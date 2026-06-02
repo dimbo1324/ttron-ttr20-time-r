@@ -1,10 +1,14 @@
 # Testing
 
-Step 1 includes baseline tests for:
+The current baseline includes tests for:
 
 - additive checksum;
 - CRC-16/Modbus;
-- frame build, verify, extract, and payload helpers;
+- checksum mode parsing and verification;
+- frame encode/decode and typed validation errors;
+- streaming parser fragmentation, noise, multiple-frame, invalid-frame, and max-size behavior;
+- read-time command request/response parsing;
+- codec read-time request/response helpers;
 - hex dump formatting.
 
 Required baseline checks:

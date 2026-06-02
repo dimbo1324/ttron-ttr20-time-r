@@ -7,19 +7,21 @@ UI, Docker, CI, and observability work.
 
 ## Current Status
 
-Implemented in Step 1:
+Implemented through Step 2:
 
 - root Go monorepo module;
 - active Go client command;
 - active Go TCP emulator command;
-- shared checksum, frame, logging, and utility packages;
+- typed FT1.2-like protocol core;
+- checksum mode abstraction with `sum` and `crc16`;
+- frame encoder, decoder, typed errors, and streaming parser;
+- read-time command model and high-level codec helpers;
 - future gateway and CLI command placeholders;
 - proto, web, deploy, docs, and legacy scaffolding;
 - Python and old Go implementations preserved under `legacy/`.
 
 Planned but not implemented yet:
 
-- deeper FT1.2 protocol core;
 - hardened emulator service;
 - gateway polling service;
 - protobuf/gRPC contracts;
@@ -35,7 +37,7 @@ cmd/                  active command entrypoints
   ft12-gateway/       future gateway placeholder
   ft12-cli/           future CLI placeholder
 internal/             active Go packages
-  protocol/           checksum and frame helpers
+  protocol/           checksum, frame, command, and codec core
   client/             polling client runtime
   emulator/           TCP emulator runtime
   config/             standard-library flag config

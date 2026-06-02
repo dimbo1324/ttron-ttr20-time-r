@@ -1,7 +1,6 @@
 package emulator
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"math/rand"
@@ -11,6 +10,9 @@ import (
 	"time"
 
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/config"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/checksum"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/codec"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/command"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/frame"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/util"
 )
@@ -88,7 +90,13 @@ func (s *Server) handleConnection(conn net.Conn) {
 		s.logger.Printf("[%s] connection handler finished", conn.RemoteAddr())
 	}()
 
-	var buf bytes.Buffer
+	mode, err := checksum.ParseMode(s.cfg.CRCMode)
+	if err != nil {
+		s.logger.Printf("[%s] invalid checksum mode: %v", conn.RemoteAddr(), err)
+		return
+	}
+	parser := frame.NewStreamParser(mode)
+	wire := codec.New(mode, 0x00, byte(s.cfg.AdapterAddr&0xFF))
 	tmp := make([]byte, 4096)
 	readTimeout := time.Duration(s.cfg.ReadTimeout) * time.Second
 
@@ -102,35 +110,17 @@ func (s *Server) handleConnection(conn net.Conn) {
 		if n == 0 {
 			continue
 		}
-		buf.Write(tmp[:n])
 
-		for {
-			frameBytes, ok := frame.ExtractFrame(&buf)
+		result := parser.Push(tmp[:n])
+		for _, parseErr := range result.Errors {
+			s.logger.Printf("[%s] protocol parse error: %v", conn.RemoteAddr(), parseErr)
+		}
+
+		for _, req := range result.Frames {
+			s.logger.Printf("[%s] RX: %s", conn.RemoteAddr(), util.HexDump(req.RawBytes()))
+			resp, ok := s.buildResponse(conn, wire, req)
 			if !ok {
-				break
-			}
-			s.logger.Printf("[%s] RX: %s", conn.RemoteAddr(), util.HexDump(frameBytes))
-			if err := frame.Verify(frameBytes); err != nil {
-				s.logger.Printf("[%s] frame verification failed: %v", conn.RemoteAddr(), err)
 				continue
-			}
-
-			control := frameBytes[3]
-			addr := frameBytes[4]
-			data := frame.PayloadData(frameBytes)
-			var cmd byte
-			if len(data) > 0 {
-				cmd = data[0]
-			}
-
-			var resp []byte
-			switch cmd {
-			case 0x01:
-				s.logger.Printf("[%s] read-time request (ctrl=0x%02X addr=0x%02X)", conn.RemoteAddr(), control, addr)
-				resp = BuildTimeResponse(control, addr, data, s.cfg.CRCMode, byte(s.cfg.AdapterAddr))
-			default:
-				s.logger.Printf("[%s] generic/unknown cmd 0x%02X - sending ACK", conn.RemoteAddr(), cmd)
-				resp = BuildAckResponse(control, addr, data, s.cfg.CRCMode, byte(s.cfg.AdapterAddr))
 			}
 
 			if s.cfg.DelayMs > 0 {
@@ -138,7 +128,7 @@ func (s *Server) handleConnection(conn net.Conn) {
 			}
 			if rand.Float64() < s.cfg.BadCRCProb {
 				s.logger.Printf("[%s] injecting bad CRC", conn.RemoteAddr())
-				frame.CorruptChecksum(resp, s.cfg.CRCMode)
+				frame.CorruptChecksum(resp, string(mode))
 			}
 
 			if rand.Float64() < s.cfg.FragProb && len(resp) > 1 {
@@ -153,6 +143,31 @@ func (s *Server) handleConnection(conn net.Conn) {
 			s.logger.Printf("[%s] TX: %s", conn.RemoteAddr(), util.HexDump(resp))
 		}
 	}
+}
+
+func (s *Server) buildResponse(conn net.Conn, wire codec.Codec, req frame.Frame) ([]byte, bool) {
+	if err := command.ParseReadTimeRequest(req.DataBytes()); err == nil {
+		s.logger.Printf("[%s] read-time request (ctrl=0x%02X addr=0x%02X)", conn.RemoteAddr(), req.Control, req.Address)
+		resp, err := wire.EncodeReadTimeResponse(req, time.Now())
+		if err != nil {
+			s.logger.Printf("[%s] read-time response encode failed: %v", conn.RemoteAddr(), err)
+			return nil, false
+		}
+		return resp, true
+	}
+
+	data := req.DataBytes()
+	cmd := byte(0x00)
+	if len(data) > 0 {
+		cmd = data[0]
+	}
+	s.logger.Printf("[%s] generic/unknown cmd 0x%02X - sending ACK", conn.RemoteAddr(), cmd)
+	resp, err := wire.EncodeACK(req, data)
+	if err != nil {
+		s.logger.Printf("[%s] ACK encode failed: %v", conn.RemoteAddr(), err)
+		return nil, false
+	}
+	return resp, true
 }
 
 func writeFragmented(conn net.Conn, data []byte) error {

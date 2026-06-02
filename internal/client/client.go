@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"net"
@@ -9,6 +8,8 @@ import (
 	"time"
 
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/config"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/checksum"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/codec"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/frame"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/util"
 )
@@ -91,8 +92,17 @@ func (c *Client) performPoll() {
 		return
 	}
 
-	req := frame.BuildSkeleton(0x00, byte(c.cfg.AdapterAddr&0xFF), []byte{0x01})
-	req = frame.AppendChecksum(req, c.cfg.CRCMode)
+	mode, err := checksum.ParseMode(c.cfg.CRCMode)
+	if err != nil {
+		c.logger.Printf("invalid checksum mode: %v", err)
+		return
+	}
+	wire := codec.New(mode, 0x00, byte(c.cfg.AdapterAddr&0xFF))
+	req, err := wire.EncodeReadTimeRequest()
+	if err != nil {
+		c.logger.Printf("cannot encode read-time request: %v", err)
+		return
+	}
 	c.logger.Printf("TX request: %s", util.HexDump(req))
 
 	var lastErr error
@@ -107,7 +117,7 @@ func (c *Client) performPoll() {
 			time.Sleep(200 * time.Millisecond)
 			continue
 		}
-		resp, err := c.readFrameWithTimeout(time.Duration(c.cfg.TimeoutMs) * time.Millisecond)
+		resp, err := c.readFrameWithTimeout(mode, time.Duration(c.cfg.TimeoutMs)*time.Millisecond)
 		if err != nil {
 			lastErr = err
 			c.logger.Printf("read error: %v", err)
@@ -117,29 +127,13 @@ func (c *Client) performPoll() {
 		}
 		c.logger.Printf("RX response: %s", util.HexDump(resp))
 
-		if err := frame.Verify(resp); err != nil {
+		_, parsed, err := wire.DecodeReadTimeResponse(resp)
+		if err != nil {
 			lastErr = err
-			c.logger.Printf("frame verification failed: %v", err)
+			c.logger.Printf("read-time response parse failed: %v", err)
 			continue
 		}
-		payload := frame.PayloadData(resp)
-		if len(payload) == 0 {
-			c.logger.Printf("empty payload")
-			return
-		}
-		if payload[0] != 0x01 {
-			c.logger.Printf("unexpected cmd in payload: 0x%02X", payload[0])
-			return
-		}
-
-		timeStr := string(payload[1:])
-		ts, err := time.Parse("2006-01-02 15:04:05", timeStr)
-		if err != nil {
-			c.logger.Printf("time parse failed, raw='%s'", timeStr)
-			c.logger.Printf("device time (raw): %s", timeStr)
-			return
-		}
-		c.logger.Printf("device time: %s", ts.Format(time.RFC3339))
+		c.logger.Printf("device time: %s", parsed.Time.Format(time.RFC3339))
 		return
 	}
 	c.logger.Printf("all retries failed: last error: %v", lastErr)
@@ -155,7 +149,7 @@ func (c *Client) write(data []byte) error {
 	return err
 }
 
-func (c *Client) readFrameWithTimeout(timeout time.Duration) ([]byte, error) {
+func (c *Client) readFrameWithTimeout(mode checksum.Mode, timeout time.Duration) ([]byte, error) {
 	c.mu.Lock()
 	if c.conn == nil {
 		c.mu.Unlock()
@@ -164,7 +158,7 @@ func (c *Client) readFrameWithTimeout(timeout time.Duration) ([]byte, error) {
 	conn := c.conn
 	c.mu.Unlock()
 
-	var buf bytes.Buffer
+	parser := frame.NewStreamParser(mode)
 	tmp := make([]byte, 1024)
 	deadline := time.Now().Add(timeout)
 
@@ -174,11 +168,15 @@ func (c *Client) readFrameWithTimeout(timeout time.Duration) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		if n > 0 {
-			buf.Write(tmp[:n])
+		if n == 0 {
+			continue
 		}
-		if f, ok := frame.ExtractFrame(&buf); ok {
-			return f, nil
+		result := parser.Push(tmp[:n])
+		for _, parseErr := range result.Errors {
+			c.logger.Printf("protocol parse error: %v", parseErr)
+		}
+		if len(result.Frames) > 0 {
+			return result.Frames[0].RawBytes(), nil
 		}
 	}
 }
