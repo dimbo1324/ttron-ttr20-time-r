@@ -2,7 +2,7 @@
 
 BIN_DIR := bin
 
-.PHONY: help fmt test build build-client build-emulator build-gateway build-cli run-emulator run-client clean
+.PHONY: help fmt test build build-client build-emulator build-gateway build-cli run-emulator run-client run-gateway clean
 
 help:
 	@echo "Targets:"
@@ -15,6 +15,7 @@ help:
 	@echo "  build-cli       build bin/ft12-cli"
 	@echo "  run-emulator    run emulator on default address"
 	@echo "  run-client      run client against default emulator"
+	@echo "  run-gateway     run gateway against default emulator"
 	@echo "  clean           remove build output"
 
 fmt:
@@ -43,6 +44,9 @@ run-emulator:
 
 run-client:
 	go run ./cmd/ft12-client
+
+run-gateway:
+	go run ./cmd/ft12-gateway
 
 clean:
 	rm -rf $(BIN_DIR)

@@ -13,21 +13,30 @@ emulator platform:
 - small Web UI;
 - Docker, CI, tests, and operational documentation.
 
-## Step 1 Baseline
+## Implemented Services
 
-Step 1 establishes the repository shape and keeps the current working behavior:
+`cmd/ft12-emulator` runs a TCP emulator service. It accepts client/gateway
+connections, parses FT1.2-like frames with the protocol core, handles read-time
+requests, applies configured fault modes, and records in-memory status/history.
 
-- `cmd/ft12-client` runs the existing polling client behavior;
-- `cmd/ft12-emulator` runs the existing TCP emulator behavior;
-- `internal/protocol` contains shared checksum and frame helpers;
-- `internal/client` and `internal/emulator` contain active runtime logic;
-- `cmd/ft12-gateway` and `cmd/ft12-cli` compile as placeholders only.
+`cmd/ft12-gateway` runs a polling gateway service. It connects to an
+emulator/device over TCP, periodically sends read-time requests, parses
+responses, maintains status/history, and reconnects with backoff after errors.
+
+`cmd/ft12-client` remains a simple direct polling/demo client.
+
+`cmd/ft12-cli` is still a placeholder for future local inspection tools.
 
 ## Dependency Rules
 
-The baseline intentionally uses the Go standard library only. Heavy config,
-logging, gRPC, web, database, metrics, and container dependencies are deferred
-until their dedicated milestones.
+```text
+cmd/ft12-emulator -> internal/emulator -> internal/transport/tcp -> internal/protocol
+cmd/ft12-gateway  -> internal/gateway  -> internal/transport/tcp -> internal/protocol
+cmd/ft12-client   -> internal/client   -> internal/protocol
+```
 
-Active source belongs under `cmd/` and `internal/`. Reference source belongs
-under `legacy/`.
+`internal/protocol` depends only on the Go standard library. It does not depend
+on TCP, emulator, gateway, logging, config, gRPC, HTTP, Web UI, or Docker.
+
+`internal/observability/events` provides a small in-memory recent event ring for
+service status and future UI/API layers. It is not a metrics stack.

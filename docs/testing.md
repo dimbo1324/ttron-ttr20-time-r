@@ -9,6 +9,9 @@ The current baseline includes tests for:
 - streaming parser fragmentation, noise, multiple-frame, invalid-frame, and max-size behavior;
 - read-time command request/response parsing;
 - codec read-time request/response helpers;
+- reusable TCP transport helpers;
+- emulator integration behavior and fault modes;
+- gateway polling and timeout behavior;
 - hex dump formatting.
 
 Required baseline checks:
@@ -19,5 +22,7 @@ go test ./...
 go build ./...
 ```
 
-Future milestones should add protocol vectors, malformed-frame coverage,
-emulator integration tests, gateway polling tests, and service contract tests.
+Manual smoke coverage should include client/emulator in `sum` and `crc16`, plus
+gateway/emulator in `sum` and `crc16`.
+
+Future milestones should add gRPC contract tests and broader service API tests.

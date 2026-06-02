@@ -13,8 +13,9 @@ for the active baseline.
 go fmt ./...
 go test ./...
 go build ./...
-go run ./cmd/ft12-emulator
-go run ./cmd/ft12-client
+go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode sum
+go run ./cmd/ft12-client -host 127.0.0.1 -port 9000 -crc sum
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 5s
 ```
 
 Individual builds:
@@ -27,6 +28,13 @@ go build -o bin/ft12-cli ./cmd/ft12-cli
 ```
 
 The `Makefile` exposes the same common operations for environments with `make`.
+
+Useful service runs:
+
+```powershell
+go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode crc16
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode crc16 -interval 1s
+```
 
 ## Active And Legacy Code
 
