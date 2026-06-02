@@ -7,7 +7,7 @@ UI, Docker, CI, and observability work.
 
 ## Current Status
 
-Implemented through Step 2:
+Implemented through Step 4:
 
 - root Go monorepo module;
 - active Go client command;
@@ -16,14 +16,15 @@ Implemented through Step 2:
 - checksum mode abstraction with `sum` and `crc16`;
 - frame encoder, decoder, typed errors, and streaming parser;
 - read-time command model and high-level codec helpers;
-- future gateway and CLI command placeholders;
+- industrial-style TCP emulator service with status, fault modes, sessions, and recent events;
+- gateway polling service with TCP reconnect, retry/backoff, status, and recent events;
+- reusable TCP transport helpers;
+- future CLI command placeholder;
 - proto, web, deploy, docs, and legacy scaffolding;
 - Python and old Go implementations preserved under `legacy/`.
 
 Planned but not implemented yet:
 
-- hardened emulator service;
-- gateway polling service;
 - protobuf/gRPC contracts;
 - Web UI;
 - Docker, CI, metrics, tracing, and release polish.
@@ -39,7 +40,9 @@ cmd/                  active command entrypoints
 internal/             active Go packages
   protocol/           checksum, frame, command, and codec core
   client/             polling client runtime
-  emulator/           TCP emulator runtime
+  emulator/           TCP emulator service
+  gateway/            polling gateway service
+  transport/          reusable TCP helpers
   config/             standard-library flag config
   logging/            baseline logger
   util/               shared helpers
@@ -63,13 +66,35 @@ go test ./...
 Run the emulator:
 
 ```powershell
-go run ./cmd/ft12-emulator -host 127.0.0.1 -port 9000 -crc sum -delay 100 -badcrc 0.2 -fragment 0.1 -adapter 1
+go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode sum
 ```
 
 Run the client in another terminal:
 
 ```powershell
 go run ./cmd/ft12-client -host 127.0.0.1 -port 9000 -crc sum -adapter 1 -timeout 1200 -retries 2 -pollstep 1
+```
+
+Run the gateway poller instead of the demo client:
+
+```powershell
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 5s
+```
+
+CRC16 mode:
+
+```powershell
+go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode crc16
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode crc16 -interval 5s
+```
+
+Fault examples:
+
+```powershell
+go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -bad-checksum
+go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -fragment-response
+go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -response-delay 2s
+go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -no-response
 ```
 
 Log files can be enabled with `-log client.log` or `-log emulator.log`.
@@ -88,13 +113,29 @@ Client:
 
 Emulator:
 
-- `-host`, `-port`: listen address;
-- `-crc`: `sum` or `crc16`;
+- `-listen`: listen address, for example `127.0.0.1:9000`;
+- `-host`, `-port`: legacy listen address flags;
+- `-mode` / `-crc`: `sum` or `crc16`;
 - `-delay`: fixed response delay in milliseconds;
+- `-response-delay`: duration response delay;
 - `-badcrc`: probability `[0..1]` of sending a corrupted checksum;
+- `-bad-checksum`: always corrupt response checksum;
 - `-fragment`: probability `[0..1]` of sending a fragmented response;
+- `-fragment-response`: always fragment responses;
+- `-no-response`: receive valid request but send no response;
 - `-adapter`: adapter address byte;
 - `-readtimeout`: connection read timeout in seconds;
+- `-log`: log file path, or stdout when empty.
+
+Gateway:
+
+- `-target`: emulator/device TCP address;
+- `-mode` / `-crc`: `sum` or `crc16`;
+- `-interval`: polling interval;
+- `-timeout`: request/response timeout;
+- `-connect-timeout`: TCP connect timeout;
+- `-backoff-initial`, `-backoff-max`: reconnect backoff settings;
+- `-recent`: recent event buffer size;
 - `-log`: log file path, or stdout when empty.
 
 ## Development Commands
@@ -107,6 +148,7 @@ go build -o bin/ft12-client ./cmd/ft12-client
 go build -o bin/ft12-emulator ./cmd/ft12-emulator
 go build -o bin/ft12-gateway ./cmd/ft12-gateway
 go build -o bin/ft12-cli ./cmd/ft12-cli
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -interval 5s
 ```
 
 A root `Makefile` is also provided for Unix-like shells and environments with
@@ -119,6 +161,8 @@ A root `Makefile` is also provided for Unix-like shells and environments with
 - [Development](docs/development.md)
 - [Testing](docs/testing.md)
 - [Roadmap](docs/roadmap.md)
+- [Emulator](docs/emulator.md)
+- [Gateway](docs/gateway.md)
 - [Legacy](docs/legacy.md)
 
 The original PDF and task document are preserved under `docs/files/` and
