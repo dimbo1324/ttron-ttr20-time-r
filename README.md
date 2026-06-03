@@ -7,7 +7,7 @@ UI, Docker, CI, and observability work.
 
 ## Current Status
 
-Implemented through Step 5:
+Implemented through Step 5.5:
 
 - root Go monorepo module;
 - active Go client command;
@@ -21,6 +21,11 @@ Implemented through Step 5:
 - reusable TCP transport helpers;
 - protobuf/gRPC contracts and generated Go code;
 - gRPC control APIs for emulator and gateway;
+- thin command entrypoints with app bootstrap packages;
+- config loading via testable `args []string` APIs with validation;
+- stable typed event history IDs for future UI/API consumers;
+- shared gRPC mapping helpers;
+- architecture boundary check scripts;
 - future CLI command placeholder;
 - proto, web, deploy, docs, and legacy scaffolding;
 - Python and old Go implementations preserved under `legacy/`.
@@ -39,10 +44,13 @@ cmd/                  active command entrypoints
   ft12-gateway/       future gateway placeholder
   ft12-cli/           future CLI placeholder
 internal/             active Go packages
+  app/                process bootstrap for command entrypoints
   protocol/           checksum, frame, command, and codec core
   client/             polling client runtime
   emulator/           TCP emulator service
   gateway/            polling gateway service
+  api/grpc/           generated gRPC code and handwritten adapters
+  platform/           lifecycle and logging platform helpers
   transport/          reusable TCP helpers
   config/             standard-library flag config
   logging/            baseline logger
@@ -62,6 +70,7 @@ Build and test from the repository root:
 ```powershell
 go build ./...
 go test ./...
+.\scripts\check-architecture.ps1
 ```
 
 Run the emulator:
@@ -118,7 +127,6 @@ Client:
 - `-retries`: retry count;
 - `-pollstep`: polling ticker step in seconds;
 - `-log`: log file path, or stdout when empty.
-- `-grpc-listen`: gRPC control listen address, default `:9100`; empty disables gRPC.
 
 Emulator:
 
@@ -135,7 +143,7 @@ Emulator:
 - `-adapter`: adapter address byte;
 - `-readtimeout`: connection read timeout in seconds;
 - `-log`: log file path, or stdout when empty.
-- `-grpc-listen`: gRPC control listen address, default `:9200`; empty disables gRPC.
+- `-grpc-listen`: gRPC control listen address, default `:9100`; empty disables gRPC.
 
 Gateway:
 
@@ -147,6 +155,7 @@ Gateway:
 - `-backoff-initial`, `-backoff-max`: reconnect backoff settings;
 - `-recent`: recent event buffer size;
 - `-log`: log file path, or stdout when empty.
+- `-grpc-listen`: gRPC control listen address, default `:9200`; empty disables gRPC.
 
 ## Development Commands
 
@@ -154,12 +163,14 @@ Gateway:
 go fmt ./...
 go test ./...
 go build ./...
+.\scripts\check-architecture.ps1
 go build -o bin/ft12-client ./cmd/ft12-client
 go build -o bin/ft12-emulator ./cmd/ft12-emulator
 go build -o bin/ft12-gateway ./cmd/ft12-gateway
 go build -o bin/ft12-cli ./cmd/ft12-cli
 go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -interval 5s
 make proto
+make verify
 ```
 
 A root `Makefile` is also provided for Unix-like shells and environments with
@@ -168,6 +179,8 @@ A root `Makefile` is also provided for Unix-like shells and environments with
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Dependency Rules](docs/architecture/dependency-rules.md)
+- [ADR 0005: Architecture Hardening Before Web UI](docs/architecture/decisions/0005-architecture-hardening-before-web-ui.md)
 - [Protocol](docs/protocol.md)
 - [Development](docs/development.md)
 - [Testing](docs/testing.md)

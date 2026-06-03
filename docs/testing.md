@@ -13,15 +13,30 @@ The current baseline includes tests for:
 - emulator integration behavior and fault modes;
 - gateway polling and timeout behavior;
 - gRPC emulator and gateway control APIs;
+- config loading and validation;
+- lifecycle group cancellation/error behavior;
+- stable event ring IDs and snapshot copy behavior;
+- shared gRPC mapper behavior;
 - hex dump formatting.
 
 Required baseline checks:
 
 ```powershell
 go fmt ./...
+.\scripts\check-architecture.ps1
 go test ./...
 go build ./...
 ```
+
+When available, also run:
+
+```powershell
+go test -race ./...
+make verify
+```
+
+`make test-fuzz` documents the current fuzz entrypoint status. Fuzzing is not
+mandatory yet because no stable fuzz corpus is configured for this milestone.
 
 Manual smoke coverage should include client/emulator in `sum` and `crc16`, plus
 gateway/emulator in `sum` and `crc16`, plus gRPC GetStatus/GetLastReadTime style

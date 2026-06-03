@@ -5,15 +5,34 @@ import (
 	"time"
 )
 
+type Direction string
+
+const (
+	DirectionRX     Direction = "RX"
+	DirectionTX     Direction = "TX"
+	DirectionError  Direction = "ERR"
+	DirectionDrop   Direction = "DROP"
+	DirectionSystem Direction = "SYSTEM"
+)
+
+type ServiceName string
+
+const (
+	ServiceEmulator ServiceName = "emulator"
+	ServiceGateway  ServiceName = "gateway"
+)
+
 type FrameRecord struct {
+	ID           uint64
 	Timestamp    time.Time
-	Direction    string
-	Service      string
+	Direction    Direction
+	Service      ServiceName
 	RemoteAddr   string
 	RawHex       string
 	Command      string
 	ChecksumMode string
 	Error        string
+	Message      string
 }
 
 type Ring struct {
@@ -21,6 +40,7 @@ type Ring struct {
 	capacity int
 	records  []FrameRecord
 	next     int
+	nextID   uint64
 	full     bool
 }
 
@@ -28,7 +48,7 @@ func NewRing(capacity int) *Ring {
 	if capacity <= 0 {
 		capacity = 100
 	}
-	return &Ring{capacity: capacity, records: make([]FrameRecord, capacity)}
+	return &Ring{capacity: capacity, records: make([]FrameRecord, capacity), nextID: 1}
 }
 
 func (r *Ring) Add(record FrameRecord) {
@@ -37,6 +57,8 @@ func (r *Ring) Add(record FrameRecord) {
 	if record.Timestamp.IsZero() {
 		record.Timestamp = time.Now()
 	}
+	record.ID = r.nextID
+	r.nextID++
 	r.records[r.next] = record
 	r.next = (r.next + 1) % r.capacity
 	if r.next == 0 {

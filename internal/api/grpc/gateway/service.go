@@ -4,6 +4,7 @@ import (
 	"context"
 
 	ft12v1 "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/mapping"
 	domain "github.com/dimbo1324/ttron-ttr20-time-r/internal/gateway"
 )
 
@@ -40,8 +41,8 @@ func (s *Service) GetRecentEvents(_ context.Context, req *ft12v1.GetRecentEvents
 func (s *Service) GetLastReadTime(context.Context, *ft12v1.GetLastReadTimeRequest) (*ft12v1.GetLastReadTimeResponse, error) {
 	status := s.gateway.Status()
 	return &ft12v1.GetLastReadTimeResponse{
-		DeviceTime: mapTime(status.LastParsedDeviceTime),
-		ReadTime:   mapTime(status.LastSuccessfulReadTime),
+		DeviceTime: mapping.Time(status.LastParsedDeviceTime),
+		ReadTime:   mapping.Time(status.LastSuccessfulReadTime),
 		Available:  !status.LastParsedDeviceTime.IsZero(),
 	}, nil
 }

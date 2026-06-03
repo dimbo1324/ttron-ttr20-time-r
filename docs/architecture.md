@@ -31,13 +31,30 @@ remains the device data path.
 
 `cmd/ft12-cli` is still a placeholder for future local inspection tools.
 
+## Step 5.5 Hardening
+
+Command entrypoints are intentionally thin. Process bootstrap lives in:
+
+- `internal/app/clientapp`;
+- `internal/app/emulatorapp`;
+- `internal/app/gatewayapp`;
+- `internal/app/cliapp`.
+
+Runtime orchestration for concurrent service runners uses
+`internal/platform/lifecycle`. Logging remains compatible with `log.Logger`,
+with `internal/platform/logging` as the structured logging migration point.
+
+Recent frame/event history uses typed directions and service names, and the
+event ring assigns stable monotonic IDs. This is important for future HTTP/Web
+adapters that need stable event identity instead of slice-position IDs.
+
 ## Dependency Rules
 
 ```text
-cmd/ft12-emulator -> internal/emulator -> internal/transport/tcp -> internal/protocol
-cmd/ft12-gateway  -> internal/gateway  -> internal/transport/tcp -> internal/protocol
+cmd/ft12-emulator -> internal/app/emulatorapp -> internal/emulator -> internal/transport/tcp -> internal/protocol
+cmd/ft12-gateway  -> internal/app/gatewayapp  -> internal/gateway  -> internal/transport/tcp -> internal/protocol
 cmd/ft12-client   -> internal/client   -> internal/protocol
-cmd/* gRPC wiring -> internal/api/grpc  -> internal/{emulator,gateway}
+app/* gRPC wiring -> internal/api/grpc  -> internal/{emulator,gateway}
 ```
 
 `internal/protocol` depends only on the Go standard library. It does not depend
@@ -45,3 +62,8 @@ on TCP, emulator, gateway, logging, config, gRPC, HTTP, Web UI, or Docker.
 
 `internal/observability/events` provides a small in-memory recent event ring for
 service status and future UI/API layers. It is not a metrics stack.
+
+See also:
+
+- [Dependency rules](architecture/dependency-rules.md)
+- [ADR 0005: Architecture hardening before Web UI](architecture/decisions/0005-architecture-hardening-before-web-ui.md)

@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"os"
+
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/app/cliapp"
+)
 
 func main() {
-	fmt.Println("ft12-cli is a placeholder for future protocol inspection and administration tools.")
+	os.Exit(cliapp.Run(os.Args[1:]))
 }

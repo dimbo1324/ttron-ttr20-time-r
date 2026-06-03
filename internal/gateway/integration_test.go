@@ -2,21 +2,25 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log"
+	"net"
 	"testing"
 	"time"
 
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/config"
-	"github.com/dimbo1324/ttron-ttr20-time-r/internal/emulator"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/checksum"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/codec"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/frame"
 )
 
 func TestGatewayPollsEmulator(t *testing.T) {
-	emu, emuErrCh := startGatewayTestEmulator(t, "sum")
-	defer stopGatewayTestEmulator(t, emu, emuErrCh)
+	addr, stopDevice := startGatewayTestDevice(t, "sum", false)
+	defer stopDevice()
 
 	cfg := &config.GatewayConfig{
-		Target:         emu.Addr().String(),
+		Target:         addr,
 		CRCMode:        "sum",
 		AdapterAddr:    1,
 		PollInterval:   50 * time.Millisecond,
@@ -55,15 +59,11 @@ func TestGatewayPollsEmulator(t *testing.T) {
 }
 
 func TestGatewayRecordsTimeoutFailure(t *testing.T) {
-	emuCfg := &config.EmulatorConfig{Listen: "127.0.0.1:0", CRCMode: "sum", AdapterAddr: 1, NoResponse: true, ReadTimeoutDuration: time.Second, WriteTimeoutDuration: time.Second, RecentSize: 10}
-	emu := emulator.NewServer(emuCfg, log.New(io.Discard, "", 0))
-	emuErrCh := make(chan error, 1)
-	go func() { emuErrCh <- emu.Start() }()
-	waitFor(t, time.Second, func() bool { return emu.Addr() != nil })
-	defer stopGatewayTestEmulator(t, emu, emuErrCh)
+	addr, stopDevice := startGatewayTestDevice(t, "sum", true)
+	defer stopDevice()
 
 	cfg := &config.GatewayConfig{
-		Target:         emu.Addr().String(),
+		Target:         addr,
 		CRCMode:        "sum",
 		AdapterAddr:    1,
 		PollInterval:   50 * time.Millisecond,
@@ -95,26 +95,66 @@ func TestGatewayRecordsTimeoutFailure(t *testing.T) {
 	}
 }
 
-func startGatewayTestEmulator(t *testing.T, mode string) (*emulator.Server, chan error) {
+func startGatewayTestDevice(t *testing.T, modeName string, noResponse bool) (string, func()) {
 	t.Helper()
-	cfg := &config.EmulatorConfig{Listen: "127.0.0.1:0", CRCMode: mode, AdapterAddr: 1, ReadTimeoutDuration: time.Second, WriteTimeoutDuration: time.Second, RecentSize: 10}
-	srv := emulator.NewServer(cfg, log.New(io.Discard, "", 0))
-	errCh := make(chan error, 1)
-	go func() { errCh <- srv.Start() }()
-	waitFor(t, time.Second, func() bool { return srv.Addr() != nil })
-	return srv, errCh
+	mode, err := checksum.ParseMode(modeName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				if errors.Is(err, net.ErrClosed) {
+					return
+				}
+				return
+			}
+			go handleGatewayTestDeviceConn(conn, mode, noResponse)
+		}
+	}()
+
+	stop := func() {
+		_ = ln.Close()
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Fatal("test device did not stop")
+		}
+	}
+	return ln.Addr().String(), stop
 }
 
-func stopGatewayTestEmulator(t *testing.T, srv *emulator.Server, errCh chan error) {
-	t.Helper()
-	srv.Stop()
-	select {
-	case err := <-errCh:
+func handleGatewayTestDeviceConn(conn net.Conn, mode checksum.Mode, noResponse bool) {
+	defer conn.Close()
+	wire := codec.New(mode, 0x00, 0x01)
+	parser := frame.NewStreamParser(mode)
+	buf := make([]byte, 1024)
+	for {
+		n, err := conn.Read(buf)
 		if err != nil {
-			t.Fatalf("emulator stopped with error: %v", err)
+			return
 		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("emulator did not stop")
+		result := parser.Push(buf[:n])
+		if len(result.Frames) == 0 {
+			continue
+		}
+		if noResponse {
+			continue
+		}
+		resp, err := wire.EncodeReadTimeResponse(result.Frames[0], time.Now())
+		if err != nil {
+			return
+		}
+		if _, err := conn.Write(resp); err != nil {
+			return
+		}
 	}
 }
 
