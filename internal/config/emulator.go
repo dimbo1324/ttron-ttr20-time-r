@@ -3,7 +3,12 @@ package config
 import (
 	"flag"
 	"fmt"
+	"net"
+	"os"
+	"strconv"
 	"time"
+
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/checksum"
 )
 
 type EmulatorConfig struct {
@@ -27,30 +32,48 @@ type EmulatorConfig struct {
 	RecentSize           int
 }
 
-func LoadEmulator() *EmulatorConfig {
-	c := &EmulatorConfig{}
-	flag.StringVar(&c.Host, "host", "127.0.0.1", "listen host")
-	flag.IntVar(&c.Port, "port", 9000, "listen port")
-	flag.StringVar(&c.Listen, "listen", "", "listen address, overrides -host/-port when set")
-	flag.StringVar(&c.CRCMode, "crc", "sum", "crc mode: sum | crc16")
-	mode := flag.String("mode", "", "checksum mode alias: sum | crc16")
-	flag.IntVar(&c.DelayMs, "delay", 0, "fixed delay before responding (ms)")
-	flag.DurationVar(&c.ResponseDelay, "response-delay", 0, "fixed delay before responding")
-	flag.Float64Var(&c.BadCRCProb, "badcrc", 0.0, "probability [0..1] to send bad CRC in responses")
-	badChecksum := flag.Bool("bad-checksum", false, "always corrupt response checksum")
-	flag.Float64Var(&c.FragProb, "fragment", 0.0, "probability [0..1] to fragment responses")
-	fragmentResponse := flag.Bool("fragment-response", false, "always fragment responses")
-	flag.DurationVar(&c.FragmentDelay, "fragment-delay", 40*time.Millisecond, "delay between fragmented response writes")
-	flag.BoolVar(&c.NoResponse, "no-response", false, "receive valid request but do not send a response")
-	flag.BoolVar(&c.CloseAfterRequest, "close-after-request", false, "close connection after processing a request")
-	flag.IntVar(&c.AdapterAddr, "adapter", 1, "adapter address byte (0..255)")
-	flag.StringVar(&c.LogFile, "log", "", "path to log file; empty = stdout")
-	flag.StringVar(&c.GRPCListen, "grpc-listen", ":9100", "gRPC control listen address; empty disables gRPC")
-	flag.IntVar(&c.ReadTimeout, "readtimeout", 300, "connection read timeout in seconds")
-	flag.DurationVar(&c.ReadTimeoutDuration, "read-timeout", 300*time.Second, "connection read timeout")
-	flag.DurationVar(&c.WriteTimeoutDuration, "write-timeout", 5*time.Second, "connection write timeout")
-	flag.IntVar(&c.RecentSize, "recent", 100, "recent frame/event buffer size")
-	flag.Parse()
+func DefaultEmulator() EmulatorConfig {
+	return EmulatorConfig{
+		Host:                 "127.0.0.1",
+		Port:                 9000,
+		CRCMode:              "sum",
+		FragmentDelay:        40 * time.Millisecond,
+		AdapterAddr:          1,
+		GRPCListen:           ":9100",
+		ReadTimeout:          300,
+		ReadTimeoutDuration:  300 * time.Second,
+		WriteTimeoutDuration: 5 * time.Second,
+		RecentSize:           100,
+	}
+}
+
+func LoadEmulator(args []string) (*EmulatorConfig, error) {
+	c := DefaultEmulator()
+	fs := flag.NewFlagSet("ft12-emulator", flag.ContinueOnError)
+	fs.StringVar(&c.Host, "host", c.Host, "listen host")
+	fs.IntVar(&c.Port, "port", c.Port, "listen port")
+	fs.StringVar(&c.Listen, "listen", c.Listen, "listen address, overrides -host/-port when set")
+	fs.StringVar(&c.CRCMode, "crc", c.CRCMode, "crc mode: sum | crc16")
+	mode := fs.String("mode", "", "checksum mode alias: sum | crc16")
+	fs.IntVar(&c.DelayMs, "delay", c.DelayMs, "fixed delay before responding (ms)")
+	fs.DurationVar(&c.ResponseDelay, "response-delay", c.ResponseDelay, "fixed delay before responding")
+	fs.Float64Var(&c.BadCRCProb, "badcrc", c.BadCRCProb, "probability [0..1] to send bad CRC in responses")
+	badChecksum := fs.Bool("bad-checksum", false, "always corrupt response checksum")
+	fs.Float64Var(&c.FragProb, "fragment", c.FragProb, "probability [0..1] to fragment responses")
+	fragmentResponse := fs.Bool("fragment-response", false, "always fragment responses")
+	fs.DurationVar(&c.FragmentDelay, "fragment-delay", c.FragmentDelay, "delay between fragmented response writes")
+	fs.BoolVar(&c.NoResponse, "no-response", c.NoResponse, "receive valid request but do not send a response")
+	fs.BoolVar(&c.CloseAfterRequest, "close-after-request", c.CloseAfterRequest, "close connection after processing a request")
+	fs.IntVar(&c.AdapterAddr, "adapter", c.AdapterAddr, "adapter address byte (0..255)")
+	fs.StringVar(&c.LogFile, "log", c.LogFile, "path to log file; empty = stdout")
+	fs.StringVar(&c.GRPCListen, "grpc-listen", c.GRPCListen, "gRPC control listen address; empty disables gRPC")
+	fs.IntVar(&c.ReadTimeout, "readtimeout", c.ReadTimeout, "connection read timeout in seconds")
+	fs.DurationVar(&c.ReadTimeoutDuration, "read-timeout", c.ReadTimeoutDuration, "connection read timeout")
+	fs.DurationVar(&c.WriteTimeoutDuration, "write-timeout", c.WriteTimeoutDuration, "connection write timeout")
+	fs.IntVar(&c.RecentSize, "recent", c.RecentSize, "recent frame/event buffer size")
+	if err := fs.Parse(args); err != nil {
+		return nil, err
+	}
 	if *mode != "" {
 		c.CRCMode = *mode
 	}
@@ -60,13 +83,70 @@ func LoadEmulator() *EmulatorConfig {
 	if *fragmentResponse {
 		c.FragProb = 1
 	}
+	c.Normalize()
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+func MustLoadEmulatorFromOS() *EmulatorConfig {
+	cfg, err := LoadEmulator(os.Args[1:])
+	if err != nil {
+		panic(err)
+	}
+	return cfg
+}
+
+func (c *EmulatorConfig) Normalize() {
+	if c.CRCMode == "" {
+		c.CRCMode = "sum"
+	}
 	if c.ResponseDelay == 0 && c.DelayMs > 0 {
 		c.ResponseDelay = time.Duration(c.DelayMs) * time.Millisecond
 	}
 	if c.ReadTimeoutDuration == 300*time.Second && c.ReadTimeout != 300 {
 		c.ReadTimeoutDuration = time.Duration(c.ReadTimeout) * time.Second
 	}
-	return c
+}
+
+func (c EmulatorConfig) Validate() error {
+	if err := validateTCPAddress(c.ListenAddress(), "listen address"); err != nil {
+		return err
+	}
+	if c.AdapterAddr < 0 || c.AdapterAddr > 255 {
+		return fmt.Errorf("adapter address must be in range 0..255")
+	}
+	if _, err := checksum.ParseMode(c.CRCMode); err != nil {
+		return err
+	}
+	if c.BadCRCProb < 0 || c.BadCRCProb > 1 {
+		return fmt.Errorf("bad CRC probability must be in range 0..1")
+	}
+	if c.FragProb < 0 || c.FragProb > 1 {
+		return fmt.Errorf("fragment probability must be in range 0..1")
+	}
+	if c.RecentSize <= 0 {
+		return fmt.Errorf("recent size must be positive")
+	}
+	if c.ReadTimeoutDuration <= 0 {
+		return fmt.Errorf("read timeout must be positive")
+	}
+	if c.WriteTimeoutDuration <= 0 {
+		return fmt.Errorf("write timeout must be positive")
+	}
+	if c.GRPCListen != "" {
+		if err := validateTCPAddress(c.GRPCListen, "gRPC listen address"); err != nil {
+			return err
+		}
+	}
+	if c.ResponseDelay < 0 {
+		return fmt.Errorf("response delay must be non-negative")
+	}
+	if c.FragmentDelay < 0 {
+		return fmt.Errorf("fragment delay must be non-negative")
+	}
+	return nil
 }
 
 func (c EmulatorConfig) ListenAddress() string {
@@ -74,4 +154,34 @@ func (c EmulatorConfig) ListenAddress() string {
 		return c.Listen
 	}
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
+}
+
+func validateTCPAddress(address, name string) error {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return fmt.Errorf("%s must be host:port: %w", name, err)
+	}
+	if host != "" {
+		if ip := net.ParseIP(host); ip == nil && !isDNSLikeHost(host) {
+			return fmt.Errorf("%s host is invalid: %s", name, host)
+		}
+	}
+	if port == "" {
+		return fmt.Errorf("%s port must not be empty", name)
+	}
+	portNumber, err := strconv.Atoi(port)
+	if err != nil || portNumber < 1 || portNumber > 65535 {
+		return fmt.Errorf("%s port must be in range 1..65535", name)
+	}
+	return nil
+}
+
+func isDNSLikeHost(host string) bool {
+	for _, r := range host {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '.' {
+			continue
+		}
+		return false
+	}
+	return host != ""
 }

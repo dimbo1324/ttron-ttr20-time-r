@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/observability/events"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/frame"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/util"
 )
@@ -78,7 +79,7 @@ func (s *session) handleFrame(req frame.Frame) {
 	fault := s.service.FaultMode()
 	if fault.NoResponse {
 		s.service.logger.Printf("[%s] fault no-response applied", s.remote)
-		s.service.recordFrame("DROP", s.remote, util.HexDump(resp), cmd, "no response fault")
+		s.service.recordFrame(events.DirectionDrop, s.remote, util.HexDump(resp), cmd, "no response fault")
 		return
 	}
 	if fault.ResponseDelay > 0 {
