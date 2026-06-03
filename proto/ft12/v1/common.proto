@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package ft12.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1;ft12v1";
+
+enum ChecksumMode {
+  CHECKSUM_MODE_UNSPECIFIED = 0;
+  CHECKSUM_MODE_SUM = 1;
+  CHECKSUM_MODE_CRC16 = 2;
+}
+
+enum ServiceState {
+  SERVICE_STATE_UNSPECIFIED = 0;
+  SERVICE_STATE_STOPPED = 1;
+  SERVICE_STATE_RUNNING = 2;
+  SERVICE_STATE_DEGRADED = 3;
+}
+
+enum EventDirection {
+  EVENT_DIRECTION_UNSPECIFIED = 0;
+  EVENT_DIRECTION_RX = 1;
+  EVENT_DIRECTION_TX = 2;
+  EVENT_DIRECTION_SYSTEM = 3;
+  EVENT_DIRECTION_ERROR = 4;
+}
+
+message FrameEvent {
+  uint64 id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  string service = 3;
+  EventDirection direction = 4;
+  string remote_addr = 5;
+  ChecksumMode checksum_mode = 6;
+  string raw_hex = 7;
+  string command = 8;
+  string error = 9;
+  string message = 10;
+}
+
+message GetRecentEventsRequest {
+  uint32 limit = 1;
+}
+
+message GetRecentEventsResponse {
+  repeated FrameEvent events = 1;
+}

@@ -27,5 +27,5 @@ Useful flags:
 - `-backoff-initial`, `-backoff-max`: reconnect behavior;
 - `-recent`: in-memory recent event buffer size.
 
-The gateway is local service logic only. gRPC APIs, Web UI, persistence, and
+The gateway service also exposes a gRPC control API. Web UI, persistence, and
 metrics are planned later.

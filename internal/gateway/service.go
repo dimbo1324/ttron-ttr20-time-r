@@ -30,6 +30,10 @@ type Service struct {
 
 	mu     sync.RWMutex
 	status Status
+
+	runMu  sync.Mutex
+	cancel context.CancelFunc
+	done   chan error
 }
 
 func NewService(cfg *config.GatewayConfig, logger *log.Logger) (*Service, error) {
@@ -52,6 +56,7 @@ func NewService(cfg *config.GatewayConfig, logger *log.Logger) (*Service, error)
 		ChecksumMode:    string(mode),
 		PollingInterval: cfg.PollInterval,
 		RequestTimeout:  cfg.RequestTimeout,
+		ConnectTimeout:  cfg.ConnectTimeout,
 	}
 	return s, nil
 }
@@ -99,6 +104,45 @@ func (s *Service) Run(ctx context.Context) error {
 			return nil
 		}
 	}
+}
+
+func (s *Service) Start(ctx context.Context) {
+	s.runMu.Lock()
+	defer s.runMu.Unlock()
+	if s.cancel != nil {
+		return
+	}
+	runCtx, cancel := context.WithCancel(ctx)
+	done := make(chan error, 1)
+	s.cancel = cancel
+	s.done = done
+	go func() {
+		done <- s.Run(runCtx)
+		s.runMu.Lock()
+		if s.done == done {
+			s.cancel = nil
+			s.done = nil
+		}
+		s.runMu.Unlock()
+	}()
+}
+
+func (s *Service) Stop() error {
+	s.runMu.Lock()
+	cancel := s.cancel
+	done := s.done
+	s.runMu.Unlock()
+	if cancel == nil || done == nil {
+		s.setRunning(false)
+		s.setConnected(false)
+		return nil
+	}
+	cancel()
+	err := <-done
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Service) runSession(ctx context.Context, conn net.Conn) error {

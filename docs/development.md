@@ -16,6 +16,7 @@ go build ./...
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode sum
 go run ./cmd/ft12-client -host 127.0.0.1 -port 9000 -crc sum
 go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 5s
+make proto
 ```
 
 Individual builds:
@@ -34,6 +35,13 @@ Useful service runs:
 ```powershell
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode crc16
 go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode crc16 -interval 1s
+```
+
+gRPC control:
+
+```powershell
+go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -grpc-listen 127.0.0.1:9100
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -grpc-listen 127.0.0.1:9200
 ```
 
 ## Active And Legacy Code

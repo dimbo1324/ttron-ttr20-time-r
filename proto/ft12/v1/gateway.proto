@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package ft12.v1;
+
+import "google/protobuf/timestamp.proto";
+import "proto/ft12/v1/common.proto";
+
+option go_package = "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1;ft12v1";
+
+message GatewayStatus {
+  ServiceState state = 1;
+  string target_addr = 2;
+  ChecksumMode checksum_mode = 3;
+  int64 polling_interval_ms = 4;
+  int64 request_timeout_ms = 5;
+  int64 connect_timeout_ms = 6;
+  bool connected = 7;
+  uint64 connection_attempts = 8;
+  uint64 successful_reads = 9;
+  uint64 failed_reads = 10;
+  uint64 reconnects = 11;
+  google.protobuf.Timestamp last_successful_read_time = 12;
+  google.protobuf.Timestamp last_device_time = 13;
+  string last_error = 14;
+  google.protobuf.Timestamp last_tx_time = 15;
+  google.protobuf.Timestamp last_rx_time = 16;
+  uint32 recent_frames_count = 17;
+}
+
+message GetGatewayStatusRequest {}
+
+message GetGatewayStatusResponse {
+  GatewayStatus status = 1;
+}
+
+message StartPollingRequest {}
+
+message StartPollingResponse {
+  GatewayStatus status = 1;
+}
+
+message StopPollingRequest {}
+
+message StopPollingResponse {
+  GatewayStatus status = 1;
+}
+
+message GetLastReadTimeRequest {}
+
+message GetLastReadTimeResponse {
+  google.protobuf.Timestamp device_time = 1;
+  google.protobuf.Timestamp read_time = 2;
+  bool available = 3;
+}
+
+service GatewayService {
+  rpc GetStatus(GetGatewayStatusRequest) returns (GetGatewayStatusResponse);
+  rpc StartPolling(StartPollingRequest) returns (StartPollingResponse);
+  rpc StopPolling(StopPollingRequest) returns (StopPollingResponse);
+  rpc GetRecentEvents(GetRecentEventsRequest) returns (GetRecentEventsResponse);
+  rpc GetLastReadTime(GetLastReadTimeRequest) returns (GetLastReadTimeResponse);
+}

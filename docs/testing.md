@@ -12,6 +12,7 @@ The current baseline includes tests for:
 - reusable TCP transport helpers;
 - emulator integration behavior and fault modes;
 - gateway polling and timeout behavior;
+- gRPC emulator and gateway control APIs;
 - hex dump formatting.
 
 Required baseline checks:
@@ -23,6 +24,7 @@ go build ./...
 ```
 
 Manual smoke coverage should include client/emulator in `sum` and `crc16`, plus
-gateway/emulator in `sum` and `crc16`.
+gateway/emulator in `sum` and `crc16`, plus gRPC GetStatus/GetLastReadTime style
+checks.
 
-Future milestones should add gRPC contract tests and broader service API tests.
+Future milestones should add Web UI/API contract coverage.

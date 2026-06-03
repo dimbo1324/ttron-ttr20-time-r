@@ -23,6 +23,10 @@ requests, applies configured fault modes, and records in-memory status/history.
 emulator/device over TCP, periodically sends read-time requests, parses
 responses, maintains status/history, and reconnects with backoff after errors.
 
+Both emulator and gateway can also expose gRPC control APIs. The gRPC plane is
+for service-to-service status/control and future API/Web layers; FT1.2-like TCP
+remains the device data path.
+
 `cmd/ft12-client` remains a simple direct polling/demo client.
 
 `cmd/ft12-cli` is still a placeholder for future local inspection tools.
@@ -33,6 +37,7 @@ responses, maintains status/history, and reconnects with backoff after errors.
 cmd/ft12-emulator -> internal/emulator -> internal/transport/tcp -> internal/protocol
 cmd/ft12-gateway  -> internal/gateway  -> internal/transport/tcp -> internal/protocol
 cmd/ft12-client   -> internal/client   -> internal/protocol
+cmd/* gRPC wiring -> internal/api/grpc  -> internal/{emulator,gateway}
 ```
 
 `internal/protocol` depends only on the Go standard library. It does not depend
