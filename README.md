@@ -7,7 +7,7 @@ UI, Docker, CI, and observability work.
 
 ## Current Status
 
-Implemented through Step 4:
+Implemented through Step 5:
 
 - root Go monorepo module;
 - active Go client command;
@@ -19,13 +19,14 @@ Implemented through Step 4:
 - industrial-style TCP emulator service with status, fault modes, sessions, and recent events;
 - gateway polling service with TCP reconnect, retry/backoff, status, and recent events;
 - reusable TCP transport helpers;
+- protobuf/gRPC contracts and generated Go code;
+- gRPC control APIs for emulator and gateway;
 - future CLI command placeholder;
 - proto, web, deploy, docs, and legacy scaffolding;
 - Python and old Go implementations preserved under `legacy/`.
 
 Planned but not implemented yet:
 
-- protobuf/gRPC contracts;
 - Web UI;
 - Docker, CI, metrics, tracing, and release polish.
 
@@ -46,7 +47,7 @@ internal/             active Go packages
   config/             standard-library flag config
   logging/            baseline logger
   util/               shared helpers
-proto/                future protobuf/gRPC contracts
+proto/                protobuf/gRPC contract sources
 web/                  future Web UI
 deploy/               future Docker/Compose assets
 docs/                 architecture, protocol, development, testing, roadmap
@@ -81,6 +82,13 @@ Run the gateway poller instead of the demo client:
 go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 5s
 ```
 
+Run with gRPC control APIs:
+
+```powershell
+go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode sum -grpc-listen 127.0.0.1:9100
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 1s -grpc-listen 127.0.0.1:9200
+```
+
 CRC16 mode:
 
 ```powershell
@@ -110,6 +118,7 @@ Client:
 - `-retries`: retry count;
 - `-pollstep`: polling ticker step in seconds;
 - `-log`: log file path, or stdout when empty.
+- `-grpc-listen`: gRPC control listen address, default `:9100`; empty disables gRPC.
 
 Emulator:
 
@@ -126,6 +135,7 @@ Emulator:
 - `-adapter`: adapter address byte;
 - `-readtimeout`: connection read timeout in seconds;
 - `-log`: log file path, or stdout when empty.
+- `-grpc-listen`: gRPC control listen address, default `:9200`; empty disables gRPC.
 
 Gateway:
 
@@ -149,6 +159,7 @@ go build -o bin/ft12-emulator ./cmd/ft12-emulator
 go build -o bin/ft12-gateway ./cmd/ft12-gateway
 go build -o bin/ft12-cli ./cmd/ft12-cli
 go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -interval 5s
+make proto
 ```
 
 A root `Makefile` is also provided for Unix-like shells and environments with
@@ -163,6 +174,7 @@ A root `Makefile` is also provided for Unix-like shells and environments with
 - [Roadmap](docs/roadmap.md)
 - [Emulator](docs/emulator.md)
 - [Gateway](docs/gateway.md)
+- [gRPC API](docs/grpc-api.md)
 - [Legacy](docs/legacy.md)
 
 The original PDF and task document are preserved under `docs/files/` and

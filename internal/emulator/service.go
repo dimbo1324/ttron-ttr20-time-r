@@ -108,7 +108,19 @@ func (s *Service) Mode() checksum.Mode {
 }
 
 func (s *Service) FaultMode() FaultMode {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.fault
+}
+
+func (s *Service) SetFaultMode(fault FaultMode) FaultMode {
+	fault.BadChecksumProb = clampProbability(fault.BadChecksumProb)
+	fault.FragmentProb = clampProbability(fault.FragmentProb)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.fault = fault
+	s.status.FaultMode = fault
+	return fault
 }
 
 func (s *Service) Timeouts() (time.Duration, time.Duration) {

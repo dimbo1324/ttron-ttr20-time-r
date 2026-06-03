@@ -1,6 +1,30 @@
 # Proto Contracts
 
-Protobuf and gRPC contracts are intentionally not implemented in Step 1.
+Step 5 adds protobuf/gRPC contracts under `proto/ft12/v1`.
 
-This directory reserves the location for future service-to-service contracts,
-planned for the gRPC milestone.
+Source files:
+
+- `common.proto`
+- `emulator.proto`
+- `gateway.proto`
+
+Generated Go code is committed under:
+
+```text
+internal/api/grpc/ft12/v1
+```
+
+Generate:
+
+```powershell
+make proto
+```
+
+Required tools:
+
+```powershell
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+```
+
+`protoc` must also be available on `PATH`.

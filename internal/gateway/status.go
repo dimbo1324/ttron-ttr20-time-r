@@ -12,6 +12,7 @@ type Status struct {
 	ChecksumMode           string
 	PollingInterval        time.Duration
 	RequestTimeout         time.Duration
+	ConnectTimeout         time.Duration
 	Connected              bool
 	ConnectionAttempts     uint64
 	SuccessfulReads        uint64

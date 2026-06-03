@@ -26,3 +26,5 @@ go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -no-response
 
 The service keeps in-memory status counters and a fixed-size recent event
 buffer. There is no database or external observability stack in this milestone.
+
+The emulator also exposes a gRPC control API when `-grpc-listen` is set.

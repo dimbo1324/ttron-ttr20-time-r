@@ -1,8 +1,9 @@
 .DEFAULT_GOAL := help
 
 BIN_DIR := bin
+PROTO_FILES := proto/ft12/v1/common.proto proto/ft12/v1/emulator.proto proto/ft12/v1/gateway.proto
 
-.PHONY: help fmt test build build-client build-emulator build-gateway build-cli run-emulator run-client run-gateway clean
+.PHONY: help fmt test build build-client build-emulator build-gateway build-cli run-emulator run-client run-gateway proto clean
 
 help:
 	@echo "Targets:"
@@ -16,6 +17,7 @@ help:
 	@echo "  run-emulator    run emulator on default address"
 	@echo "  run-client      run client against default emulator"
 	@echo "  run-gateway     run gateway against default emulator"
+	@echo "  proto           generate protobuf/gRPC Go code"
 	@echo "  clean           remove build output"
 
 fmt:
@@ -47,6 +49,9 @@ run-client:
 
 run-gateway:
 	go run ./cmd/ft12-gateway
+
+proto:
+	protoc --go_out=. --go_opt=module=github.com/dimbo1324/ttron-ttr20-time-r --go-grpc_out=. --go-grpc_opt=module=github.com/dimbo1324/ttron-ttr20-time-r $(PROTO_FILES)
 
 clean:
 	rm -rf $(BIN_DIR)

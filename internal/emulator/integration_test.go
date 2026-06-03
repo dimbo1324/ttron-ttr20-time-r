@@ -38,6 +38,10 @@ func TestEmulatorReadTimeIntegration(t *testing.T) {
 	if resp.Raw == "" {
 		t.Fatal("empty response timestamp")
 	}
+	waitForEmulator(t, time.Second, func() bool {
+		status := srv.Service().Status()
+		return status.TotalRequests == 1 && status.TotalResponses == 1 && status.RecentFramesCount > 0
+	})
 	if status := srv.Service().Status(); status.TotalRequests != 1 || status.TotalResponses != 1 || status.RecentFramesCount == 0 {
 		t.Fatalf("status = %+v", status)
 	}
@@ -192,4 +196,16 @@ func TestFaultModeClamp(t *testing.T) {
 	if f.BadChecksumProb != 1 || f.FragmentProb != 0 {
 		t.Fatalf("fault = %+v", f)
 	}
+}
+
+func waitForEmulator(t *testing.T, timeout time.Duration, fn func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if fn() {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("condition was not met")
 }

@@ -4,11 +4,11 @@
 2. FT1.2 protocol core. Implemented.
 3. Emulator TCP service. Implemented.
 4. Gateway polling service. Implemented.
-5. gRPC contracts. Next.
-6. Web UI.
+5. gRPC contracts. Implemented.
+6. Web UI. Next.
 7. Docker, observability, and CI.
 8. Final docs and release polish.
 
-Step 4 is complete when the emulator TCP service, transport helpers, gateway
-poller, fault handling, status/history models, integration tests, docs, and
-build/test checks are in place.
+Step 5 is complete when proto contracts, generated Go code, emulator/gateway
+gRPC adapters, client helpers, integration tests, docs, and build/test checks
+are in place.

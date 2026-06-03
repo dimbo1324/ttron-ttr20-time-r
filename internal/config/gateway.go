@@ -16,6 +16,7 @@ type GatewayConfig struct {
 	BackoffMax     time.Duration
 	RecentSize     int
 	LogFile        string
+	GRPCListen     string
 }
 
 func LoadGateway() *GatewayConfig {
@@ -31,6 +32,7 @@ func LoadGateway() *GatewayConfig {
 	flag.DurationVar(&c.BackoffMax, "backoff-max", 5*time.Second, "maximum reconnect backoff")
 	flag.IntVar(&c.RecentSize, "recent", 100, "recent frame/event buffer size")
 	flag.StringVar(&c.LogFile, "log", "", "path to log file; empty = stdout")
+	flag.StringVar(&c.GRPCListen, "grpc-listen", ":9200", "gRPC control listen address; empty disables gRPC")
 	flag.Parse()
 	if *mode != "" {
 		c.CRCMode = *mode

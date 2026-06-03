@@ -20,6 +20,7 @@ type EmulatorConfig struct {
 	CloseAfterRequest    bool
 	AdapterAddr          int
 	LogFile              string
+	GRPCListen           string
 	ReadTimeout          int
 	ReadTimeoutDuration  time.Duration
 	WriteTimeoutDuration time.Duration
@@ -44,6 +45,7 @@ func LoadEmulator() *EmulatorConfig {
 	flag.BoolVar(&c.CloseAfterRequest, "close-after-request", false, "close connection after processing a request")
 	flag.IntVar(&c.AdapterAddr, "adapter", 1, "adapter address byte (0..255)")
 	flag.StringVar(&c.LogFile, "log", "", "path to log file; empty = stdout")
+	flag.StringVar(&c.GRPCListen, "grpc-listen", ":9100", "gRPC control listen address; empty disables gRPC")
 	flag.IntVar(&c.ReadTimeout, "readtimeout", 300, "connection read timeout in seconds")
 	flag.DurationVar(&c.ReadTimeoutDuration, "read-timeout", 300*time.Second, "connection read timeout")
 	flag.DurationVar(&c.WriteTimeoutDuration, "write-timeout", 5*time.Second, "connection write timeout")
