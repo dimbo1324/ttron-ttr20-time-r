@@ -31,6 +31,13 @@ remains the device data path.
 
 `cmd/ft12-cli` is still a placeholder for future local inspection tools.
 
+`cmd/ft12-api` runs a thin HTTP/JSON adapter. It talks to emulator and gateway
+through the existing gRPC clients and exposes frontend-friendly DTOs for the Web
+UI. It does not call emulator or gateway service packages directly.
+
+The Web UI under `web/` is a React/Vite app that talks to `/api/v1` with
+HTTP/JSON. gRPC remains an internal service API.
+
 ## Step 5.5 Hardening
 
 Command entrypoints are intentionally thin. Process bootstrap lives in:
@@ -55,6 +62,8 @@ cmd/ft12-emulator -> internal/app/emulatorapp -> internal/emulator -> internal/t
 cmd/ft12-gateway  -> internal/app/gatewayapp  -> internal/gateway  -> internal/transport/tcp -> internal/protocol
 cmd/ft12-client   -> internal/client   -> internal/protocol
 app/* gRPC wiring -> internal/api/grpc  -> internal/{emulator,gateway}
+cmd/ft12-api      -> internal/app/apiapp -> internal/api/http -> internal/api/grpc/client
+web/              -> HTTP/JSON only
 ```
 
 `internal/protocol` depends only on the Go standard library. It does not depend
@@ -67,3 +76,5 @@ See also:
 
 - [Dependency rules](architecture/dependency-rules.md)
 - [ADR 0005: Architecture hardening before Web UI](architecture/decisions/0005-architecture-hardening-before-web-ui.md)
+- [HTTP API](http-api.md)
+- [Web UI](web-ui.md)

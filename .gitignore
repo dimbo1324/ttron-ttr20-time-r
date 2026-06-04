@@ -37,7 +37,10 @@ venv/
 
 # Node future
 node_modules/
+web/node_modules/
 web/dist/
+web/.vite/
+web/*.tsbuildinfo
 
 # Docker future
 *.tar
