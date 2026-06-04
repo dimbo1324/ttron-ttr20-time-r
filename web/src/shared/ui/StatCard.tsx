@@ -11,9 +11,9 @@ export function StatCard({ label, value, detail, tone = 'default' }: { label: st
 
   return (
     <Card className="min-h-[92px]">
-      <div className="text-xs uppercase text-subtle">{label}</div>
-      <div className={`mt-1 truncate text-2xl font-semibold ${toneClass}`}>{value}</div>
-      {detail ? <div className="mt-1 truncate text-xs text-subtle">{detail}</div> : null}
+      <div className="text-wrap-safe text-xs uppercase leading-tight text-subtle" title={label}>{label}</div>
+      <div className={`text-wrap-safe mt-1 text-2xl font-semibold leading-tight ${toneClass}`} title={value}>{value}</div>
+      {detail ? <div className="text-wrap-safe mt-1 text-xs leading-snug text-subtle" title={detail}>{detail}</div> : null}
     </Card>
   );
 }

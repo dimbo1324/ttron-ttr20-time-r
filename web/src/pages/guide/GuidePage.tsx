@@ -35,18 +35,18 @@ export function GuidePage() {
           {sections.map((section) => (
             <Card key={section.title}>
               <div className="mb-2 flex items-center gap-2">
-                <BookOpen className="text-signal" size={16} />
-                <h2 className="text-base font-semibold text-ink">{t(section.title)}</h2>
+                <BookOpen className="shrink-0 text-signal" size={16} />
+                <h2 className="text-wrap-safe text-base font-semibold text-ink">{t(section.title)}</h2>
               </div>
-              <p className="text-sm leading-6 text-subtle">{t(section.body)}</p>
+              <p className="text-wrap-safe text-sm leading-6 text-subtle">{t(section.body)}</p>
             </Card>
           ))}
           <Card className="border-fault/40">
             <div className="mb-2 flex items-center gap-2">
-              <ShieldAlert className="text-fault" size={16} />
-              <h2 className="text-base font-semibold text-ink">{t('guide.safety.title')}</h2>
+              <ShieldAlert className="shrink-0 text-fault" size={16} />
+              <h2 className="text-wrap-safe text-base font-semibold text-ink">{t('guide.safety.title')}</h2>
             </div>
-            <p className="text-sm leading-6 text-subtle">{t('guide.safety.body')}</p>
+            <p className="text-wrap-safe text-sm leading-6 text-subtle">{t('guide.safety.body')}</p>
           </Card>
         </div>
       </div>

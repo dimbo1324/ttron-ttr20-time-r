@@ -17,8 +17,11 @@ The current baseline includes tests for:
 - lifecycle group cancellation/error behavior;
 - stable event ring IDs and snapshot copy behavior;
 - shared gRPC mapper behavior;
+- HTTP DTO nil-safety, timestamp UTC formatting, status/checksum/direction
+  mapping, and last-read/fault-mode DTO fallbacks;
 - HTTP API config, handlers, error shape, CORS, readiness, metrics, events merge, controls, security headers, JSON body limits, invalid JSON, and invalid limits;
-- HTTP export endpoints, JSON download envelopes, CSV escaping, and export limit validation;
+- HTTP export endpoints, JSON download envelopes, status export envelopes, CSV
+  escaping, export source validation, method validation, and export limit validation;
 - runtime logging helpers and cleanup dry-run scripts;
 - hex dump formatting.
 
@@ -82,7 +85,9 @@ Manual smoke coverage should include client/emulator in `sum` and `crc16`,
 gateway/emulator in `sum` and `crc16`, HTTP API health/readiness/status/events
 and export endpoints, Docker Compose, and the Web UI dashboard, RU/EN language
 switching, dark/light themes, exports, diagnostics, and Guide page in a browser
-when the environment supports it.
+when the environment supports it. Browser layout audits should also report no
+text overflow, no body-level horizontal scroll, and no non-nested overlaps in
+the main dashboard/events/gateway views.
 
 Future optional milestones can add deeper Web UI/API contract coverage and
 release artifact automation.

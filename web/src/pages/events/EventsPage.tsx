@@ -41,22 +41,22 @@ export function EventsPage() {
       <div className="mt-3 space-y-3">
         <Card>
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="flex flex-wrap gap-3">
+            <div className="grid flex-1 gap-3 sm:grid-cols-[minmax(11rem,14rem)_minmax(11rem,14rem)_auto]">
               <label className="text-sm text-ink">
-                {t('common.source')}
-                <select className="app-field ml-2 px-3 py-2" value={source} onChange={(event) => setSource(event.target.value as EventSource)}>
+                <span className="text-wrap-safe mb-1 block font-medium">{t('common.source')}</span>
+                <select className="app-field w-full px-3 py-2" value={source} onChange={(event) => setSource(event.target.value as EventSource)}>
                   {sources.map((value) => <option key={value} value={value}>{displaySource(value, t)}</option>)}
                 </select>
               </label>
               <label className="text-sm text-ink">
-                {t('common.direction')}
-                <select className="app-field ml-2 px-3 py-2" value={direction} onChange={(event) => setDirection(event.target.value as 'all' | EventDirection)}>
+                <span className="text-wrap-safe mb-1 block font-medium">{t('common.direction')}</span>
+                <select className="app-field w-full px-3 py-2" value={direction} onChange={(event) => setDirection(event.target.value as 'all' | EventDirection)}>
                   {directions.map((value) => <option key={value} value={value}>{value === 'all' ? t('common.all') : value}</option>)}
                 </select>
               </label>
-              <span className="self-center rounded-md border border-line bg-muted px-3 py-2 text-sm text-subtle">{t('events.limit100')}</span>
+              <span className="text-wrap-safe self-end rounded-md border border-line bg-muted px-3 py-2 text-sm text-subtle">{t('events.limit100')}</span>
             </div>
-            {events.updatedAt ? <span className="text-xs text-subtle">{t('common.updated', { time: events.updatedAt.toLocaleTimeString(locale) })}</span> : null}
+            {events.updatedAt ? <span className="text-wrap-safe text-xs text-subtle">{t('common.updated', { time: events.updatedAt.toLocaleTimeString(locale) })}</span> : null}
           </div>
         </Card>
         <div className="grid gap-3 xl:grid-cols-[1fr_1fr]">

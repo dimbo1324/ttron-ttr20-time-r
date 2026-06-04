@@ -1,7 +1,7 @@
 export function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (next: boolean) => void; label: string }) {
   return (
     <label className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-line bg-muted px-3 py-2 text-sm text-ink transition hover:border-signal/60">
-      <span>{label}</span>
+      <span className="text-wrap-safe min-w-0 leading-snug">{label}</span>
       <input
         type="checkbox"
         className="peer sr-only"

@@ -65,3 +65,24 @@ func TestTimeZeroReturnsNil(t *testing.T) {
 		t.Fatal("zero time should map to nil")
 	}
 }
+
+func TestServiceState(t *testing.T) {
+	tests := []struct {
+		name      string
+		running   bool
+		lastError string
+		want      ft12v1.ServiceState
+	}{
+		{name: "stopped", running: false, want: ft12v1.ServiceState_SERVICE_STATE_STOPPED},
+		{name: "running", running: true, want: ft12v1.ServiceState_SERVICE_STATE_RUNNING},
+		{name: "degraded", running: true, lastError: "timeout", want: ft12v1.ServiceState_SERVICE_STATE_DEGRADED},
+		{name: "stopped with stale error", running: false, lastError: "timeout", want: ft12v1.ServiceState_SERVICE_STATE_STOPPED},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ServiceState(tt.running, tt.lastError); got != tt.want {
+				t.Fatalf("ServiceState(%v, %q) = %v, want %v", tt.running, tt.lastError, got, tt.want)
+			}
+		})
+	}
+}

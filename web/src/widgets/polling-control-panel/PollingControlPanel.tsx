@@ -39,10 +39,10 @@ export function PollingControlPanel({ onUpdated }: { onUpdated: () => Promise<vo
 
   return (
     <Card>
-      <h2 className="text-base font-semibold text-ink">{t('polling.title')}</h2>
-      <p className="mt-1 text-sm text-subtle">{t('polling.subtitle')}</p>
+      <h2 className="text-wrap-safe text-base font-semibold text-ink">{t('polling.title')}</h2>
+      <p className="text-wrap-safe mt-1 text-sm text-subtle">{t('polling.subtitle')}</p>
       <ErrorBanner message={error} />
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="button-row mt-3">
         <Button variant="primary" icon={<Play size={16} />} onClick={() => void start()} disabled={busy !== null}>
           {busy === 'start' ? t('polling.starting') : t('polling.start')}
         </Button>

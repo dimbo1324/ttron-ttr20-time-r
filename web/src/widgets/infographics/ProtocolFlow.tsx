@@ -1,8 +1,8 @@
-import { ArrowRight } from 'lucide-react';
 import type { Overview } from '../../entities/events/types';
 import { displayStatus } from '../../shared/lib/display';
 import { Badge } from '../../shared/ui/Badge';
 import { Card } from '../../shared/ui/Card';
+import { InfoTile } from '../../shared/ui/InfoTile';
 import { useI18n } from '../../shared/i18n/useI18n';
 
 export function ProtocolFlow({ overview }: { overview?: Overview | null }) {
@@ -24,18 +24,15 @@ export function ProtocolFlow({ overview }: { overview?: Overview | null }) {
           <p className="text-xs text-subtle">{t('infographic.protocolFlow.subtitle')}</p>
         </div>
       </div>
-      <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
+      <div className="info-grid">
         {nodes.map((node, index) => (
-          <div key={node.label} className="flex items-stretch gap-2">
-            <div className="flex min-h-[92px] flex-1 flex-col justify-between rounded-md border border-line bg-muted p-2">
-              <div>
-                <div className="text-sm font-semibold text-ink">{node.label}</div>
-                <div className="mt-0.5 text-xs text-subtle">{node.detail}</div>
-              </div>
-              <Badge value={node.tone ?? 'unspecified'} label={node.status} />
-            </div>
-            {index < nodes.length - 1 ? <ArrowRight className="mt-9 hidden shrink-0 text-subtle xl:block" size={16} /> : null}
-          </div>
+          <InfoTile
+            key={`${index}-${node.label}`}
+            title={node.label}
+            detail={node.detail}
+            icon={<span className="flex h-5 w-5 items-center justify-center rounded-full border border-line bg-panel text-[11px] font-semibold text-subtle">{index + 1}</span>}
+            badge={<Badge value={node.tone ?? 'unspecified'} label={node.status} />}
+          />
         ))}
       </div>
     </Card>

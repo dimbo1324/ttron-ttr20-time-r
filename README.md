@@ -47,6 +47,8 @@ Web UI talks only to `/api`.
 - React/Vite/TypeScript/Tailwind dashboard with Russian-by-default and English UI.
 - Persisted dark/light themes for the local dashboard.
 - Compact responsive Web UI for laptop and desktop monitoring.
+- Polished container-safe UI primitives for wrapped labels, stable buttons,
+  readable badges, detail lists, and non-overlapping protocol tiles.
 - Protocol flow, frame anatomy, polling timeline, and event distribution infographics.
 - Events export as JSON/CSV plus overview and service status JSON exports.
 - Docker Compose stack with nginx static serving and API proxy.

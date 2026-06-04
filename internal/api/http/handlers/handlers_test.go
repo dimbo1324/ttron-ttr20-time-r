@@ -232,6 +232,32 @@ func TestEventsEndpointMergesEvents(t *testing.T) {
 	}
 }
 
+func TestEventsEndpointRejectsInvalidSource(t *testing.T) {
+	handler, _, _ := testHandler()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events?source=bad&limit=10", nil)
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"code":"INVALID_SOURCE"`) {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+}
+
+func TestGatewayControlRejectsWrongMethod(t *testing.T) {
+	handler, _, _ := testHandler()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/gateway/start", nil)
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"code":"METHOD_NOT_ALLOWED"`) {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+}
+
 func TestWriteEventsCSVEscapesValues(t *testing.T) {
 	timestamp := "2026-06-04T12:00:00Z"
 	var buf bytes.Buffer
@@ -332,6 +358,43 @@ func TestExportOverviewJSONEndpoint(t *testing.T) {
 	}
 	if body.ExportedAt == "" || len(body.Overview.Events) != 2 {
 		t.Fatalf("body = %+v", body)
+	}
+}
+
+func TestExportStatusJSONEndpoints(t *testing.T) {
+	handler, _, _ := testHandler()
+	tests := []struct {
+		path       string
+		wantPrefix string
+		wantState  string
+	}{
+		{path: "/api/v1/export/emulator-status.json", wantPrefix: "ft12-emulator-status-", wantState: "running"},
+		{path: "/api/v1/export/gateway-status.json", wantPrefix: "ft12-gateway-status-", wantState: "running"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			rec := httptest.NewRecorder()
+			handler.Routes().ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+			}
+			if got := rec.Header().Get("Content-Disposition"); !strings.Contains(got, tt.wantPrefix) {
+				t.Fatalf("content-disposition = %q", got)
+			}
+			var body struct {
+				ExportedAt string `json:"exportedAt"`
+				Status     struct {
+					State string `json:"state"`
+				} `json:"status"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if body.ExportedAt == "" || body.Status.State != tt.wantState {
+				t.Fatalf("body = %+v", body)
+			}
+		})
 	}
 }
 

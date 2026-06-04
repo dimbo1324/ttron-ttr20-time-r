@@ -46,7 +46,7 @@ export function ExportActions({ jsonPath, csvPath, copyValue, compact = false }:
 
   return (
     <div className="flex flex-col gap-2">
-      <div className={`flex flex-wrap gap-2 ${compact ? 'justify-end' : ''}`}>
+      <div className={`button-row ${compact ? 'sm:justify-end' : ''}`}>
         {jsonPath ? (
           <Button
             icon={<FileJson size={16} />}

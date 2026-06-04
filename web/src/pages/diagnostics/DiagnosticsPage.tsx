@@ -8,6 +8,7 @@ import { usePollingResource } from '../../shared/lib/usePollingResource';
 import { useI18n } from '../../shared/i18n/useI18n';
 import { Badge } from '../../shared/ui/Badge';
 import { Card } from '../../shared/ui/Card';
+import { DetailList } from '../../shared/ui/DetailList';
 import { ExportActions } from '../../shared/ui/ExportActions';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { StatCard } from '../../shared/ui/StatCard';
@@ -24,6 +25,14 @@ export function DiagnosticsPage() {
 
   if (overview.loading && !overview.data) return <LoadingState label={t('common.loadingDiagnostics')} />;
   const data = overview.data;
+  const counterItems = data ? [
+    { label: t('diagnostics.totalRequests'), value: compactNumber(data.emulator.totalRequests) },
+    { label: t('diagnostics.totalResponses'), value: compactNumber(data.emulator.totalResponses) },
+    { label: t('diagnostics.successfulReads'), value: compactNumber(data.gateway.successfulReads) },
+    { label: t('diagnostics.failedReads'), value: compactNumber(data.gateway.failedReads) },
+    { label: t('diagnostics.reconnects'), value: compactNumber(data.gateway.reconnects) },
+    { label: t('diagnostics.eventsByType'), value: compactNumber(data.events.length) },
+  ] : [];
 
   return (
     <>
@@ -50,14 +59,7 @@ export function DiagnosticsPage() {
                   <Badge value={data.gateway.connected ? 'connected' : data.gateway.state} label={displayStatus(data.gateway.connected ? 'connected' : data.gateway.state, t)} />
                 </div>
               </div>
-              <div className="grid gap-2 text-sm text-subtle sm:grid-cols-2">
-                <div>{t('diagnostics.totalRequests')}: <span className="text-ink">{compactNumber(data.emulator.totalRequests)}</span></div>
-                <div>{t('diagnostics.totalResponses')}: <span className="text-ink">{compactNumber(data.emulator.totalResponses)}</span></div>
-                <div>{t('diagnostics.successfulReads')}: <span className="text-ink">{compactNumber(data.gateway.successfulReads)}</span></div>
-                <div>{t('diagnostics.failedReads')}: <span className="text-ink">{compactNumber(data.gateway.failedReads)}</span></div>
-                <div>{t('diagnostics.reconnects')}: <span className="text-ink">{compactNumber(data.gateway.reconnects)}</span></div>
-                <div>{t('diagnostics.eventsByType')}: <span className="text-ink">{compactNumber(data.events.length)}</span></div>
-              </div>
+              <DetailList items={counterItems} />
             </Card>
             <EventDistribution events={data.events} />
           </div>
@@ -69,7 +71,7 @@ export function DiagnosticsPage() {
                   <div>{t('diagnostics.totalRequests')}: <span className="text-ink">{compactNumber(metricsSummary.requestsTotal)}</span></div>
                   {metricsSummary.paths.map((item) => (
                     <div key={item.path} className="flex items-center justify-between gap-3 rounded-md border border-line bg-muted px-3 py-2">
-                      <span className="truncate font-mono text-xs">{item.path}</span>
+                      <span className="text-wrap-safe font-mono text-xs">{item.path}</span>
                       <span className="font-mono text-xs text-ink">{compactNumber(item.count)}</span>
                     </div>
                   ))}
@@ -79,12 +81,12 @@ export function DiagnosticsPage() {
             <Card>
               <h2 className="text-base font-semibold text-ink">{t('diagnostics.docsLinks')}</h2>
               <div className="mt-3 grid gap-2 text-sm text-subtle sm:grid-cols-2">
-                <a className="rounded-md border border-line bg-muted px-3 py-2 transition hover:border-signal hover:text-ink" href="https://github.com/dimbo1324/ttron-ttr20-time-r/blob/main/docs/http-api.md">docs/http-api.md</a>
-                <a className="rounded-md border border-line bg-muted px-3 py-2 transition hover:border-signal hover:text-ink" href="https://github.com/dimbo1324/ttron-ttr20-time-r/blob/main/docs/web-ui.md">docs/web-ui.md</a>
-                <a className="rounded-md border border-line bg-muted px-3 py-2 transition hover:border-signal hover:text-ink" href="https://github.com/dimbo1324/ttron-ttr20-time-r/blob/main/docs/protocol.md">docs/protocol.md</a>
-                <a className="rounded-md border border-line bg-muted px-3 py-2 transition hover:border-signal hover:text-ink" href="https://github.com/dimbo1324/ttron-ttr20-time-r/blob/main/docs/examples.md">docs/examples.md</a>
+                <a className="text-wrap-safe rounded-md border border-line bg-muted px-3 py-2 transition hover:border-signal hover:text-ink" href="https://github.com/dimbo1324/ttron-ttr20-time-r/blob/main/docs/http-api.md">docs/http-api.md</a>
+                <a className="text-wrap-safe rounded-md border border-line bg-muted px-3 py-2 transition hover:border-signal hover:text-ink" href="https://github.com/dimbo1324/ttron-ttr20-time-r/blob/main/docs/web-ui.md">docs/web-ui.md</a>
+                <a className="text-wrap-safe rounded-md border border-line bg-muted px-3 py-2 transition hover:border-signal hover:text-ink" href="https://github.com/dimbo1324/ttron-ttr20-time-r/blob/main/docs/protocol.md">docs/protocol.md</a>
+                <a className="text-wrap-safe rounded-md border border-line bg-muted px-3 py-2 transition hover:border-signal hover:text-ink" href="https://github.com/dimbo1324/ttron-ttr20-time-r/blob/main/docs/examples.md">docs/examples.md</a>
               </div>
-              <p className="mt-3 text-xs text-subtle">{t('export.dataNote')}</p>
+              <p className="text-wrap-safe mt-3 text-xs text-subtle">{t('export.dataNote')}</p>
             </Card>
           </div>
         </div>

@@ -15,11 +15,12 @@ const tones: Record<string, string> = {
   system: 'app-badge--neutral',
 };
 
-export function Badge({ value, tone, label }: { value: string; tone?: string; label?: string }) {
+export function Badge({ value, tone, label, className = '' }: { value: string; tone?: string; label?: string; className?: string }) {
   const key = (tone ?? value).toLowerCase();
+  const text = label ?? value;
   return (
-    <span className={`app-badge ${tones[key] ?? 'app-badge--neutral'}`}>
-      {label ?? value}
+    <span className={`app-badge ${tones[key] ?? 'app-badge--neutral'} ${className}`} title={text}>
+      {text}
     </span>
   );
 }

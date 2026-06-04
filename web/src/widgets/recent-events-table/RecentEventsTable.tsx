@@ -14,15 +14,23 @@ export function RecentEventsTable({ events, maxHeightClass = 'max-h-[340px]' }: 
   if (events.length === 0) return <EmptyState label={t('common.noRecentFrames')} />;
   return (
     <div className={`overflow-auto rounded-md border border-line ${maxHeightClass}`}>
-      <table className="w-full border-collapse text-left text-sm">
+      <table className="responsive-table w-full border-collapse text-left text-sm">
+        <colgroup>
+          <col className="w-[12rem]" />
+          <col className="w-[8rem]" />
+          <col className="w-[7rem]" />
+          <col className="w-[8rem]" />
+          <col className="w-[10rem]" />
+          <col />
+        </colgroup>
         <thead className="sticky top-0 z-[1] bg-muted text-xs uppercase text-subtle">
           <tr>
-            <th className="px-3 py-2">{t('table.time')}</th>
-            <th className="px-3 py-2">{t('table.source')}</th>
-            <th className="px-3 py-2">{t('table.direction')}</th>
-            <th className="px-3 py-2">{t('table.command')}</th>
-            <th className="px-3 py-2">{t('table.remote')}</th>
-            <th className="px-3 py-2">{t('table.message')}</th>
+            <th className="text-wrap-safe px-3 py-2">{t('table.time')}</th>
+            <th className="text-wrap-safe px-3 py-2">{t('table.source')}</th>
+            <th className="text-wrap-safe px-3 py-2">{t('table.direction')}</th>
+            <th className="text-wrap-safe px-3 py-2">{t('table.command')}</th>
+            <th className="text-wrap-safe px-3 py-2">{t('table.remote')}</th>
+            <th className="text-wrap-safe px-3 py-2">{t('table.message')}</th>
           </tr>
         </thead>
         <tbody>
@@ -47,12 +55,14 @@ export function RecentEventsTable({ events, maxHeightClass = 'max-h-[340px]' }: 
                 role="button"
                 tabIndex={0}
               >
-                <td className="whitespace-nowrap px-3 py-2 text-xs text-subtle">{formatTime(event.timestamp, t('common.notAvailable'), locale)}</td>
-                <td className="px-3 py-2">{displaySource(event.source, t)}</td>
+                <td className="px-3 py-2 text-xs text-subtle">{formatTime(event.timestamp, t('common.notAvailable'), locale)}</td>
+                <td className="text-wrap-safe px-3 py-2">{displaySource(event.source, t)}</td>
                 <td className="px-3 py-2"><Badge value={event.direction} tone={event.direction} /></td>
-                <td className="px-3 py-2 font-mono text-xs">{event.command || '-'}</td>
-                <td className="px-3 py-2 text-xs">{event.remoteAddr || '-'}</td>
-                <td className="max-w-[280px] truncate px-3 py-2 text-xs text-subtle">{event.error || event.message || '-'}</td>
+                <td className="text-wrap-safe px-3 py-2 font-mono text-xs">{event.command || '-'}</td>
+                <td className="text-wrap-safe px-3 py-2 text-xs">{event.remoteAddr || '-'}</td>
+                <td className="px-3 py-2 text-xs text-subtle" title={event.error || event.message || '-'}>
+                  <span className="responsive-table__message">{event.error || event.message || '-'}</span>
+                </td>
               </tr>
               {selected ? (
                 <tr className="border-t border-line bg-muted">

@@ -14,7 +14,7 @@ export function App() {
 
   return (
     <div className="min-h-screen text-ink">
-      <aside className="fixed inset-y-0 left-0 hidden w-56 border-r border-line bg-graphite p-3 md:flex md:flex-col">
+      <aside className="fixed inset-y-0 left-0 hidden w-60 border-r border-line bg-graphite p-3 md:flex md:flex-col">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-signal/40 bg-signal/10 text-signal">
             <AppIcon size={20} />
@@ -31,19 +31,20 @@ export function App() {
             return (
               <button
                 key={route.id}
-                className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-sm transition ${selected ? 'border-signal/50 bg-signal/15 text-signal' : 'border-transparent text-subtle hover:border-line hover:bg-muted hover:text-ink'}`}
+                className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-sm leading-snug transition ${selected ? 'border-signal/50 bg-signal/15 text-signal' : 'border-transparent text-subtle hover:border-line hover:bg-muted hover:text-ink'}`}
                 onClick={() => setRouteID(route.id)}
+                title={t(route.labelKey)}
               >
-                <Icon size={16} />
-                {t(route.labelKey)}
+                <Icon className="shrink-0" size={16} />
+                <span className="text-wrap-safe min-w-0">{t(route.labelKey)}</span>
               </button>
             );
           })}
         </nav>
         <div className="mt-auto space-y-2 border-t border-line pt-3">
           <LanguageSwitcher language={language} setLanguage={setLanguage} />
-          <button className="flex w-full items-center justify-between rounded-md border border-line bg-muted px-3 py-2 text-sm text-ink transition hover:border-signal" onClick={toggleTheme}>
-            <span className="flex items-center gap-2">{theme === 'dark' ? <Moon size={15} /> : <Sun size={15} />}{t('app.theme')}</span>
+          <button className="flex w-full items-center justify-between gap-3 rounded-md border border-line bg-muted px-3 py-2 text-sm text-ink transition hover:border-signal" onClick={toggleTheme}>
+            <span className="flex min-w-0 items-center gap-2">{theme === 'dark' ? <Moon className="shrink-0" size={15} /> : <Sun className="shrink-0" size={15} />}<span className="text-wrap-safe">{t('app.theme')}</span></span>
             <span className="text-xs text-subtle">{theme === 'dark' ? t('app.theme.dark') : t('app.theme.light')}</span>
           </button>
         </div>
@@ -62,7 +63,7 @@ export function App() {
           </button>
         </div>
       </header>
-      <main className="p-3 md:ml-56 md:p-4 xl:p-5">
+      <main className="p-3 md:ml-60 md:p-4 xl:p-5">
         <Page />
       </main>
     </div>
@@ -74,8 +75,8 @@ function LanguageSwitcher({ language, setLanguage }: { language: Language; setLa
   return (
     <div className="rounded-md border border-line bg-muted p-1">
       <div className="mb-1 flex items-center gap-1 px-2 text-xs text-subtle">
-        <Languages size={13} />
-        {t('app.language')}
+        <Languages className="shrink-0" size={13} />
+        <span className="text-wrap-safe">{t('app.language')}</span>
       </div>
       <div className="grid grid-cols-2 gap-1">
         {(['ru', 'en'] as const).map((value) => (

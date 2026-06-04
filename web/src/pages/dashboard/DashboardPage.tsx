@@ -5,6 +5,7 @@ import { compactNumber, formatTime, localeForLanguage } from '../../shared/lib/f
 import { useI18n } from '../../shared/i18n/useI18n';
 import { Badge } from '../../shared/ui/Badge';
 import { Card } from '../../shared/ui/Card';
+import { DetailList } from '../../shared/ui/DetailList';
 import { ExportActions } from '../../shared/ui/ExportActions';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { StatCard } from '../../shared/ui/StatCard';
@@ -20,6 +21,14 @@ export function DashboardPage() {
   if (overview.loading && !overview.data) return <LoadingState label={t('common.loadingDashboard')} />;
   const data = overview.data;
   const gatewayState = data?.gateway.connected ? 'connected' : data?.gateway.state;
+  const statusItems = data ? [
+    { label: t('dashboard.emulatorChecksum'), value: displayChecksum(data.emulator.checksumMode), mono: true },
+    { label: t('dashboard.gatewayChecksum'), value: displayChecksum(data.gateway.checksumMode), mono: true },
+    { label: t('dashboard.activeConnections'), value: compactNumber(data.emulator.activeConnections) },
+    { label: t('dashboard.reconnects'), value: compactNumber(data.gateway.reconnects) },
+    { label: t('dashboard.protocolErrors'), value: compactNumber(data.emulator.protocolErrors) },
+    { label: t('dashboard.totalEvents'), value: compactNumber(data.events.length) },
+  ] : [];
 
   return (
     <>
@@ -50,14 +59,7 @@ export function DashboardPage() {
                   <Badge value={gatewayState ?? 'unspecified'} label={displayStatus(gatewayState, t)} />
                 </div>
               </div>
-              <div className="grid gap-2 text-sm text-subtle md:grid-cols-2 xl:grid-cols-1">
-                <div>{t('dashboard.emulatorChecksum')}: <span className="text-ink">{displayChecksum(data.emulator.checksumMode)}</span></div>
-                <div>{t('dashboard.gatewayChecksum')}: <span className="text-ink">{displayChecksum(data.gateway.checksumMode)}</span></div>
-                <div>{t('dashboard.activeConnections')}: <span className="text-ink">{compactNumber(data.emulator.activeConnections)}</span></div>
-                <div>{t('dashboard.reconnects')}: <span className="text-ink">{compactNumber(data.gateway.reconnects)}</span></div>
-                <div>{t('dashboard.protocolErrors')}: <span className="text-ink">{compactNumber(data.emulator.protocolErrors)}</span></div>
-                <div>{t('dashboard.totalEvents')}: <span className="text-ink">{compactNumber(data.events.length)}</span></div>
-              </div>
+              <DetailList items={statusItems} />
             </Card>
             <Card>
               <div className="mb-3 flex items-center justify-between gap-3">

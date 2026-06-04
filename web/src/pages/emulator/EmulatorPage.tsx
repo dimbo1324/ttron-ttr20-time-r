@@ -5,6 +5,7 @@ import { compactNumber, formatTime, localeForLanguage } from '../../shared/lib/f
 import { useI18n } from '../../shared/i18n/useI18n';
 import { Badge } from '../../shared/ui/Badge';
 import { Card } from '../../shared/ui/Card';
+import { DetailList } from '../../shared/ui/DetailList';
 import { ExportActions } from '../../shared/ui/ExportActions';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { StatCard } from '../../shared/ui/StatCard';
@@ -18,6 +19,12 @@ export function EmulatorPage() {
   const locale = localeForLanguage(language);
   if (status.loading && !status.data) return <LoadingState label={t('common.loadingEmulator')} />;
   const data = status.data;
+  const runtimeItems = data ? [
+    { label: t('common.checksum'), value: displayChecksum(data.checksumMode), mono: true },
+    { label: t('emulator.recentFrames'), value: compactNumber(data.recentFramesCount) },
+    { label: t('emulator.lastRequest'), value: formatTime(data.lastRequestTime, t('common.notAvailable'), locale) },
+    { label: t('emulator.lastResponse'), value: formatTime(data.lastResponseTime, t('common.notAvailable'), locale) },
+  ] : [];
   return (
     <>
       <PageHeader
@@ -40,12 +47,7 @@ export function EmulatorPage() {
                 <h2 className="text-base font-semibold text-ink">{t('emulator.runtime')}</h2>
                 <Badge value={data.state} label={displayStatus(data.state, t)} />
               </div>
-              <div className="mt-3 grid gap-2 text-sm text-subtle md:grid-cols-2 xl:grid-cols-1">
-                <div>{t('common.checksum')}: <span className="text-ink">{displayChecksum(data.checksumMode)}</span></div>
-                <div>{t('emulator.recentFrames')}: <span className="text-ink">{compactNumber(data.recentFramesCount)}</span></div>
-                <div>{t('emulator.lastRequest')}: <span className="text-ink">{formatTime(data.lastRequestTime, t('common.notAvailable'), locale)}</span></div>
-                <div>{t('emulator.lastResponse')}: <span className="text-ink">{formatTime(data.lastResponseTime, t('common.notAvailable'), locale)}</span></div>
-              </div>
+              <DetailList className="mt-3" items={runtimeItems} />
             </Card>
             <FrameAnatomy checksumMode={data.checksumMode} />
           </div>

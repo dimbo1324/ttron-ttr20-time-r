@@ -3,6 +3,7 @@ import type { GatewayStatus } from '../../entities/gateway/types';
 import { formatTime, localeForLanguage } from '../../shared/lib/format';
 import { useI18n } from '../../shared/i18n/useI18n';
 import { Card } from '../../shared/ui/Card';
+import { InfoTile } from '../../shared/ui/InfoTile';
 
 export function PollingTimeline({ status }: { status?: GatewayStatus | null }) {
   const { t, language } = useI18n();
@@ -25,17 +26,16 @@ export function PollingTimeline({ status }: { status?: GatewayStatus | null }) {
         </div>
         <RadioTower className="text-signal" size={18} />
       </div>
-      <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
+      <div className="info-grid">
         {steps.map((step) => {
           const Icon = step.error ? AlertTriangle : step.done ? CheckCircle2 : Circle;
           return (
-            <div key={step.label} className="rounded-md border border-line bg-muted p-2">
-              <div className="flex items-center gap-2">
-                <Icon className={step.error ? 'text-fault' : step.done ? 'text-ok' : 'text-subtle'} size={16} />
-                <span className="text-sm font-semibold text-ink">{step.label}</span>
-              </div>
-              <div className="mt-2 truncate text-xs text-subtle">{step.detail || t('common.notAvailable')}</div>
-            </div>
+            <InfoTile
+              key={step.label}
+              title={step.label}
+              detail={step.detail || t('common.notAvailable')}
+              icon={<Icon className={step.error ? 'text-fault' : step.done ? 'text-ok' : 'text-subtle'} size={16} />}
+            />
           );
         })}
       </div>

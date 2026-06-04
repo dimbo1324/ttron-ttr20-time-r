@@ -3,6 +3,7 @@ import { displayChecksum } from '../../shared/lib/display';
 import { useI18n } from '../../shared/i18n/useI18n';
 import { Card } from '../../shared/ui/Card';
 import { HexBlock } from '../../shared/ui/HexBlock';
+import { InfoTile } from '../../shared/ui/InfoTile';
 
 export function FrameAnatomy({ event, checksumMode }: { event?: FrameEvent; checksumMode?: string }) {
   const { t } = useI18n();
@@ -23,12 +24,15 @@ export function FrameAnatomy({ event, checksumMode }: { event?: FrameEvent; chec
         <h2 className="text-base font-semibold text-ink">{t('infographic.frame.title')}</h2>
         <p className="text-xs text-subtle">{t('infographic.frame.subtitle')}</p>
       </div>
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
+      <div className="info-grid info-grid--tight">
         {fields.map(([value, label]) => (
-          <div key={`${value}-${label}`} className="rounded-md border border-line bg-muted p-2">
-            <div className="truncate font-mono text-sm font-semibold text-signal">{value}</div>
-            <div className="mt-1 text-xs text-subtle">{label}</div>
-          </div>
+          <InfoTile
+            key={`${value}-${label}`}
+            title={value}
+            detail={label}
+            className="min-h-[5rem]"
+            titleClassName="font-mono text-signal"
+          />
         ))}
       </div>
       <div className="mt-3">

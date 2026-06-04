@@ -5,6 +5,7 @@ import { compactNumber, formatDurationMs, formatTime, localeForLanguage } from '
 import { useI18n } from '../../shared/i18n/useI18n';
 import { Badge } from '../../shared/ui/Badge';
 import { Card } from '../../shared/ui/Card';
+import { DetailList } from '../../shared/ui/DetailList';
 import { ExportActions } from '../../shared/ui/ExportActions';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { StatCard } from '../../shared/ui/StatCard';
@@ -20,6 +21,15 @@ export function GatewayPage() {
   if (status.loading && !status.data) return <LoadingState label={t('common.loadingGateway')} />;
   const data = status.data;
   const gatewayState = data?.connected ? 'connected' : data?.state;
+  const sessionItems = data ? [
+    { label: t('common.checksum'), value: displayChecksum(data.checksumMode), mono: true },
+    { label: t('gateway.interval'), value: formatDurationMs(data.pollingIntervalMs) },
+    { label: t('gateway.requestTimeout'), value: formatDurationMs(data.requestTimeoutMs) },
+    { label: t('gateway.connectTimeout'), value: formatDurationMs(data.connectTimeoutMs) },
+    { label: t('gateway.lastTx'), value: formatTime(data.lastTxTime, t('common.notAvailable'), locale) },
+    { label: t('gateway.lastRx'), value: formatTime(data.lastRxTime, t('common.notAvailable'), locale) },
+    { label: t('gateway.lastError'), value: data.lastError || t('common.none') },
+  ] : [];
   return (
     <>
       <PageHeader
@@ -42,15 +52,7 @@ export function GatewayPage() {
                 <h2 className="text-base font-semibold text-ink">{t('gateway.pollingSession')}</h2>
                 <Badge value={gatewayState ?? 'unspecified'} label={displayStatus(gatewayState, t)} />
               </div>
-              <div className="mt-3 grid gap-2 text-sm text-subtle md:grid-cols-2 xl:grid-cols-1">
-                <div>{t('common.checksum')}: <span className="text-ink">{displayChecksum(data.checksumMode)}</span></div>
-                <div>{t('gateway.interval')}: <span className="text-ink">{formatDurationMs(data.pollingIntervalMs)}</span></div>
-                <div>{t('gateway.requestTimeout')}: <span className="text-ink">{formatDurationMs(data.requestTimeoutMs)}</span></div>
-                <div>{t('gateway.connectTimeout')}: <span className="text-ink">{formatDurationMs(data.connectTimeoutMs)}</span></div>
-                <div>{t('gateway.lastTx')}: <span className="text-ink">{formatTime(data.lastTxTime, t('common.notAvailable'), locale)}</span></div>
-                <div>{t('gateway.lastRx')}: <span className="text-ink">{formatTime(data.lastRxTime, t('common.notAvailable'), locale)}</span></div>
-                <div>{t('gateway.lastError')}: <span className="text-ink">{data.lastError || t('common.none')}</span></div>
-              </div>
+              <DetailList className="mt-3" items={sessionItems} />
             </Card>
             <PollingTimeline status={data} />
           </div>

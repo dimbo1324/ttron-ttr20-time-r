@@ -67,6 +67,13 @@ infographics, and recent events fit better on 1366x768, 1440x900, and
 1920x1080 screens. Long tables use internal scrolling instead of growing the
 whole page.
 
+The second UI polish pass adds container-safe text wrapping and auto-fit
+infographic grids. Buttons, badges, status cards, detail rows, table cells, and
+protocol tiles allow long Russian/English labels, endpoint addresses, timestamps,
+and errors to wrap instead of overlapping or being silently clipped. Shared
+`InfoTile` and `DetailList` primitives keep this behavior consistent across
+Dashboard, Emulator, Gateway, Events, Diagnostics, Settings, and Guide pages.
+
 Interactive controls include hover/press feedback, disabled states, visible
 keyboard focus, keyboard-expandable event rows, compact toggles, and reduced
 motion support through `prefers-reduced-motion`.
@@ -136,6 +143,10 @@ npm run build
 - Language persists after reload.
 - Dark and light themes switch and persist after reload.
 - Dashboard remains compact on 1366x768 and larger desktop viewports.
+- Protocol flow and polling timeline tiles wrap cleanly without overlap when
+  embedded in narrower dashboard columns.
+- Long labels, status badges, endpoint addresses, timestamps, and errors remain
+  readable without text clipping.
 - Emulator fault toggles and numeric inputs update through the API.
 - Gateway start/stop buttons show disabled/busy state during requests.
 - Events source/direction filters work.

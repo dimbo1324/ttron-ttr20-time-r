@@ -5,14 +5,15 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: 'primary' | 'secondary' | 'danger';
 };
 
-export function Button({ icon, children, className = '', variant = 'secondary', ...props }: Props) {
+export function Button({ icon, children, className = '', variant = 'secondary', type = 'button', ...props }: Props) {
   return (
     <button
       className={`app-button app-button--${variant} ${className}`}
+      type={type}
       {...props}
     >
       {icon}
-      <span>{children}</span>
+      {children ? <span>{children}</span> : null}
     </button>
   );
 }
