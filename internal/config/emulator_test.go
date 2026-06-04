@@ -13,6 +13,9 @@ func TestLoadEmulatorDefaults(t *testing.T) {
 	if cfg.ListenAddress() != "127.0.0.1:9000" || cfg.CRCMode != "sum" || cfg.AdapterAddr != 1 {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
+	if cfg.LogFile != "runtime/logs/ft12-emulator.log" {
+		t.Fatalf("LogFile = %q", cfg.LogFile)
+	}
 }
 
 func TestLoadEmulatorAliasesAndNormalization(t *testing.T) {

@@ -27,6 +27,7 @@ npm run build
 
 ```powershell
 go fmt ./...
+.\scripts\check-go-format.ps1
 go test ./...
 go build ./...
 .\scripts\check-architecture.ps1
@@ -67,11 +68,21 @@ Do not commit:
 - `bin/`
 - `dist/`
 - `tmp/`
+- `runtime/`
 - logs
 - local `.exe` files
 - `web/node_modules/`
 - `web/dist/`
 - `web/*.tsbuildinfo`
+
+Use cleanup dry-run before committing when local build output has accumulated:
+
+```powershell
+.\scripts\clean-runtime.ps1 -DryRun
+```
+
+Active Go code lives in `cmd/` and `internal/`. `legacy/` is reference-only and
+is excluded from active formatting/build/test checks.
 
 ## Protobuf
 

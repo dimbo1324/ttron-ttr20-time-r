@@ -157,6 +157,43 @@ func TestFaultModeValidation(t *testing.T) {
 	}
 }
 
+func TestFaultModeRejectsInvalidJSON(t *testing.T) {
+	handler, _, _ := testHandler()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/emulator/fault-mode", bytes.NewBufferString(`{`))
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"code":"BAD_JSON"`) {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+}
+
+func TestFaultModeBodyLimit(t *testing.T) {
+	handler, _, _ := testHandler()
+	handler.config.MaxBodyBytes = 8
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/emulator/fault-mode", bytes.NewBufferString(`{"responseDelayMs":0}`))
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestEventsInvalidLimit(t *testing.T) {
+	handler, _, _ := testHandler()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events?limit=1001", nil)
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"code":"INVALID_LIMIT"`) {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+}
+
 func TestGatewayStartStopHandlers(t *testing.T) {
 	handler, _, gateway := testHandler()
 	for _, path := range []string{"/api/v1/gateway/start", "/api/v1/gateway/stop"} {
@@ -204,5 +241,24 @@ func TestCORSPreflight(t *testing.T) {
 	}
 	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "http://localhost:5173" {
 		t.Fatalf("cors origin = %q", got)
+	}
+}
+
+func TestSecurityHeaders(t *testing.T) {
+	handler, _, _ := testHandler()
+	wrapped := middleware.SecurityHeaders()(handler.Routes())
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	rec := httptest.NewRecorder()
+	wrapped.ServeHTTP(rec, req)
+
+	headers := map[string]string{
+		"X-Content-Type-Options": "nosniff",
+		"X-Frame-Options":        "DENY",
+		"Referrer-Policy":        "no-referrer",
+	}
+	for name, want := range headers {
+		if got := rec.Header().Get(name); got != want {
+			t.Fatalf("%s = %q, want %q", name, got, want)
+		}
 	}
 }

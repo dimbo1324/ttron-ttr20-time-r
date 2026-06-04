@@ -47,6 +47,7 @@ func New(cfg Config, handler http.Handler, logger Logger) *Server {
 	wrapped := middleware.Chain(
 		handler,
 		middleware.RequestID(),
+		middleware.SecurityHeaders(),
 		middleware.Recovery(logger),
 		middleware.CORS(cfg.CORSOrigin),
 		middleware.Metrics(func(method, path string, status int, elapsed time.Duration) {

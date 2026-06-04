@@ -11,6 +11,7 @@ for the active baseline.
 
 ```powershell
 go fmt ./...
+.\scripts\check-go-format.ps1
 go test ./...
 go build ./...
 .\scripts\check-architecture.ps1
@@ -36,6 +37,8 @@ go build -o bin/ft12-api ./cmd/ft12-api
 
 The `Makefile` exposes the same common operations for environments with `make`.
 `make verify` runs formatting, architecture checks, tests, and build.
+`make clean-runtime-dry-run` previews ignored runtime/build cleanup, and
+`make clean-runtime` removes those ignored local artifacts.
 
 Useful service runs:
 
@@ -83,6 +86,35 @@ Legacy/reference code lives in:
 Legacy code is preserved for comparison and is not part of normal root module
 build/test workflows.
 
+Go formatting checks apply to active Go files and intentionally exclude
+`legacy/`. The repository includes `.gitattributes` so active text files use LF
+in Git. The dedicated Go format scripts compare `gofmt` output after CRLF/LF
+normalization, which keeps Windows CI stable without weakening active-code
+formatting.
+
+## Local Logs And Cleanup
+
+Runtime logs default to `runtime/logs`:
+
+- `ft12-emulator.log`
+- `ft12-gateway.log`
+- `ft12-api.log`
+
+The `-log` flag overrides the path; `-log=` sends logs to stdout. Do not log
+secrets or request bodies. Protocol frame hex is logged for local diagnostics.
+
+Cleanup scripts remove ignored runtime/build artifacts only:
+
+```powershell
+.\scripts\clean-runtime.ps1 -DryRun
+.\scripts\clean-runtime.ps1
+```
+
+```sh
+bash scripts/clean-runtime.sh --dry-run
+bash scripts/clean-runtime.sh
+```
+
 ## Architecture Checks
 
 Dependency boundary scripts live in `scripts/`:
@@ -105,6 +137,7 @@ When all tools are available, use:
 
 ```powershell
 go fmt ./...
+.\scripts\check-go-format.ps1
 .\scripts\check-architecture.ps1
 go test ./...
 go build ./...

@@ -22,6 +22,7 @@ Concurrency cancels older runs for the same Git ref.
 | --- | --- | --- |
 | `backend` | Ubuntu, Windows, macOS | Go formatting, tests, build |
 | `architecture` | Ubuntu | dependency boundary script |
+| `cleanup` | Ubuntu, Windows | cleanup script dry-run |
 | `frontend` | Ubuntu | npm ci, typecheck, lint, build |
 | `docker` | Ubuntu | compose config, compose build, compose smoke |
 | `race` | Ubuntu | `go test -race ./...` |
@@ -30,6 +31,7 @@ Concurrency cancels older runs for the same Git ref.
 
 ```powershell
 go fmt ./...
+.\scripts\check-go-format.ps1
 .\scripts\check-architecture.ps1
 go test ./...
 go build ./...
@@ -43,6 +45,7 @@ docker compose config
 docker compose build
 docker compose up -d
 .\scripts\check-doc-links.ps1
+.\scripts\clean-runtime.ps1 -DryRun
 .\scripts\release-check.ps1
 ```
 
@@ -50,7 +53,22 @@ On Unix-like systems:
 
 ```sh
 sh scripts/check-architecture.sh
+sh scripts/check-go-format.sh
+bash scripts/clean-runtime.sh --dry-run
 ```
+
+## Formatting And Line Endings
+
+CI uses `scripts/check-go-format.ps1` for the cross-platform backend matrix.
+The script checks active Go files only and compares `gofmt` output after
+normalizing CRLF/LF, so `windows-latest` does not fail merely because checkout
+line endings differ. Real `gofmt` changes still fail the job.
+
+`legacy/` is reference-only and excluded from active formatting/build/test
+policy. Active code under `cmd/` and `internal/` is checked strictly.
+
+`.gitattributes` pins LF for active text formats used by this repository,
+including Go, proto, YAML, shell, PowerShell, Markdown, and TypeScript.
 
 ## Notes
 

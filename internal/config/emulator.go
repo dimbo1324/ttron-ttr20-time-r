@@ -7,8 +7,6 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/checksum"
 )
 
 type EmulatorConfig struct {
@@ -39,6 +37,7 @@ func DefaultEmulator() EmulatorConfig {
 		CRCMode:              "sum",
 		FragmentDelay:        40 * time.Millisecond,
 		AdapterAddr:          1,
+		LogFile:              "runtime/logs/ft12-emulator.log",
 		GRPCListen:           ":9100",
 		ReadTimeout:          300,
 		ReadTimeoutDuration:  300 * time.Second,
@@ -114,37 +113,37 @@ func (c EmulatorConfig) Validate() error {
 	if err := validateTCPAddress(c.ListenAddress(), "listen address"); err != nil {
 		return err
 	}
-	if c.AdapterAddr < 0 || c.AdapterAddr > 255 {
-		return fmt.Errorf("adapter address must be in range 0..255")
-	}
-	if _, err := checksum.ParseMode(c.CRCMode); err != nil {
+	if err := validateAdapterAddr(c.AdapterAddr); err != nil {
 		return err
 	}
-	if c.BadCRCProb < 0 || c.BadCRCProb > 1 {
-		return fmt.Errorf("bad CRC probability must be in range 0..1")
+	if err := validateChecksumMode(c.CRCMode); err != nil {
+		return err
 	}
-	if c.FragProb < 0 || c.FragProb > 1 {
-		return fmt.Errorf("fragment probability must be in range 0..1")
+	if err := validateProbability(c.BadCRCProb, "bad CRC probability"); err != nil {
+		return err
 	}
-	if c.RecentSize <= 0 {
-		return fmt.Errorf("recent size must be positive")
+	if err := validateProbability(c.FragProb, "fragment probability"); err != nil {
+		return err
 	}
-	if c.ReadTimeoutDuration <= 0 {
-		return fmt.Errorf("read timeout must be positive")
+	if err := validateRecentSize(c.RecentSize); err != nil {
+		return err
 	}
-	if c.WriteTimeoutDuration <= 0 {
-		return fmt.Errorf("write timeout must be positive")
+	if err := validatePositiveDuration(c.ReadTimeoutDuration, "read timeout"); err != nil {
+		return err
+	}
+	if err := validatePositiveDuration(c.WriteTimeoutDuration, "write timeout"); err != nil {
+		return err
 	}
 	if c.GRPCListen != "" {
 		if err := validateTCPAddress(c.GRPCListen, "gRPC listen address"); err != nil {
 			return err
 		}
 	}
-	if c.ResponseDelay < 0 {
-		return fmt.Errorf("response delay must be non-negative")
+	if err := validateNonNegativeDuration(c.ResponseDelay, "response delay"); err != nil {
+		return err
 	}
-	if c.FragmentDelay < 0 {
-		return fmt.Errorf("fragment delay must be non-negative")
+	if err := validateNonNegativeDuration(c.FragmentDelay, "fragment delay"); err != nil {
+		return err
 	}
 	return nil
 }

@@ -24,8 +24,10 @@ Thumbs.db
 
 # Temp/logs
 *.log
+*.out
 logs/
 tmp/
+runtime/
 temp/
 
 # Python legacy

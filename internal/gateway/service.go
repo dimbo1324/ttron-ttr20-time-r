@@ -56,8 +56,10 @@ func (s *Service) Start(ctx context.Context) {
 	s.runMu.Lock()
 	defer s.runMu.Unlock()
 	if s.cancel != nil {
+		s.logger.Printf("gateway polling already running")
 		return
 	}
+	s.logger.Printf("gateway polling start")
 	runCtx, cancel := context.WithCancel(ctx)
 	done := make(chan error, 1)
 	s.cancel = cancel
@@ -79,10 +81,12 @@ func (s *Service) Stop() error {
 	done := s.done
 	s.runMu.Unlock()
 	if cancel == nil || done == nil {
+		s.logger.Printf("gateway polling stop requested while not running")
 		s.setRunning(false)
 		s.setConnected(false)
 		return nil
 	}
+	s.logger.Printf("gateway polling stop")
 	cancel()
 	err := <-done
 	if err != nil {

@@ -126,3 +126,41 @@ is `ft12-api:8080/metrics`.
 
 Git may warn that LF will be replaced by CRLF. That warning is expected in some
 Windows configurations and does not imply a content change by itself.
+
+## Windows CI Go Formatting Fails
+
+Symptoms:
+
+- `Backend (windows-latest)` prints a long list of `.go` files.
+- The list includes active Go files and possibly legacy reference files.
+
+Actions:
+
+- Run `go fmt ./...`.
+- Run `.\scripts\check-go-format.ps1`.
+- Check that `.gitattributes` is present.
+- Do not include `legacy/` in active formatting/build/test fixes unless legacy
+  reference code is intentionally being changed.
+
+The CI format script normalizes CRLF/LF while comparing `gofmt` output, so a
+failure means real formatting drift in active Go code.
+
+## Logs Or Runtime Files Accumulate
+
+Service logs default to `runtime/logs`. This folder is ignored by Git.
+
+Preview cleanup:
+
+```powershell
+.\scripts\clean-runtime.ps1 -DryRun
+```
+
+```sh
+bash scripts/clean-runtime.sh --dry-run
+```
+
+Then remove ignored runtime/build artifacts:
+
+```powershell
+.\scripts\clean-runtime.ps1
+```

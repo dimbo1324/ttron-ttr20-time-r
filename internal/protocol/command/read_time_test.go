@@ -60,6 +60,7 @@ func TestParseReadTimeResponseRejectsInvalidPayload(t *testing.T) {
 		{name: "empty", data: nil, want: ErrEmptyPayload},
 		{name: "wrong command", data: []byte{0x02}, want: ErrUnexpectedCommand},
 		{name: "short timestamp", data: []byte{byte(ReadTime), '1'}, want: ErrInvalidPayload},
+		{name: "long timestamp", data: append([]byte{byte(ReadTime)}, []byte("2026-06-02 12:34:56Z")...), want: ErrInvalidPayload},
 		{name: "malformed timestamp", data: append([]byte{byte(ReadTime)}, []byte("2026-99-99 99:99:99")...), want: ErrInvalidTime},
 	}
 	for _, tt := range tests {

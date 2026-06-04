@@ -21,3 +21,18 @@ func TestBackoffNextAndReset(t *testing.T) {
 		t.Fatalf("after reset = %s", got)
 	}
 }
+
+func TestBackoffNormalizesInvalidInput(t *testing.T) {
+	b := NewBackoff(0, -1)
+	if got := b.Next(); got != 500*time.Millisecond {
+		t.Fatalf("default initial = %s", got)
+	}
+
+	b = NewBackoff(2*time.Second, time.Second)
+	if got := b.Next(); got != 2*time.Second {
+		t.Fatalf("max below initial should clamp to initial, got %s", got)
+	}
+	if got := b.Next(); got != 2*time.Second {
+		t.Fatalf("capped = %s", got)
+	}
+}

@@ -13,6 +13,9 @@ func TestLoadGatewayDefaults(t *testing.T) {
 	if cfg.Target != "127.0.0.1:9000" || cfg.CRCMode != "sum" || cfg.AdapterAddr != 1 {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
+	if cfg.LogFile != "runtime/logs/ft12-gateway.log" {
+		t.Fatalf("LogFile = %q", cfg.LogFile)
+	}
 }
 
 func TestLoadGatewayModeAlias(t *testing.T) {

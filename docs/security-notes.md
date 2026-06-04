@@ -19,7 +19,12 @@ production deployment.
 - Build contexts exclude `.env`, logs, binaries, `node_modules`, and build
   outputs.
 - The HTTP API keeps recovery middleware and request IDs.
+- The HTTP API sets `X-Content-Type-Options`, `X-Frame-Options`, and
+  `Referrer-Policy` headers.
+- JSON control endpoints use request body size limits.
 - Health/readiness/metrics endpoints are intended for local development and CI.
+- Runtime logs default to ignored `runtime/logs` files. Logs should not contain
+  secrets or request bodies; protocol frame hex is local diagnostic data.
 
 ## Do Not Expose Publicly
 
