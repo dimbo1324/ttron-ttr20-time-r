@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-lg border border-line bg-panel/90 p-4 shadow-sm ${className}`}>{children}</section>;
+  return <section className={`app-card p-3 transition-shadow duration-150 ${className}`}>{children}</section>;
 }

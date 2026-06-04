@@ -4,9 +4,9 @@ export function ErrorBanner({ message }: { message: string | null }) {
 }
 
 export function LoadingState({ label = 'Loading' }: { label?: string }) {
-  return <div className="rounded-md border border-line bg-white/5 px-3 py-6 text-center text-sm text-zinc-400">{label}</div>;
+  return <div className="app-card px-3 py-6 text-center text-sm text-subtle">{label}</div>;
 }
 
 export function EmptyState({ label = 'No data' }: { label?: string }) {
-  return <div className="rounded-md border border-dashed border-line px-3 py-6 text-center text-sm text-zinc-500">{label}</div>;
+  return <div className="rounded-md border border-dashed border-line px-3 py-6 text-center text-sm text-subtle">{label}</div>;
 }

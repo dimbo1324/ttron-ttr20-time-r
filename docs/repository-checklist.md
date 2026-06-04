@@ -28,8 +28,12 @@ Use this checklist before public demos or GitHub releases.
 - `GET /api/v1/ready` returns `200`.
 - `GET /api/v1/overview` returns `200`.
 - `GET /api/v1/events` returns `200`.
+- `GET /api/v1/export/events.json` returns `200`.
+- `GET /api/v1/export/events.csv` returns `200`.
+- `GET /api/v1/export/overview.json` returns `200`.
 - `GET /metrics` returns `200`.
 - Web UI opens at `http://localhost:5173`.
+- Web UI language switch, theme switch, exports, diagnostics, and Guide page work.
 
 ## Documentation
 

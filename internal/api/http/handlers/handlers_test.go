@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	ft12v1 "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/dto"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/metrics"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/middleware"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -227,6 +229,122 @@ func TestEventsEndpointMergesEvents(t *testing.T) {
 	}
 	if len(body.Events) != 2 || body.Events[0].ID != 2 {
 		t.Fatalf("events = %+v", body.Events)
+	}
+}
+
+func TestWriteEventsCSVEscapesValues(t *testing.T) {
+	timestamp := "2026-06-04T12:00:00Z"
+	var buf bytes.Buffer
+	err := writeEventsCSV(&buf, []dto.EventDTO{{
+		Timestamp:    &timestamp,
+		Source:       "gateway",
+		Service:      "gateway",
+		Direction:    "ERR",
+		Command:      "read-time",
+		ChecksumMode: "crc16",
+		RemoteAddr:   "127.0.0.1:9000",
+		RawHex:       "68 03\n68 00",
+		Message:      `value, with comma and "quotes"`,
+		Error:        "protocol error",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := csv.NewReader(strings.NewReader(buf.String())).ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("rows = %d, want 2; body=%s", len(rows), buf.String())
+	}
+	if rows[1][7] != "68 03\n68 00" || rows[1][8] != `value, with comma and "quotes"` {
+		t.Fatalf("csv row did not round-trip escaped fields: %#v", rows[1])
+	}
+}
+
+func TestExportEventsJSONEndpoint(t *testing.T) {
+	handler, _, _ := testHandler()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/export/events.json?source=all&limit=10", nil)
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Content-Type"); !strings.Contains(got, "application/json") {
+		t.Fatalf("content-type = %q", got)
+	}
+	if got := rec.Header().Get("Content-Disposition"); !strings.Contains(got, "ft12-events-") {
+		t.Fatalf("content-disposition = %q", got)
+	}
+	var body struct {
+		ExportedAt string `json:"exportedAt"`
+		Source     string `json:"source"`
+		Events     []struct {
+			ID uint64 `json:"id"`
+		} `json:"events"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.ExportedAt == "" || body.Source != "all" || len(body.Events) != 2 {
+		t.Fatalf("body = %+v", body)
+	}
+}
+
+func TestExportEventsCSVEndpoint(t *testing.T) {
+	handler, _, _ := testHandler()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/export/events.csv?source=gateway&limit=10", nil)
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Content-Type"); !strings.Contains(got, "text/csv") {
+		t.Fatalf("content-type = %q", got)
+	}
+	rows, err := csv.NewReader(strings.NewReader(rec.Body.String())).ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[1][1] != "gateway" || rows[1][3] != "TX" {
+		t.Fatalf("rows = %#v", rows)
+	}
+}
+
+func TestExportOverviewJSONEndpoint(t *testing.T) {
+	handler, _, _ := testHandler()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/export/overview.json?limit=10", nil)
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		ExportedAt string `json:"exportedAt"`
+		Overview   struct {
+			Events []struct {
+				ID uint64 `json:"id"`
+			} `json:"events"`
+		} `json:"overview"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.ExportedAt == "" || len(body.Overview.Events) != 2 {
+		t.Fatalf("body = %+v", body)
+	}
+}
+
+func TestExportInvalidLimit(t *testing.T) {
+	handler, _, _ := testHandler()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/export/events.csv?limit=0", nil)
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"code":"INVALID_LIMIT"`) {
+		t.Fatalf("body = %s", rec.Body.String())
 	}
 }
 

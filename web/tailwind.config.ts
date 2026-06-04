@@ -5,13 +5,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        graphite: '#101418',
-        panel: '#171d23',
-        line: '#2a343d',
-        signal: '#22d3ee',
-        ok: '#22c55e',
-        warn: '#f59e0b',
-        fault: '#ef4444',
+        graphite: 'var(--color-shell)',
+        canvas: 'var(--color-bg)',
+        panel: 'var(--color-panel)',
+        muted: 'var(--color-panel-muted)',
+        line: 'var(--color-border)',
+        ink: 'var(--color-text)',
+        subtle: 'var(--color-muted)',
+        signal: 'rgb(var(--color-signal-rgb) / <alpha-value>)',
+        ok: 'rgb(var(--color-ok-rgb) / <alpha-value>)',
+        warn: 'rgb(var(--color-warn-rgb) / <alpha-value>)',
+        fault: 'rgb(var(--color-fault-rgb) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['Inter', 'Segoe UI', 'Arial', 'sans-serif'],

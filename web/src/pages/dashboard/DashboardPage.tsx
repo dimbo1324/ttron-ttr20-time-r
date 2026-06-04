@@ -1,52 +1,72 @@
 import { getOverview } from '../../entities/events/api';
+import { displayChecksum, displayStatus, statTone } from '../../shared/lib/display';
 import { usePollingResource } from '../../shared/lib/usePollingResource';
-import { compactNumber, formatTime } from '../../shared/lib/format';
+import { compactNumber, formatTime, localeForLanguage } from '../../shared/lib/format';
+import { useI18n } from '../../shared/i18n/useI18n';
 import { Badge } from '../../shared/ui/Badge';
 import { Card } from '../../shared/ui/Card';
+import { ExportActions } from '../../shared/ui/ExportActions';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { StatCard } from '../../shared/ui/StatCard';
 import { ErrorBanner, LoadingState } from '../../shared/ui/State';
+import { EventDistribution } from '../../widgets/infographics/EventDistribution';
+import { ProtocolFlow } from '../../widgets/infographics/ProtocolFlow';
 import { RecentEventsTable } from '../../widgets/recent-events-table/RecentEventsTable';
 
 export function DashboardPage() {
+  const { t, language } = useI18n();
   const overview = usePollingResource(getOverview, 2000);
-  if (overview.loading && !overview.data) return <LoadingState label="Loading dashboard" />;
+  const locale = localeForLanguage(language);
+  if (overview.loading && !overview.data) return <LoadingState label={t('common.loadingDashboard')} />;
   const data = overview.data;
+  const gatewayState = data?.gateway.connected ? 'connected' : data?.gateway.state;
 
   return (
     <>
-      <PageHeader title="Dashboard" subtitle="Operational view of the FT1.2 emulator and gateway control plane." />
+      <PageHeader
+        title={t('dashboard.title')}
+        subtitle={t('dashboard.subtitle')}
+        actions={<ExportActions compact jsonPath="/api/v1/export/overview.json" copyValue={data} />}
+      />
       <ErrorBanner message={overview.error} />
       {data ? (
-        <div className="mt-4 space-y-5">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Emulator" value={data.emulator.state} detail={data.emulator.listenAddr} />
-            <StatCard label="Gateway" value={data.gateway.connected ? 'connected' : data.gateway.state} detail={data.gateway.targetAddr} />
-            <StatCard label="Device time" value={formatTime(data.lastRead.deviceTime)} detail={data.lastRead.available ? 'last read available' : 'no read yet'} />
-            <StatCard label="Reads" value={compactNumber(data.gateway.successfulReads)} detail={`${compactNumber(data.gateway.failedReads)} failed`} />
+        <div className="mt-3 space-y-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard label={t('dashboard.emulator')} value={displayStatus(data.emulator.state, t)} detail={data.emulator.listenAddr} tone={statTone(data.emulator.state)} />
+            <StatCard label={t('dashboard.gateway')} value={displayStatus(gatewayState, t)} detail={data.gateway.targetAddr} tone={statTone(gatewayState)} />
+            <StatCard label={t('dashboard.deviceTime')} value={formatTime(data.lastRead.deviceTime, t('common.notAvailable'), locale)} detail={data.lastRead.available ? t('dashboard.lastReadAvailable') : t('dashboard.noReadYet')} tone="signal" />
+            <StatCard label={t('dashboard.reads')} value={compactNumber(data.gateway.successfulReads)} detail={t('dashboard.failedReads', { count: compactNumber(data.gateway.failedReads) })} tone={data.gateway.failedReads > 0 ? 'warn' : 'ok'} />
           </div>
-          <Card>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold">Current status</h2>
-              <div className="flex gap-2">
-                <Badge value={data.emulator.state} />
-                <Badge value={data.gateway.connected ? 'connected' : data.gateway.state} />
+          <div className="grid gap-3 xl:grid-cols-[1.45fr_1fr]">
+            <ProtocolFlow overview={data} />
+            <EventDistribution events={data.events} />
+          </div>
+          <div className="grid gap-3 xl:grid-cols-[0.9fr_1.4fr]">
+            <Card>
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-semibold text-ink">{t('dashboard.currentStatus')}</h2>
+                <div className="flex gap-2">
+                  <Badge value={data.emulator.state} label={displayStatus(data.emulator.state, t)} />
+                  <Badge value={gatewayState ?? 'unspecified'} label={displayStatus(gatewayState, t)} />
+                </div>
               </div>
-            </div>
-            <div className="grid gap-3 text-sm text-zinc-400 md:grid-cols-2">
-              <div>Emulator checksum: <span className="text-zinc-100">{data.emulator.checksumMode}</span></div>
-              <div>Gateway checksum: <span className="text-zinc-100">{data.gateway.checksumMode}</span></div>
-              <div>Active connections: <span className="text-zinc-100">{data.emulator.activeConnections}</span></div>
-              <div>Reconnects: <span className="text-zinc-100">{data.gateway.reconnects}</span></div>
-            </div>
-          </Card>
-          <Card>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Latest events</h2>
-              {overview.updatedAt ? <span className="text-xs text-zinc-500">Updated {overview.updatedAt.toLocaleTimeString()}</span> : null}
-            </div>
-            <RecentEventsTable events={data.events} />
-          </Card>
+              <div className="grid gap-2 text-sm text-subtle md:grid-cols-2 xl:grid-cols-1">
+                <div>{t('dashboard.emulatorChecksum')}: <span className="text-ink">{displayChecksum(data.emulator.checksumMode)}</span></div>
+                <div>{t('dashboard.gatewayChecksum')}: <span className="text-ink">{displayChecksum(data.gateway.checksumMode)}</span></div>
+                <div>{t('dashboard.activeConnections')}: <span className="text-ink">{compactNumber(data.emulator.activeConnections)}</span></div>
+                <div>{t('dashboard.reconnects')}: <span className="text-ink">{compactNumber(data.gateway.reconnects)}</span></div>
+                <div>{t('dashboard.protocolErrors')}: <span className="text-ink">{compactNumber(data.emulator.protocolErrors)}</span></div>
+                <div>{t('dashboard.totalEvents')}: <span className="text-ink">{compactNumber(data.events.length)}</span></div>
+              </div>
+            </Card>
+            <Card>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-base font-semibold text-ink">{t('dashboard.latestEvents')}</h2>
+                {overview.updatedAt ? <span className="text-xs text-subtle">{t('common.updated', { time: overview.updatedAt.toLocaleTimeString(locale) })}</span> : null}
+              </div>
+              <RecentEventsTable events={data.events} maxHeightClass="max-h-[300px]" />
+            </Card>
+          </div>
         </div>
       ) : null}
     </>

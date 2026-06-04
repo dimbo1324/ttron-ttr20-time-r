@@ -85,6 +85,9 @@ curl http://127.0.0.1:8080/health
 curl http://127.0.0.1:8080/api/v1/ready
 curl http://127.0.0.1:8080/api/v1/overview
 curl http://127.0.0.1:8080/api/v1/events
+curl http://127.0.0.1:8080/api/v1/export/events.json
+curl http://127.0.0.1:8080/api/v1/export/events.csv
+curl http://127.0.0.1:8080/api/v1/export/overview.json
 curl http://127.0.0.1:8080/metrics
 ```
 

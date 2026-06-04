@@ -22,9 +22,13 @@ production deployment.
 - The HTTP API sets `X-Content-Type-Options`, `X-Frame-Options`, and
   `Referrer-Policy` headers.
 - JSON control endpoints use request body size limits.
+- Export endpoints validate `limit`, use server-generated filenames, and do not
+  accept local filesystem paths.
 - Health/readiness/metrics endpoints are intended for local development and CI.
 - Runtime logs default to ignored `runtime/logs` files. Logs should not contain
   secrets or request bodies; protocol frame hex is local diagnostic data.
+  Exported JSON/CSV may also contain protocol diagnostic data and should stay
+  local unless reviewed.
 
 ## Do Not Expose Publicly
 

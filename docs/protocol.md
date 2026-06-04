@@ -57,6 +57,10 @@ responses with bit `0x80` set on the request control byte.
 
 Decoding is mode-aware because checksum length changes the expected frame size.
 
+The Web UI Guide and Events pages include a frame anatomy infographic that uses
+the same layout. It is a display aid only; this milestone does not change the
+FT1.2-like wire format.
+
 ## Read-Time Command
 
 Command ID:

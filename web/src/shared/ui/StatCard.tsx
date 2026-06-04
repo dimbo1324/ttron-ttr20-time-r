@@ -1,11 +1,19 @@
 import { Card } from './Card';
 
-export function StatCard({ label, value, detail }: { label: string; value: string; detail?: string }) {
+export function StatCard({ label, value, detail, tone = 'default' }: { label: string; value: string; detail?: string; tone?: 'default' | 'ok' | 'warn' | 'fault' | 'signal' }) {
+  const toneClass = {
+    default: 'text-ink',
+    ok: 'text-ok',
+    warn: 'text-warn',
+    fault: 'text-fault',
+    signal: 'text-signal',
+  }[tone];
+
   return (
-    <Card>
-      <div className="text-xs uppercase tracking-wide text-zinc-500">{label}</div>
-      <div className="mt-2 text-2xl font-semibold text-zinc-100">{value}</div>
-      {detail ? <div className="mt-1 text-xs text-zinc-500">{detail}</div> : null}
+    <Card className="min-h-[92px]">
+      <div className="text-xs uppercase text-subtle">{label}</div>
+      <div className={`mt-1 truncate text-2xl font-semibold ${toneClass}`}>{value}</div>
+      {detail ? <div className="mt-1 truncate text-xs text-subtle">{detail}</div> : null}
     </Card>
   );
 }
