@@ -71,6 +71,9 @@ services. It returns `200` when emulator and gateway status calls succeed, and
 `GET /metrics` returns Prometheus-compatible text metrics for HTTP request
 counts and total request duration by method, path, and status.
 
+`GET /health` also includes build metadata fields: `version`, `commit`, and
+`buildDate`.
+
 ## Architecture
 
 HTTP handlers depend on small interfaces implemented by gRPC client adapters.

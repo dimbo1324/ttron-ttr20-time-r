@@ -75,5 +75,6 @@ service.
 
 ## Notes
 
-No HTTP gateway, Web UI, TLS, auth, database, Prometheus, or OpenTelemetry stack
-is implemented in Step 5.
+The HTTP API and Web UI are implemented as later layers on top of this gRPC
+control plane. TLS, auth, database persistence, and OpenTelemetry tracing remain
+future optional work.

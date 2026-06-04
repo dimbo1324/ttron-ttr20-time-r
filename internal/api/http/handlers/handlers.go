@@ -13,6 +13,7 @@ import (
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/dto"
 	httperrors "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/errors"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/metrics"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/version"
 )
 
 type Config struct {
@@ -56,7 +57,7 @@ func (h *Handler) health(w http.ResponseWriter, r *http.Request) {
 	if !requireMethod(w, r, http.MethodGet) {
 		return
 	}
-	httperrors.WriteJSON(w, http.StatusOK, dto.HealthDTO{Status: "ok", Service: "ft12-api", Version: "dev"})
+	httperrors.WriteJSON(w, http.StatusOK, healthDTO())
 }
 
 func (h *Handler) ready(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +131,7 @@ func (h *Handler) overview(w http.ResponseWriter, r *http.Request) {
 	}
 	events, note := h.mergedEvents(ctx, 20)
 	httperrors.WriteJSON(w, http.StatusOK, dto.OverviewDTO{
-		Health:     dto.HealthDTO{Status: "ok", Service: "ft12-api", Version: "dev"},
+		Health:     healthDTO(),
 		Emulator:   dto.EmulatorStatus(emulatorStatus),
 		Gateway:    dto.GatewayStatus(gatewayStatus),
 		LastRead:   dto.LastReadTime(lastRead),
@@ -398,4 +399,14 @@ func appendNote(current, next string) string {
 		return next
 	}
 	return current + "; " + next
+}
+
+func healthDTO() dto.HealthDTO {
+	return dto.HealthDTO{
+		Status:    "ok",
+		Service:   "ft12-api",
+		Version:   version.Version,
+		Commit:    version.Commit,
+		BuildDate: version.BuildDate,
+	}
 }

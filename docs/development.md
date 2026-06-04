@@ -116,4 +116,6 @@ npm run build
 cd ..
 docker compose config
 docker compose build
+.\scripts\check-doc-links.ps1
+.\scripts\release-check.ps1
 ```

@@ -61,6 +61,13 @@ curl http://127.0.0.1:8080/metrics
 docker compose down -v
 ```
 
+Documentation and release checks:
+
+```powershell
+.\scripts\check-doc-links.ps1
+.\scripts\release-check.ps1
+```
+
 `make test-fuzz` documents the current fuzz entrypoint status. Fuzzing is not
 mandatory yet because no stable fuzz corpus is configured for this milestone.
 
@@ -69,5 +76,5 @@ gateway/emulator in `sum` and `crc16`, HTTP API health/readiness/status/events
 endpoints, Docker Compose, and the Web UI dashboard in a browser when the
 environment supports it.
 
-Future milestones should add deeper Web UI/API contract coverage and release
-artifact validation.
+Future optional milestones can add deeper Web UI/API contract coverage and
+release artifact automation.
