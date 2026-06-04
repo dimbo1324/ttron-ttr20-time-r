@@ -17,6 +17,7 @@ The current baseline includes tests for:
 - lifecycle group cancellation/error behavior;
 - stable event ring IDs and snapshot copy behavior;
 - shared gRPC mapper behavior;
+- HTTP API config, handlers, error shape, CORS, events merge, and controls;
 - hex dump formatting.
 
 Required baseline checks:
@@ -26,6 +27,7 @@ go fmt ./...
 .\scripts\check-architecture.ps1
 go test ./...
 go build ./...
+go build ./cmd/ft12-api
 ```
 
 When available, also run:
@@ -35,11 +37,21 @@ go test -race ./...
 make verify
 ```
 
+Frontend checks:
+
+```powershell
+cd web
+npm install
+npm run typecheck
+npm run build
+npm run lint
+```
+
 `make test-fuzz` documents the current fuzz entrypoint status. Fuzzing is not
 mandatory yet because no stable fuzz corpus is configured for this milestone.
 
-Manual smoke coverage should include client/emulator in `sum` and `crc16`, plus
-gateway/emulator in `sum` and `crc16`, plus gRPC GetStatus/GetLastReadTime style
-checks.
+Manual smoke coverage should include client/emulator in `sum` and `crc16`,
+gateway/emulator in `sum` and `crc16`, HTTP API health/status/events endpoints,
+and the Web UI dashboard in a browser when the environment supports it.
 
 Future milestones should add Web UI/API contract coverage.

@@ -7,7 +7,7 @@ UI, Docker, CI, and observability work.
 
 ## Current Status
 
-Implemented through Step 5.5:
+Implemented through Step 6:
 
 - root Go monorepo module;
 - active Go client command;
@@ -26,6 +26,8 @@ Implemented through Step 5.5:
 - stable typed event history IDs for future UI/API consumers;
 - shared gRPC mapping helpers;
 - architecture boundary check scripts;
+- HTTP/JSON API adapter over internal gRPC clients;
+- React/Vite/TypeScript Web UI dashboard;
 - future CLI command placeholder;
 - proto, web, deploy, docs, and legacy scaffolding;
 - Python and old Go implementations preserved under `legacy/`.
@@ -42,6 +44,7 @@ cmd/                  active command entrypoints
   ft12-client/        polling client
   ft12-emulator/      TCP device emulator
   ft12-gateway/       future gateway placeholder
+  ft12-api/           HTTP/JSON API adapter
   ft12-cli/           future CLI placeholder
 internal/             active Go packages
   app/                process bootstrap for command entrypoints
@@ -56,7 +59,7 @@ internal/             active Go packages
   logging/            baseline logger
   util/               shared helpers
 proto/                protobuf/gRPC contract sources
-web/                  future Web UI
+web/                  React/Vite dashboard
 deploy/               future Docker/Compose assets
 docs/                 architecture, protocol, development, testing, roadmap
 legacy/               retained reference implementations
@@ -97,6 +100,22 @@ Run with gRPC control APIs:
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode sum -grpc-listen 127.0.0.1:9100
 go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 1s -grpc-listen 127.0.0.1:9200
 ```
+
+Run the HTTP API:
+
+```powershell
+go run ./cmd/ft12-api -http-listen 127.0.0.1:8080 -emulator-grpc 127.0.0.1:9100 -gateway-grpc 127.0.0.1:9200
+```
+
+Run the Web UI:
+
+```powershell
+cd web
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`.
 
 CRC16 mode:
 
@@ -157,6 +176,31 @@ Gateway:
 - `-log`: log file path, or stdout when empty.
 - `-grpc-listen`: gRPC control listen address, default `:9200`; empty disables gRPC.
 
+HTTP API:
+
+- `-http-listen`: HTTP listen address, default `:8080`;
+- `-emulator-grpc`: emulator gRPC address, default `127.0.0.1:9100`;
+- `-gateway-grpc`: gateway gRPC address, default `127.0.0.1:9200`;
+- `-timeout`: upstream request timeout, default `3s`;
+- `-cors-origin`: allowed CORS origin, default `http://localhost:5173`;
+- `-log`: log file path, or stdout when empty.
+
+## HTTP API
+
+Core endpoints:
+
+- `GET /health`
+- `GET /api/v1/overview`
+- `GET /api/v1/emulator/status`
+- `GET /api/v1/emulator/fault-mode`
+- `PUT /api/v1/emulator/fault-mode`
+- `GET /api/v1/gateway/status`
+- `POST /api/v1/gateway/start`
+- `POST /api/v1/gateway/stop`
+- `GET /api/v1/events?source=all&limit=100`
+
+See [HTTP API](docs/http-api.md).
+
 ## Development Commands
 
 ```powershell
@@ -168,6 +212,7 @@ go build -o bin/ft12-client ./cmd/ft12-client
 go build -o bin/ft12-emulator ./cmd/ft12-emulator
 go build -o bin/ft12-gateway ./cmd/ft12-gateway
 go build -o bin/ft12-cli ./cmd/ft12-cli
+go build -o bin/ft12-api ./cmd/ft12-api
 go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -interval 5s
 make proto
 make verify
@@ -181,6 +226,8 @@ A root `Makefile` is also provided for Unix-like shells and environments with
 - [Architecture](docs/architecture.md)
 - [Dependency Rules](docs/architecture/dependency-rules.md)
 - [ADR 0005: Architecture Hardening Before Web UI](docs/architecture/decisions/0005-architecture-hardening-before-web-ui.md)
+- [HTTP API](docs/http-api.md)
+- [Web UI](docs/web-ui.md)
 - [Protocol](docs/protocol.md)
 - [Development](docs/development.md)
 - [Testing](docs/testing.md)

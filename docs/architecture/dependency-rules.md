@@ -10,6 +10,8 @@ Step 5.5 adds explicit architecture checks before Web UI work.
 - config and logging packages;
 - emulator and gateway service packages;
 - gRPC adapters;
+- HTTP adapters;
+- app bootstrap packages;
 - future HTTP/Web adapters;
 - deployment or observability stacks.
 
@@ -32,6 +34,12 @@ Generated protobuf code remains under `internal/api/grpc/ft12/v1`.
 Handwritten gRPC adapters map service snapshots into protobuf DTOs through
 `internal/api/grpc/mapping`. The shared mapper prevents duplicate checksum,
 direction, event, timestamp, and service-state logic.
+
+The HTTP API lives under `internal/api/http` and may import gRPC clients,
+protobuf DTOs, config, and platform helpers. It must not import
+`internal/emulator` or `internal/gateway` service packages directly.
+
+Go packages must not import `web/`; the Web UI communicates through HTTP/JSON.
 
 ## Legacy Boundary
 

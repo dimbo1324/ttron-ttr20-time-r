@@ -17,6 +17,7 @@ go build ./...
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode sum
 go run ./cmd/ft12-client -host 127.0.0.1 -port 9000 -crc sum
 go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 5s
+go run ./cmd/ft12-api -http-listen 127.0.0.1:8080
 make verify
 make proto
 ```
@@ -28,6 +29,7 @@ go build -o bin/ft12-client ./cmd/ft12-client
 go build -o bin/ft12-emulator ./cmd/ft12-emulator
 go build -o bin/ft12-gateway ./cmd/ft12-gateway
 go build -o bin/ft12-cli ./cmd/ft12-cli
+go build -o bin/ft12-api ./cmd/ft12-api
 ```
 
 The `Makefile` exposes the same common operations for environments with `make`.
@@ -46,6 +48,16 @@ gRPC control:
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -grpc-listen 127.0.0.1:9100
 go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -grpc-listen 127.0.0.1:9200
 ```
+
+Web dashboard:
+
+```powershell
+cd web
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`. Vite proxies `/api` to the local HTTP API.
 
 ## Active And Legacy Code
 

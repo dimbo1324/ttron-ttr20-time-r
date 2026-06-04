@@ -1,6 +1,26 @@
-# Web UI
+# FT12 Web Dashboard
 
-No Web UI is implemented in Step 1.
+React + TypeScript + Vite dashboard for the FT12 HTTP API.
 
-This directory is reserved for a future React/Vite application that will be
-added after the protocol core, emulator, gateway, and gRPC contracts mature.
+## Development
+
+```powershell
+npm install
+npm run dev
+```
+
+The dev server listens on `http://localhost:5173` and proxies `/api` to
+`http://localhost:8080`.
+
+## Checks
+
+```powershell
+npm run typecheck
+npm run build
+npm run lint
+```
+
+## Runtime
+
+Set `VITE_API_BASE_URL` when the HTTP API is not available through the Vite
+proxy or same-origin path.
