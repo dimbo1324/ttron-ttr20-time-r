@@ -138,8 +138,9 @@ implementation. The current frame format is FT1.2-like and intentionally narrow:
 - only the read-time command is modeled as a first-class command;
 - real TTR20/FT1.2 device behavior may require additional frame variants,
   address handling, control semantics, timing rules, and certification work;
-- serial transport, security, gRPC, gateway polling, Web UI, Docker, and CI are
-  outside Step 2.
+- serial transport, security, and expanded command coverage remain future work.
+  gRPC, gateway polling, Web UI, Docker, CI, and observability are implemented
+  around this protocol core without changing its package boundaries.
 
 The original task document and retained protocol PDF live under `task/` and
 `docs/files/`.

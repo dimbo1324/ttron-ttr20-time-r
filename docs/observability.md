@@ -14,7 +14,9 @@ Example:
 {
   "status": "ok",
   "service": "ft12-api",
-  "version": "dev"
+  "version": "dev",
+  "commit": "unknown",
+  "buildDate": "unknown"
 }
 ```
 

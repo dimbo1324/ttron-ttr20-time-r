@@ -3,7 +3,7 @@
 BIN_DIR := bin
 PROTO_FILES := proto/ft12/v1/common.proto proto/ft12/v1/emulator.proto proto/ft12/v1/gateway.proto
 
-.PHONY: help fmt test test-race test-fuzz build build-client build-emulator build-gateway build-cli build-api build-healthcheck run-emulator run-client run-gateway run-api proto check-architecture web-install web-dev web-build web-typecheck web-lint verify-web compose-config docker-build docker-up docker-down docker-logs docker-ps docker-smoke metrics-smoke ci-local verify clean
+.PHONY: help fmt test test-race test-fuzz build build-client build-emulator build-gateway build-cli build-api build-healthcheck run-emulator run-client run-gateway run-api proto check-architecture check-doc-links release-check web-install web-dev web-build web-typecheck web-lint verify-web compose-config docker-build docker-up docker-down docker-logs docker-ps docker-smoke metrics-smoke ci-local verify clean
 
 help:
 	@echo "Targets:"
@@ -24,6 +24,8 @@ help:
 	@echo "  run-api         run HTTP API on default address"
 	@echo "  proto           generate protobuf/gRPC Go code"
 	@echo "  check-architecture run dependency boundary checks"
+	@echo "  check-doc-links validate local Markdown links"
+	@echo "  release-check   run release-style local checks"
 	@echo "  web-install     npm install in web/"
 	@echo "  web-dev         run Vite dev server"
 	@echo "  web-build       build web app"
@@ -93,6 +95,13 @@ else
 	sh scripts/check-architecture.sh
 endif
 
+check-doc-links:
+ifeq ($(OS),Windows_NT)
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-doc-links.ps1
+else
+	sh scripts/check-doc-links.sh
+endif
+
 web-install:
 	cd web && npm install
 
@@ -146,7 +155,14 @@ else
 	@if command -v npm >/dev/null 2>&1; then cd web && npm run typecheck && npm run build; else echo "npm not found; skipping web verification"; fi
 endif
 
-ci-local: fmt check-architecture test build web-typecheck web-lint web-build compose-config
+ci-local: fmt check-architecture test build web-typecheck web-lint web-build compose-config check-doc-links
+
+release-check:
+ifeq ($(OS),Windows_NT)
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-check.ps1
+else
+	sh scripts/release-check.sh
+endif
 
 verify: fmt check-architecture test build verify-web
 

@@ -77,6 +77,15 @@ jobs:
         working-directory: web
         run: npm run build
 
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check local Markdown links
+        shell: pwsh
+        run: ./scripts/check-doc-links.ps1
+
   docker:
     name: Docker Compose
     runs-on: ubuntu-latest

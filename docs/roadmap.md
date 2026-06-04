@@ -8,7 +8,7 @@
 5.5. Architecture hardening before Web UI. Implemented.
 6. Web UI and HTTP API layer. Implemented.
 7. Docker, observability, and CI. Implemented.
-8. Final docs and release polish. Next.
+8. Final docs and release polish. Implemented.
 
 Step 5 is complete when proto contracts, generated Go code, emulator/gateway
 gRPC adapters, client helpers, integration tests, docs, and build/test checks
@@ -27,3 +27,37 @@ Step 7 is complete when Docker images, Docker Compose, health/readiness,
 metrics, optional Prometheus scraping, CI quality gates, Makefile targets, and
 operational docs are available without changing protocol or service business
 logic.
+
+Step 8 completes the current MVP/portfolio scope when the README, docs index,
+release flow, troubleshooting guide, examples, governance files, screenshots,
+doc-link checks, release checks, and repository hygiene are ready for a public
+GitHub presentation.
+
+## Completed MVP Scope
+
+- Go monorepo baseline.
+- FT1.2-like protocol core.
+- TCP emulator service.
+- Gateway polling service.
+- gRPC control plane.
+- Architecture hardening.
+- HTTP API and Web UI.
+- Docker, CI, observability.
+- Final documentation, release, examples, and GitHub polish.
+
+## Future Optional Milestones
+
+These are intentionally outside the current MVP:
+
+- auth/RBAC;
+- TLS/mTLS;
+- persistence;
+- multi-device gateway management;
+- serial transport;
+- expanded FT1.2 command set;
+- Grafana dashboard;
+- Kubernetes/Helm;
+- OpenTelemetry tracing;
+- advanced fuzzing;
+- Windows/Linux release binary workflow;
+- production-grade secrets/config management.

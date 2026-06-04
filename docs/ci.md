@@ -42,6 +42,8 @@ cd ..
 docker compose config
 docker compose build
 docker compose up -d
+.\scripts\check-doc-links.ps1
+.\scripts\release-check.ps1
 ```
 
 On Unix-like systems:
@@ -54,4 +56,5 @@ sh scripts/check-architecture.sh
 
 The workflow intentionally avoids heavy lint suites until they are configured
 with project-specific rules. Docker smoke is limited to stable health and HTTP
-API checks to reduce flakiness.
+API checks to reduce flakiness. Release checks are documented for maintainers
+and can be split into CI jobs later if needed.

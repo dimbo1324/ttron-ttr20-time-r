@@ -9,9 +9,11 @@ import (
 )
 
 type HealthDTO struct {
-	Status  string `json:"status"`
-	Service string `json:"service"`
-	Version string `json:"version"`
+	Status    string `json:"status"`
+	Service   string `json:"service"`
+	Version   string `json:"version"`
+	Commit    string `json:"commit,omitempty"`
+	BuildDate string `json:"buildDate,omitempty"`
 }
 
 type PublicConfigDTO struct {
