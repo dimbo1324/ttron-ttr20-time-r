@@ -35,6 +35,12 @@ func TestDirection(t *testing.T) {
 	}
 }
 
+func TestDirectionUnknownMapsToSystem(t *testing.T) {
+	if got := Direction(events.Direction("unknown")); got != ft12v1.EventDirection_EVENT_DIRECTION_SYSTEM {
+		t.Fatalf("Direction(unknown) = %v", got)
+	}
+}
+
 func TestEventsKeepsStableIDAndLimit(t *testing.T) {
 	ts := time.Unix(10, 0).UTC()
 	records := []events.FrameRecord{

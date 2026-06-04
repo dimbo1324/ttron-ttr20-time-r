@@ -5,6 +5,7 @@ dist/
 tmp/
 temp/
 logs/
+runtime/
 *.log
 *.out
 *.test

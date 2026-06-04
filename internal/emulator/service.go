@@ -78,7 +78,12 @@ func (s *Service) Addr() net.Addr {
 
 func (s *Service) HandleConnection(ctx context.Context, conn net.Conn) {
 	s.connectionOpened()
-	defer s.connectionClosed()
+	remote := conn.RemoteAddr().String()
+	s.logger.Printf("[%s] connection accepted", remote)
+	defer func() {
+		s.connectionClosed()
+		s.logger.Printf("[%s] connection closed", remote)
+	}()
 
 	session := newSession(s, conn)
 	session.run(ctx)
@@ -101,6 +106,8 @@ func (s *Service) SetFaultMode(fault FaultMode) FaultMode {
 	defer s.mu.Unlock()
 	s.fault = fault
 	s.status.FaultMode = fault
+	s.logger.Printf("emulator fault mode updated responseDelay=%s badChecksum=%.3f fragment=%.3f fragmentDelay=%s noResponse=%t closeAfterRequest=%t",
+		fault.ResponseDelay, fault.BadChecksumProb, fault.FragmentProb, fault.FragmentDelay, fault.NoResponse, fault.CloseAfterRequest)
 	return fault
 }
 

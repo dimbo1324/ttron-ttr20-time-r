@@ -65,7 +65,9 @@ func TestDecodeErrors(t *testing.T) {
 		{name: "invalid first start", raw: mutate(valid, 0, 0x67), want: ErrInvalidStartByte},
 		{name: "invalid second start", raw: mutate(valid, 2, 0x67), want: ErrInvalidRepeatedStartByte},
 		{name: "invalid length too small", raw: mutate(valid, 1, 0x01), want: ErrInvalidLength},
+		{name: "invalid len mismatch longer than data", raw: mutate(valid, 1, 0x04), want: ErrInvalidLength},
 		{name: "invalid checksum", raw: mutate(valid, len(valid)-2, 0x99), want: ErrInvalidChecksum},
+		{name: "truncated checksum", raw: valid[:len(valid)-2], want: ErrFrameTooShort},
 		{name: "invalid end", raw: mutate(valid, len(valid)-1, 0x00), want: ErrInvalidEndByte},
 		{name: "invalid byte count", raw: valid[:len(valid)-1], want: ErrInvalidLength},
 	}

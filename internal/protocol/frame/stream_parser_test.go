@@ -88,6 +88,26 @@ func TestStreamParserInvalidThenValid(t *testing.T) {
 	}
 }
 
+func TestStreamParserNoisePartialInvalidThenValid(t *testing.T) {
+	bad := mustEncode(t, checksum.ModeSum, []byte{0x01})
+	bad[len(bad)-1] = 0x00
+	good := mustEncode(t, checksum.ModeSum, []byte{0x03})
+	parser := NewStreamParser(checksum.ModeSum)
+
+	first := append([]byte{0x44, 0x55}, bad[:4]...)
+	result := parser.Push(first)
+	if len(result.Frames) != 0 {
+		t.Fatalf("partial invalid push frames = %d, want 0", len(result.Frames))
+	}
+	result = parser.Push(append(bad[4:], good...))
+	if len(result.Errors) == 0 || !errors.Is(result.Errors[0], ErrInvalidEndByte) {
+		t.Fatalf("errors = %v, want leading ErrInvalidEndByte", result.Errors)
+	}
+	if len(result.Frames) != 1 || !bytes.Equal(result.Frames[0].DataBytes(), []byte{0x03}) {
+		t.Fatalf("frames = %+v, want valid frame after invalid data", result.Frames)
+	}
+}
+
 func TestStreamParserMaxFrameSizeExceeded(t *testing.T) {
 	parser := NewStreamParser(checksum.ModeSum, WithMaxFrameSize(8))
 	result := parser.Push([]byte{StartByte, 0x20, StartByte, 0x00, 0x01})

@@ -1,10 +1,13 @@
 package codec
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/checksum"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/command"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/frame"
 )
 
 func TestEncodeDecodeReadTimeRequest(t *testing.T) {
@@ -52,5 +55,17 @@ func TestEncodeDecodeReadTimeResponse(t *testing.T) {
 				t.Fatalf("response = frame %+v payload %+v", respFrame, resp)
 			}
 		})
+	}
+}
+
+func TestDecodeReadTimeResponseRejectsWrongCommand(t *testing.T) {
+	c := New(checksum.ModeSum, 0x00, 0x01)
+	raw, err := frame.Encode(frame.New(0x80, 0x01, []byte{0x02}), checksum.ModeSum)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = c.DecodeReadTimeResponse(raw)
+	if !errors.Is(err, command.ErrUnexpectedCommand) {
+		t.Fatalf("DecodeReadTimeResponse() error = %v, want ErrUnexpectedCommand", err)
 	}
 }

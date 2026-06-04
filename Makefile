@@ -3,11 +3,12 @@
 BIN_DIR := bin
 PROTO_FILES := proto/ft12/v1/common.proto proto/ft12/v1/emulator.proto proto/ft12/v1/gateway.proto
 
-.PHONY: help fmt test test-race test-fuzz build build-client build-emulator build-gateway build-cli build-api build-healthcheck run-emulator run-client run-gateway run-api proto check-architecture check-doc-links release-check web-install web-dev web-build web-typecheck web-lint verify-web compose-config docker-build docker-up docker-down docker-logs docker-ps docker-smoke metrics-smoke ci-local verify clean
+.PHONY: help fmt check-go-format test test-race test-fuzz build build-client build-emulator build-gateway build-cli build-api build-healthcheck run-emulator run-client run-gateway run-api proto check-architecture check-doc-links release-check clean-runtime clean-runtime-dry-run web-install web-dev web-build web-typecheck web-lint verify-web compose-config docker-build docker-up docker-down docker-logs docker-ps docker-smoke metrics-smoke ci-local verify clean
 
 help:
 	@echo "Targets:"
 	@echo "  fmt             go fmt ./..."
+	@echo "  check-go-format verify active Go files are gofmt-formatted"
 	@echo "  test            go test ./..."
 	@echo "  test-race       go test -race ./..."
 	@echo "  test-fuzz       list documented fuzz entrypoint"
@@ -26,6 +27,8 @@ help:
 	@echo "  check-architecture run dependency boundary checks"
 	@echo "  check-doc-links validate local Markdown links"
 	@echo "  release-check   run release-style local checks"
+	@echo "  clean-runtime   remove ignored runtime/build artifacts"
+	@echo "  clean-runtime-dry-run preview ignored runtime/build cleanup"
 	@echo "  web-install     npm install in web/"
 	@echo "  web-dev         run Vite dev server"
 	@echo "  web-build       build web app"
@@ -42,6 +45,13 @@ help:
 
 fmt:
 	go fmt ./...
+
+check-go-format:
+ifeq ($(OS),Windows_NT)
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-go-format.ps1
+else
+	sh scripts/check-go-format.sh
+endif
 
 test:
 	go test ./...
@@ -102,6 +112,20 @@ else
 	sh scripts/check-doc-links.sh
 endif
 
+clean-runtime:
+ifeq ($(OS),Windows_NT)
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-runtime.ps1
+else
+	bash scripts/clean-runtime.sh
+endif
+
+clean-runtime-dry-run:
+ifeq ($(OS),Windows_NT)
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-runtime.ps1 -DryRun
+else
+	bash scripts/clean-runtime.sh --dry-run
+endif
+
 web-install:
 	cd web && npm install
 
@@ -155,7 +179,7 @@ else
 	@if command -v npm >/dev/null 2>&1; then cd web && npm run typecheck && npm run build; else echo "npm not found; skipping web verification"; fi
 endif
 
-ci-local: fmt check-architecture test build web-typecheck web-lint web-build compose-config check-doc-links
+ci-local: fmt check-go-format check-architecture test build web-typecheck web-lint web-build compose-config check-doc-links clean-runtime-dry-run
 
 release-check:
 ifeq ($(OS),Windows_NT)

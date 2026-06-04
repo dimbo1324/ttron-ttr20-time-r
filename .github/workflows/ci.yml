@@ -34,13 +34,8 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Check Go formatting
-        shell: bash
-        run: |
-          files="$(gofmt -l $(git ls-files '*.go'))"
-          if [ -n "$files" ]; then
-            echo "$files"
-            exit 1
-          fi
+        shell: pwsh
+        run: ./scripts/check-go-format.ps1
       - name: Test
         run: go test ./...
       - name: Build
@@ -53,6 +48,25 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check architecture boundaries
         run: sh scripts/check-architecture.sh
+
+  cleanup:
+    name: Cleanup Scripts
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell cleanup dry-run
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/clean-runtime.ps1 -DryRun
+      - name: Shell cleanup dry-run
+        if: runner.os == 'Linux'
+        run: bash scripts/clean-runtime.sh --dry-run
 
   frontend:
     name: Frontend

@@ -31,6 +31,25 @@ func TestCRC16(t *testing.T) {
 	}
 }
 
+func TestCRC16AdditionalVectors(t *testing.T) {
+	tests := []struct {
+		name string
+		data []byte
+		want uint16
+	}{
+		{name: "empty", data: nil, want: 0xFFFF},
+		{name: "single zero", data: []byte{0x00}, want: 0x40BF},
+		{name: "read-time payload", data: []byte{0x00, 0x01, 0x01}, want: 0x90B1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := CRC16(tt.data); got != tt.want {
+				t.Fatalf("CRC16() = 0x%04X, want 0x%04X", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestParseMode(t *testing.T) {
 	tests := []struct {
 		raw     string
@@ -38,9 +57,11 @@ func TestParseMode(t *testing.T) {
 		wantErr bool
 	}{
 		{raw: "", want: ModeSum},
+		{raw: " sum ", want: ModeSum},
 		{raw: "sum", want: ModeSum},
 		{raw: "SUM", want: ModeSum},
 		{raw: "crc16", want: ModeCRC16},
+		{raw: "CRC16", want: ModeCRC16},
 		{raw: "bad", wantErr: true},
 	}
 

@@ -16,6 +16,12 @@ func TestLoadAPIDefaults(t *testing.T) {
 	if cfg.RequestTimeout != 3*time.Second {
 		t.Fatalf("timeout = %s", cfg.RequestTimeout)
 	}
+	if cfg.CORSOrigin == "*" {
+		t.Fatal("default CORS origin must not be wildcard")
+	}
+	if cfg.LogFile != "runtime/logs/ft12-api.log" {
+		t.Fatalf("LogFile = %q", cfg.LogFile)
+	}
 }
 
 func TestLoadAPIFlags(t *testing.T) {

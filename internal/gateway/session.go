@@ -36,6 +36,7 @@ func (s *Service) pollOnce(conn net.Conn) error {
 	if err != nil {
 		return err
 	}
+	s.logger.Printf("gateway polling request command=read-time target=%s timeout=%s", conn.RemoteAddr().String(), s.cfg.RequestTimeout)
 	deadline := time.Now().Add(s.cfg.RequestTimeout)
 	_ = conn.SetWriteDeadline(deadline)
 	if _, err := conn.Write(req); err != nil {
@@ -53,6 +54,7 @@ func (s *Service) pollOnce(conn net.Conn) error {
 			if errors.Is(err, io.EOF) {
 				return err
 			}
+			s.logger.Printf("gateway read timeout/error: %v", err)
 			return fmt.Errorf("read response: %w", err)
 		}
 		result := parser.Push(buf[:n])

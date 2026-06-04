@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"time"
-
-	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/checksum"
 )
 
 type GatewayConfig struct {
@@ -34,6 +32,7 @@ func DefaultGateway() GatewayConfig {
 		BackoffInitial: 500 * time.Millisecond,
 		BackoffMax:     5 * time.Second,
 		RecentSize:     100,
+		LogFile:        "runtime/logs/ft12-gateway.log",
 		GRPCListen:     ":9200",
 	}
 }
@@ -87,32 +86,32 @@ func (c GatewayConfig) Validate() error {
 	if err := validateTCPAddress(c.Target, "target address"); err != nil {
 		return err
 	}
-	if _, err := checksum.ParseMode(c.CRCMode); err != nil {
+	if err := validateChecksumMode(c.CRCMode); err != nil {
 		return err
 	}
-	if c.AdapterAddr < 0 || c.AdapterAddr > 255 {
-		return fmt.Errorf("adapter address must be in range 0..255")
+	if err := validateAdapterAddr(c.AdapterAddr); err != nil {
+		return err
 	}
-	if c.PollInterval <= 0 {
-		return fmt.Errorf("poll interval must be positive")
+	if err := validatePositiveDuration(c.PollInterval, "poll interval"); err != nil {
+		return err
 	}
-	if c.RequestTimeout <= 0 {
-		return fmt.Errorf("request timeout must be positive")
+	if err := validatePositiveDuration(c.RequestTimeout, "request timeout"); err != nil {
+		return err
 	}
-	if c.ConnectTimeout <= 0 {
-		return fmt.Errorf("connect timeout must be positive")
+	if err := validatePositiveDuration(c.ConnectTimeout, "connect timeout"); err != nil {
+		return err
 	}
-	if c.BackoffInitial <= 0 {
-		return fmt.Errorf("backoff initial must be positive")
+	if err := validatePositiveDuration(c.BackoffInitial, "backoff initial"); err != nil {
+		return err
 	}
-	if c.BackoffMax <= 0 {
-		return fmt.Errorf("backoff max must be positive")
+	if err := validatePositiveDuration(c.BackoffMax, "backoff max"); err != nil {
+		return err
 	}
 	if c.BackoffInitial > c.BackoffMax {
 		return fmt.Errorf("backoff initial must not exceed backoff max")
 	}
-	if c.RecentSize <= 0 {
-		return fmt.Errorf("recent size must be positive")
+	if err := validateRecentSize(c.RecentSize); err != nil {
+		return err
 	}
 	if c.GRPCListen != "" {
 		if err := validateTCPAddress(c.GRPCListen, "gRPC listen address"); err != nil {

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	ft12v1 "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1"
 	httpclient "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/client"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/dto"
 	httperrors "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/errors"
@@ -21,6 +22,7 @@ type Config struct {
 	EmulatorGRPC   string
 	GatewayGRPC    string
 	Metrics        *metrics.Registry
+	MaxBodyBytes   int64
 }
 
 type Handler struct {
@@ -177,6 +179,7 @@ func (h *Handler) getEmulatorFaultMode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) putEmulatorFaultMode(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, h.maxBodyBytes())
 	var fault dto.FaultModeDTO
 	if err := json.NewDecoder(r.Body).Decode(&fault); err != nil {
 		httperrors.WriteError(w, http.StatusBadRequest, "BAD_JSON", "request body must be a valid fault mode JSON object")
@@ -209,12 +212,7 @@ func (h *Handler) emulatorEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := h.requestContext(r)
 	defer cancel()
-	events, err := h.emulator.GetRecentEvents(ctx, uint32(limit))
-	if err != nil {
-		httperrors.WriteUpstreamError(w, "EMULATOR", err)
-		return
-	}
-	httperrors.WriteJSON(w, http.StatusOK, map[string]any{"events": dto.Events(events, "emulator")})
+	h.writeEvents(w, ctx, "emulator", "EMULATOR", h.emulator.GetRecentEvents, limit)
 }
 
 func (h *Handler) gatewayStatus(w http.ResponseWriter, r *http.Request) {
@@ -283,12 +281,7 @@ func (h *Handler) gatewayEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := h.requestContext(r)
 	defer cancel()
-	events, err := h.gateway.GetRecentEvents(ctx, uint32(limit))
-	if err != nil {
-		httperrors.WriteUpstreamError(w, "GATEWAY", err)
-		return
-	}
-	httperrors.WriteJSON(w, http.StatusOK, map[string]any{"events": dto.Events(events, "gateway")})
+	h.writeEvents(w, ctx, "gateway", "GATEWAY", h.gateway.GetRecentEvents, limit)
 }
 
 func (h *Handler) events(w http.ResponseWriter, r *http.Request) {
@@ -345,12 +338,28 @@ func (h *Handler) mergedEvents(ctx context.Context, limit int) ([]dto.EventDTO, 
 	return dto.MergeEvents(dto.Events(emulatorEvents, "emulator"), dto.Events(gatewayEvents, "gateway"), limit), note
 }
 
+func (h *Handler) writeEvents(w http.ResponseWriter, ctx context.Context, source, upstream string, fetch func(context.Context, uint32) ([]*ft12v1.FrameEvent, error), limit int) {
+	events, err := fetch(ctx, uint32(limit))
+	if err != nil {
+		httperrors.WriteUpstreamError(w, upstream, err)
+		return
+	}
+	httperrors.WriteJSON(w, http.StatusOK, map[string]any{"events": dto.Events(events, source)})
+}
+
 func (h *Handler) requestContext(r *http.Request) (context.Context, context.CancelFunc) {
 	timeout := h.config.RequestTimeout
 	if timeout <= 0 {
 		timeout = 3 * time.Second
 	}
 	return context.WithTimeout(r.Context(), timeout)
+}
+
+func (h *Handler) maxBodyBytes() int64 {
+	if h.config.MaxBodyBytes > 0 {
+		return h.config.MaxBodyBytes
+	}
+	return 64 * 1024
 }
 
 func parseLimit(w http.ResponseWriter, r *http.Request, fallback int) (int, bool) {

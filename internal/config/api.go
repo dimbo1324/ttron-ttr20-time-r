@@ -24,6 +24,7 @@ func DefaultAPI() APIConfig {
 		GatewayGRPC:    "127.0.0.1:9200",
 		RequestTimeout: 3 * time.Second,
 		CORSOrigin:     "http://localhost:5173",
+		LogFile:        "runtime/logs/ft12-api.log",
 	}
 }
 
@@ -75,8 +76,8 @@ func (c APIConfig) Validate() error {
 	if err := validateTCPAddress(c.GatewayGRPC, "gateway gRPC address"); err != nil {
 		return err
 	}
-	if c.RequestTimeout <= 0 {
-		return fmt.Errorf("request timeout must be positive")
+	if err := validatePositiveDuration(c.RequestTimeout, "request timeout"); err != nil {
+		return err
 	}
 	return validateOrigin(c.CORSOrigin)
 }

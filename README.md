@@ -49,6 +49,8 @@ Web UI talks only to `/api`.
 - Optional Prometheus scrape profile.
 - GitHub Actions CI across Go, frontend, Docker, architecture, and race tests.
 - Architecture boundary scripts and local release checks.
+- Runtime logs under ignored `runtime/logs/` and cleanup scripts for local build
+  output.
 
 ## Quick Start
 
@@ -85,6 +87,7 @@ Backend checks:
 
 ```powershell
 go fmt ./...
+.\scripts\check-go-format.ps1
 go test ./...
 go build ./...
 .\scripts\check-architecture.ps1
@@ -113,6 +116,26 @@ Release-style local check:
 
 ```powershell
 .\scripts\release-check.ps1
+```
+
+Local service logs default to:
+
+- `runtime/logs/ft12-emulator.log`
+- `runtime/logs/ft12-gateway.log`
+- `runtime/logs/ft12-api.log`
+
+Use `-log=` to keep a service on stdout, or pass another `-log` path for local
+diagnostics. `runtime/`, `tmp/`, logs, `web/dist`, and similar generated output
+are ignored by Git. Cleanup helpers:
+
+```powershell
+.\scripts\clean-runtime.ps1 -DryRun
+.\scripts\clean-runtime.ps1
+```
+
+```sh
+bash scripts/clean-runtime.sh --dry-run
+bash scripts/clean-runtime.sh
 ```
 
 ## Service Ports

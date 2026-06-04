@@ -26,6 +26,7 @@ func (s *Service) Run(ctx context.Context) error {
 		if err != nil {
 			s.recordFailure(fmt.Errorf("connect failed: %w", err))
 			delay := backoff.Next()
+			s.logger.Printf("gateway connect failed target=%s error=%v backoff=%s", s.cfg.Target, err, delay)
 			if !sleepContext(ctx, delay) {
 				return nil
 			}
@@ -47,6 +48,7 @@ func (s *Service) Run(ctx context.Context) error {
 			s.logger.Printf("gateway session error: %v", err)
 		}
 		delay := backoff.Next()
+		s.logger.Printf("gateway reconnect backoff=%s", delay)
 		if !sleepContext(ctx, delay) {
 			return nil
 		}
