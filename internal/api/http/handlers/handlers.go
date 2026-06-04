@@ -12,12 +12,14 @@ import (
 	httpclient "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/client"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/dto"
 	httperrors "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/errors"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/metrics"
 )
 
 type Config struct {
 	RequestTimeout time.Duration
 	EmulatorGRPC   string
 	GatewayGRPC    string
+	Metrics        *metrics.Registry
 }
 
 type Handler struct {
@@ -34,6 +36,8 @@ func (h *Handler) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", h.health)
 	mux.HandleFunc("/api/v1/health", h.health)
+	mux.HandleFunc("/api/v1/ready", h.ready)
+	mux.HandleFunc("/metrics", h.metrics)
 	mux.HandleFunc("/api/v1/config", h.configHandler)
 	mux.HandleFunc("/api/v1/overview", h.overview)
 	mux.HandleFunc("/api/v1/emulator/status", h.emulatorStatus)
@@ -53,6 +57,42 @@ func (h *Handler) health(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperrors.WriteJSON(w, http.StatusOK, dto.HealthDTO{Status: "ok", Service: "ft12-api", Version: "dev"})
+}
+
+func (h *Handler) ready(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodGet) {
+		return
+	}
+	ctx, cancel := h.requestContext(r)
+	defer cancel()
+
+	emulatorState := "ok"
+	gatewayState := "ok"
+	status := http.StatusOK
+	if _, err := h.emulator.GetStatus(ctx); err != nil {
+		emulatorState = "unavailable"
+		status = http.StatusServiceUnavailable
+	}
+	if _, err := h.gateway.GetStatus(ctx); err != nil {
+		gatewayState = "unavailable"
+		status = http.StatusServiceUnavailable
+	}
+	overall := "ready"
+	if status != http.StatusOK {
+		overall = "not_ready"
+	}
+	httperrors.WriteJSON(w, status, map[string]string{
+		"status":   overall,
+		"emulator": emulatorState,
+		"gateway":  gatewayState,
+	})
+}
+
+func (h *Handler) metrics(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodGet) {
+		return
+	}
+	h.config.Metrics.Write(w)
 }
 
 func (h *Handler) configHandler(w http.ResponseWriter, r *http.Request) {

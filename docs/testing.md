@@ -17,7 +17,7 @@ The current baseline includes tests for:
 - lifecycle group cancellation/error behavior;
 - stable event ring IDs and snapshot copy behavior;
 - shared gRPC mapper behavior;
-- HTTP API config, handlers, error shape, CORS, events merge, and controls;
+- HTTP API config, handlers, error shape, CORS, readiness, metrics, events merge, and controls;
 - hex dump formatting.
 
 Required baseline checks:
@@ -41,17 +41,33 @@ Frontend checks:
 
 ```powershell
 cd web
-npm install
+npm ci
 npm run typecheck
 npm run build
 npm run lint
+```
+
+Docker checks:
+
+```powershell
+docker compose config
+docker compose build
+docker compose up -d
+curl http://127.0.0.1:8080/health
+curl http://127.0.0.1:8080/api/v1/ready
+curl http://127.0.0.1:8080/api/v1/overview
+curl http://127.0.0.1:8080/api/v1/events
+curl http://127.0.0.1:8080/metrics
+docker compose down -v
 ```
 
 `make test-fuzz` documents the current fuzz entrypoint status. Fuzzing is not
 mandatory yet because no stable fuzz corpus is configured for this milestone.
 
 Manual smoke coverage should include client/emulator in `sum` and `crc16`,
-gateway/emulator in `sum` and `crc16`, HTTP API health/status/events endpoints,
-and the Web UI dashboard in a browser when the environment supports it.
+gateway/emulator in `sum` and `crc16`, HTTP API health/readiness/status/events
+endpoints, Docker Compose, and the Web UI dashboard in a browser when the
+environment supports it.
 
-Future milestones should add Web UI/API contract coverage.
+Future milestones should add deeper Web UI/API contract coverage and release
+artifact validation.

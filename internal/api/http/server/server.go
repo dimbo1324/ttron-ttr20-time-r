@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/metrics"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/middleware"
 )
 
@@ -18,6 +19,7 @@ type Logger interface {
 type Config struct {
 	Address      string
 	CORSOrigin   string
+	Metrics      *metrics.Registry
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
@@ -47,6 +49,11 @@ func New(cfg Config, handler http.Handler, logger Logger) *Server {
 		middleware.RequestID(),
 		middleware.Recovery(logger),
 		middleware.CORS(cfg.CORSOrigin),
+		middleware.Metrics(func(method, path string, status int, elapsed time.Duration) {
+			if cfg.Metrics != nil {
+				cfg.Metrics.Observe(method, path, status, elapsed)
+			}
+		}),
 		middleware.Logging(logger),
 	)
 	return &Server{

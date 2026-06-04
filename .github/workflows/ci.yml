@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "**"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Check Go formatting
+        shell: bash
+        run: |
+          files="$(gofmt -l $(git ls-files '*.go'))"
+          if [ -n "$files" ]; then
+            echo "$files"
+            exit 1
+          fi
+      - name: Test
+        run: go test ./...
+      - name: Build
+        run: go build ./...
+
+  architecture:
+    name: Architecture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check architecture boundaries
+        run: sh scripts/check-architecture.sh
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+      - name: Typecheck
+        working-directory: web
+        run: npm run typecheck
+      - name: Lint
+        working-directory: web
+        run: npm run lint
+      - name: Build
+        working-directory: web
+        run: npm run build
+
+  docker:
+    name: Docker Compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose config
+        run: docker compose config
+      - name: Build images
+        run: docker compose build
+      - name: Smoke compose stack
+        run: |
+          docker compose up -d
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8080/api/v1/ready >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8080/health
+          curl -fsS http://127.0.0.1:8080/api/v1/ready
+          curl -fsS http://127.0.0.1:8080/api/v1/overview
+          curl -fsS http://127.0.0.1:8080/api/v1/events
+          curl -fsS http://127.0.0.1:8080/metrics
+          curl -fsS http://127.0.0.1:5173/health
+      - name: Compose logs
+        if: always()
+        run: docker compose logs
+      - name: Compose down
+        if: always()
+        run: docker compose down -v
+
+  race:
+    name: Race Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Race tests
+        run: go test -race ./...

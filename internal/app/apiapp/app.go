@@ -12,6 +12,7 @@ import (
 	grpcclient "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/client"
 	httpclient "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/client"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/handlers"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/metrics"
 	httpserver "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/server"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/config"
 	platformlogging "github.com/dimbo1324/ttron-ttr20-time-r/internal/platform/logging"
@@ -46,6 +47,7 @@ func Run(args []string) int {
 	}
 	defer gatewayConn.Close()
 
+	metricsRegistry := metrics.NewRegistry()
 	handler := handlers.New(
 		httpclient.NewEmulatorGRPCClient(emulatorClient),
 		httpclient.NewGatewayGRPCClient(gatewayClient),
@@ -53,11 +55,13 @@ func Run(args []string) int {
 			RequestTimeout: cfg.RequestTimeout,
 			EmulatorGRPC:   cfg.EmulatorGRPC,
 			GatewayGRPC:    cfg.GatewayGRPC,
+			Metrics:        metricsRegistry,
 		},
 	)
 	server := httpserver.New(httpserver.Config{
 		Address:    cfg.HTTPListen,
 		CORSOrigin: cfg.CORSOrigin,
+		Metrics:    metricsRegistry,
 	}, handler.Routes(), logger)
 
 	if err := server.Run(rootCtx); err != nil {
