@@ -9,6 +9,7 @@
 6. Web UI and HTTP API layer. Implemented.
 7. Docker, observability, and CI. Implemented.
 8. Final docs and release polish. Implemented.
+9. UI localisation, themes, infographics, exports, and documentation upgrade. Implemented.
 
 Step 5 is complete when proto contracts, generated Go code, emulator/gateway
 gRPC adapters, client helpers, integration tests, docs, and build/test checks
@@ -33,6 +34,12 @@ release flow, troubleshooting guide, examples, governance files, screenshots,
 doc-link checks, release checks, and repository hygiene are ready for a public
 GitHub presentation.
 
+Step 9 is complete when the Web UI is bilingual with Russian default, supports
+persisted dark/light themes, uses a more compact responsive dashboard, includes
+protocol and diagnostics infographics, provides JSON/CSV analysis exports, and
+documents the updated UI/API behavior without changing the FT1.2-like wire
+protocol.
+
 ## Completed MVP Scope
 
 - Go monorepo baseline.
@@ -44,6 +51,7 @@ GitHub presentation.
 - HTTP API and Web UI.
 - Docker, CI, observability.
 - Final documentation, release, examples, and GitHub polish.
+- Bilingual themed Web UI, protocol infographics, diagnostics, and local exports.
 
 ## Future Optional Milestones
 

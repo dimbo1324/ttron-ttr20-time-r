@@ -1,8 +1,8 @@
-export function formatTime(value?: string | null): string {
-  if (!value) return 'not available';
+export function formatTime(value?: string | null, fallback = 'not available', locale?: string): string {
+  if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
+  return date.toLocaleString(locale);
 }
 
 export function formatDurationMs(ms?: number): string {
@@ -13,4 +13,8 @@ export function formatDurationMs(ms?: number): string {
 
 export function compactNumber(value?: number): string {
   return new Intl.NumberFormat().format(value ?? 0);
+}
+
+export function localeForLanguage(language: 'ru' | 'en') {
+  return language === 'ru' ? 'ru-RU' : 'en-US';
 }

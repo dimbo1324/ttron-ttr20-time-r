@@ -1,44 +1,59 @@
 import { getGatewayStatus, getLastReadTime } from '../../entities/gateway/api';
 import { usePollingResource } from '../../shared/lib/usePollingResource';
-import { compactNumber, formatDurationMs, formatTime } from '../../shared/lib/format';
+import { displayChecksum, displayStatus, statTone } from '../../shared/lib/display';
+import { compactNumber, formatDurationMs, formatTime, localeForLanguage } from '../../shared/lib/format';
+import { useI18n } from '../../shared/i18n/useI18n';
 import { Badge } from '../../shared/ui/Badge';
 import { Card } from '../../shared/ui/Card';
+import { ExportActions } from '../../shared/ui/ExportActions';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { StatCard } from '../../shared/ui/StatCard';
 import { ErrorBanner, LoadingState } from '../../shared/ui/State';
+import { PollingTimeline } from '../../widgets/infographics/PollingTimeline';
 import { PollingControlPanel } from '../../widgets/polling-control-panel/PollingControlPanel';
 
 export function GatewayPage() {
+  const { t, language } = useI18n();
   const status = usePollingResource(getGatewayStatus, 2000);
   const lastRead = usePollingResource(getLastReadTime, 2000);
-  if (status.loading && !status.data) return <LoadingState label="Loading gateway status" />;
+  const locale = localeForLanguage(language);
+  if (status.loading && !status.data) return <LoadingState label={t('common.loadingGateway')} />;
   const data = status.data;
+  const gatewayState = data?.connected ? 'connected' : data?.state;
   return (
     <>
-      <PageHeader title="Gateway" subtitle="Polling gateway status and control actions." />
+      <PageHeader
+        title={t('gateway.title')}
+        subtitle={t('gateway.subtitle')}
+        actions={<ExportActions compact jsonPath="/api/v1/export/gateway-status.json" copyValue={data} />}
+      />
       <ErrorBanner message={status.error || lastRead.error} />
       {data ? (
-        <div className="mt-4 space-y-5">
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Connection" value={data.connected ? 'connected' : data.state} detail={data.targetAddr} />
-            <StatCard label="Successful reads" value={compactNumber(data.successfulReads)} detail={`${compactNumber(data.failedReads)} failed`} />
-            <StatCard label="Reconnects" value={compactNumber(data.reconnects)} detail={`${compactNumber(data.connectionAttempts)} attempts`} />
-            <StatCard label="Device time" value={formatTime(lastRead.data?.deviceTime ?? data.lastDeviceTime)} detail={lastRead.data?.available ? 'available' : 'not available'} />
+        <div className="mt-3 space-y-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard label={t('gateway.connection')} value={displayStatus(gatewayState, t)} detail={data.targetAddr} tone={statTone(gatewayState)} />
+            <StatCard label={t('gateway.successfulReads')} value={compactNumber(data.successfulReads)} detail={t('dashboard.failedReads', { count: compactNumber(data.failedReads) })} tone={data.failedReads > 0 ? 'warn' : 'ok'} />
+            <StatCard label={t('gateway.reconnects')} value={compactNumber(data.reconnects)} detail={t('gateway.attempts', { count: compactNumber(data.connectionAttempts) })} />
+            <StatCard label={t('gateway.deviceTime')} value={formatTime(lastRead.data?.deviceTime ?? data.lastDeviceTime, t('common.notAvailable'), locale)} detail={lastRead.data?.available ? t('common.available') : t('common.notAvailable')} tone="signal" />
           </div>
-          <Card>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold text-zinc-100">Polling session</h2>
-              <Badge value={data.connected ? 'connected' : data.state} />
-            </div>
-            <div className="mt-4 grid gap-3 text-sm text-zinc-400 md:grid-cols-2">
-              <div>Checksum mode: <span className="text-zinc-100">{data.checksumMode}</span></div>
-              <div>Interval: <span className="text-zinc-100">{formatDurationMs(data.pollingIntervalMs)}</span></div>
-              <div>Request timeout: <span className="text-zinc-100">{formatDurationMs(data.requestTimeoutMs)}</span></div>
-              <div>Connect timeout: <span className="text-zinc-100">{formatDurationMs(data.connectTimeoutMs)}</span></div>
-              <div>Last TX: <span className="text-zinc-100">{formatTime(data.lastTxTime)}</span></div>
-              <div>Last RX: <span className="text-zinc-100">{formatTime(data.lastRxTime)}</span></div>
-            </div>
-          </Card>
+          <div className="grid gap-3 xl:grid-cols-[0.85fr_1.15fr]">
+            <Card>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-semibold text-ink">{t('gateway.pollingSession')}</h2>
+                <Badge value={gatewayState ?? 'unspecified'} label={displayStatus(gatewayState, t)} />
+              </div>
+              <div className="mt-3 grid gap-2 text-sm text-subtle md:grid-cols-2 xl:grid-cols-1">
+                <div>{t('common.checksum')}: <span className="text-ink">{displayChecksum(data.checksumMode)}</span></div>
+                <div>{t('gateway.interval')}: <span className="text-ink">{formatDurationMs(data.pollingIntervalMs)}</span></div>
+                <div>{t('gateway.requestTimeout')}: <span className="text-ink">{formatDurationMs(data.requestTimeoutMs)}</span></div>
+                <div>{t('gateway.connectTimeout')}: <span className="text-ink">{formatDurationMs(data.connectTimeoutMs)}</span></div>
+                <div>{t('gateway.lastTx')}: <span className="text-ink">{formatTime(data.lastTxTime, t('common.notAvailable'), locale)}</span></div>
+                <div>{t('gateway.lastRx')}: <span className="text-ink">{formatTime(data.lastRxTime, t('common.notAvailable'), locale)}</span></div>
+                <div>{t('gateway.lastError')}: <span className="text-ink">{data.lastError || t('common.none')}</span></div>
+              </div>
+            </Card>
+            <PollingTimeline status={data} />
+          </div>
           <PollingControlPanel onUpdated={status.refresh} />
         </div>
       ) : null}

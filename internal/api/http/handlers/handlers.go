@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	ft12v1 "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1"
@@ -52,6 +51,11 @@ func (h *Handler) Routes() http.Handler {
 	mux.HandleFunc("/api/v1/gateway/last-read-time", h.gatewayLastReadTime)
 	mux.HandleFunc("/api/v1/gateway/events", h.gatewayEvents)
 	mux.HandleFunc("/api/v1/events", h.events)
+	mux.HandleFunc("/api/v1/export/events.json", h.exportEventsJSON)
+	mux.HandleFunc("/api/v1/export/events.csv", h.exportEventsCSV)
+	mux.HandleFunc("/api/v1/export/overview.json", h.exportOverviewJSON)
+	mux.HandleFunc("/api/v1/export/emulator-status.json", h.exportEmulatorStatusJSON)
+	mux.HandleFunc("/api/v1/export/gateway-status.json", h.exportGatewayStatusJSON)
 	return mux
 }
 
@@ -116,30 +120,11 @@ func (h *Handler) overview(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := h.requestContext(r)
 	defer cancel()
 
-	emulatorStatus, err := h.emulator.GetStatus(ctx)
-	if err != nil {
-		httperrors.WriteUpstreamError(w, "EMULATOR", err)
+	overview, ok := h.buildOverview(w, ctx, 20)
+	if !ok {
 		return
 	}
-	gatewayStatus, err := h.gateway.GetStatus(ctx)
-	if err != nil {
-		httperrors.WriteUpstreamError(w, "GATEWAY", err)
-		return
-	}
-	lastRead, err := h.gateway.GetLastReadTime(ctx)
-	if err != nil {
-		httperrors.WriteUpstreamError(w, "GATEWAY", err)
-		return
-	}
-	events, note := h.mergedEvents(ctx, 20)
-	httperrors.WriteJSON(w, http.StatusOK, dto.OverviewDTO{
-		Health:     healthDTO(),
-		Emulator:   dto.EmulatorStatus(emulatorStatus),
-		Gateway:    dto.GatewayStatus(gatewayStatus),
-		LastRead:   dto.LastReadTime(lastRead),
-		Events:     events,
-		EventsNote: note,
-	})
+	httperrors.WriteJSON(w, http.StatusOK, overview)
 }
 
 func (h *Handler) emulatorStatus(w http.ResponseWriter, r *http.Request) {
@@ -292,34 +277,12 @@ func (h *Handler) events(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	source := strings.ToLower(r.URL.Query().Get("source"))
-	if source == "" {
-		source = "all"
-	}
+	source := exportSource(r)
 	ctx, cancel := h.requestContext(r)
 	defer cancel()
 
-	var out []dto.EventDTO
-	var note string
-	switch source {
-	case "all":
-		out, note = h.mergedEvents(ctx, limit)
-	case "emulator":
-		events, err := h.emulator.GetRecentEvents(ctx, uint32(limit))
-		if err != nil {
-			httperrors.WriteUpstreamError(w, "EMULATOR", err)
-			return
-		}
-		out = dto.Events(events, "emulator")
-	case "gateway":
-		events, err := h.gateway.GetRecentEvents(ctx, uint32(limit))
-		if err != nil {
-			httperrors.WriteUpstreamError(w, "GATEWAY", err)
-			return
-		}
-		out = dto.Events(events, "gateway")
-	default:
-		httperrors.WriteError(w, http.StatusBadRequest, "INVALID_SOURCE", "source must be all, emulator, or gateway")
+	out, note, ok := h.eventsForSource(w, ctx, source, limit)
+	if !ok {
 		return
 	}
 	httperrors.WriteJSON(w, http.StatusOK, map[string]any{"events": out, "note": note})

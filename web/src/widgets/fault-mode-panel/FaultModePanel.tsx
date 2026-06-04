@@ -2,12 +2,14 @@ import { Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { FaultMode } from '../../entities/emulator/types';
 import { updateFaultMode } from '../../entities/emulator/api';
+import { useI18n } from '../../shared/i18n/useI18n';
 import { Button } from '../../shared/ui/Button';
 import { Card } from '../../shared/ui/Card';
 import { Toggle } from '../../shared/ui/Toggle';
 import { ErrorBanner } from '../../shared/ui/State';
 
 export function FaultModePanel({ faultMode, onUpdated }: { faultMode?: FaultMode; onUpdated: () => Promise<void> }) {
+  const { t } = useI18n();
   const [draft, setDraft] = useState<FaultMode | null>(faultMode ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,37 +28,45 @@ export function FaultModePanel({ faultMode, onUpdated }: { faultMode?: FaultMode
       await updateFaultMode(draft);
       await onUpdated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'fault mode update failed');
+      setError(err instanceof Error ? err.message : t('fault.updateFailed'));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Card className="space-y-4">
+    <Card className="space-y-3">
       <div>
-        <h2 className="text-lg font-semibold text-zinc-100">Fault mode</h2>
-        <p className="text-sm text-zinc-500">Controls emulator response behavior through the HTTP API.</p>
+        <h2 className="text-base font-semibold text-ink">{t('fault.title')}</h2>
+        <p className="text-sm text-subtle">{t('fault.subtitle')}</p>
       </div>
       <ErrorBanner message={error} />
       <div className="grid gap-3 md:grid-cols-2">
-        <Toggle label="Corrupt checksum" checked={draft.corruptChecksum} onChange={(value) => setDraft({ ...draft, corruptChecksum: value, corruptChecksumProbability: value ? Math.max(draft.corruptChecksumProbability, 1) : 0 })} />
-        <Toggle label="Fragment response" checked={draft.fragmentResponse} onChange={(value) => setDraft({ ...draft, fragmentResponse: value, fragmentProbability: value ? Math.max(draft.fragmentProbability, 1) : 0 })} />
-        <Toggle label="No response" checked={draft.noResponse} onChange={(value) => setDraft({ ...draft, noResponse: value })} />
-        <Toggle label="Close after request" checked={draft.closeAfterRequest} onChange={(value) => setDraft({ ...draft, closeAfterRequest: value })} />
+        <Toggle label={t('fault.corruptChecksum')} checked={draft.corruptChecksum} onChange={(value) => setDraft({ ...draft, corruptChecksum: value, corruptChecksumProbability: value ? Math.max(draft.corruptChecksumProbability, 0.25) : 0 })} />
+        <Toggle label={t('fault.fragmentResponse')} checked={draft.fragmentResponse} onChange={(value) => setDraft({ ...draft, fragmentResponse: value, fragmentProbability: value ? Math.max(draft.fragmentProbability, 0.25) : 0 })} />
+        <Toggle label={t('fault.noResponse')} checked={draft.noResponse} onChange={(value) => setDraft({ ...draft, noResponse: value })} />
+        <Toggle label={t('fault.closeAfterRequest')} checked={draft.closeAfterRequest} onChange={(value) => setDraft({ ...draft, closeAfterRequest: value })} />
       </div>
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="text-sm text-zinc-300">
-          Response delay ms
-          <input className="mt-1 w-full rounded-md border border-line bg-black/20 px-3 py-2 text-zinc-100" type="number" min={0} value={draft.responseDelayMs} onChange={(event) => setDraft({ ...draft, responseDelayMs: Number(event.target.value) })} />
+        <label className="text-sm text-ink">
+          {t('fault.responseDelayMs')}
+          <input className="app-field mt-1 w-full px-3 py-2" type="number" min={0} value={draft.responseDelayMs} onChange={(event) => setDraft({ ...draft, responseDelayMs: Number(event.target.value) })} />
         </label>
-        <label className="text-sm text-zinc-300">
-          Fragment delay ms
-          <input className="mt-1 w-full rounded-md border border-line bg-black/20 px-3 py-2 text-zinc-100" type="number" min={0} value={draft.fragmentDelayMs} onChange={(event) => setDraft({ ...draft, fragmentDelayMs: Number(event.target.value) })} />
+        <label className="text-sm text-ink">
+          {t('fault.fragmentDelayMs')}
+          <input className="app-field mt-1 w-full px-3 py-2" type="number" min={0} value={draft.fragmentDelayMs} onChange={(event) => setDraft({ ...draft, fragmentDelayMs: Number(event.target.value) })} />
+        </label>
+        <label className="text-sm text-ink">
+          {t('fault.corruptProbability')}
+          <input className="app-field mt-1 w-full px-3 py-2" type="number" min={0} max={1} step={0.05} value={draft.corruptChecksumProbability} onChange={(event) => setDraft({ ...draft, corruptChecksumProbability: Number(event.target.value) })} />
+        </label>
+        <label className="text-sm text-ink">
+          {t('fault.fragmentProbability')}
+          <input className="app-field mt-1 w-full px-3 py-2" type="number" min={0} max={1} step={0.05} value={draft.fragmentProbability} onChange={(event) => setDraft({ ...draft, fragmentProbability: Number(event.target.value) })} />
         </label>
       </div>
       <Button variant="primary" icon={<Save size={16} />} onClick={() => void save()} disabled={saving}>
-        {saving ? 'Applying' : 'Apply fault mode'}
+        {saving ? t('common.applying') : t('fault.apply')}
       </Button>
     </Card>
   );

@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 export class ApiError extends Error {
   constructor(
@@ -18,7 +18,7 @@ type ErrorBody = {
 };
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(buildApiUrl(path), {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -35,4 +35,16 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     throw new ApiError(body.error?.message ?? response.statusText, response.status, body.error?.code ?? 'HTTP_ERROR');
   }
   return (await response.json()) as T;
+}
+
+export async function apiTextRequest(path: string, options: RequestInit = {}): Promise<string> {
+  const response = await fetch(buildApiUrl(path), options);
+  if (!response.ok) {
+    throw new ApiError(response.statusText, response.status, 'HTTP_ERROR');
+  }
+  return response.text();
+}
+
+export function buildApiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
 }

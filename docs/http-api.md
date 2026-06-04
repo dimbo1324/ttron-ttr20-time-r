@@ -28,6 +28,11 @@ go run ./cmd/ft12-api -http-listen 127.0.0.1:8080 -emulator-grpc 127.0.0.1:9100 
 - `GET /api/v1/gateway/last-read-time`
 - `GET /api/v1/gateway/events?limit=100`
 - `GET /api/v1/events?source=all&limit=100`
+- `GET /api/v1/export/events.json?source=all&limit=100`
+- `GET /api/v1/export/events.csv?source=all&limit=100`
+- `GET /api/v1/export/overview.json?limit=50`
+- `GET /api/v1/export/emulator-status.json`
+- `GET /api/v1/export/gateway-status.json`
 
 ## Fault Mode Update
 
@@ -73,6 +78,30 @@ counts and total request duration by method, path, and status.
 
 `GET /health` also includes build metadata fields: `version`, `commit`, and
 `buildDate`.
+
+## Exports
+
+Export endpoints are read-only and use the same upstream gRPC status/events
+data as the ordinary JSON API. They do not read local log files and do not
+accept filesystem paths.
+
+`source` supports `all`, `emulator`, or `gateway`. `limit` must be an integer
+from `1` to `1000`; invalid values return `400 INVALID_LIMIT`.
+
+Events CSV columns:
+
+```text
+timestamp,source,service,direction,command,checksumMode,remoteAddr,rawHex,message,error
+```
+
+CSV output is generated with Go's standard CSV writer, so commas, quotes, and
+line breaks are escaped correctly. JSON downloads are indented and include an
+`exportedAt` timestamp. Responses set `Content-Type` and `Content-Disposition`
+headers with server-generated filenames such as
+`ft12-events-YYYYMMDD-HHMMSS.csv`.
+
+Exported files may contain protocol diagnostic data, raw hex, remote addresses,
+and service counters. Treat them as local troubleshooting artifacts.
 
 ## Architecture
 

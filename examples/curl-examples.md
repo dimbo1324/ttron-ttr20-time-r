@@ -62,3 +62,28 @@ Metrics:
 ```powershell
 curl http://127.0.0.1:8080/metrics
 ```
+
+Events JSON export:
+
+```powershell
+curl "http://127.0.0.1:8080/api/v1/export/events.json?source=all&limit=100"
+```
+
+Events CSV export:
+
+```powershell
+curl "http://127.0.0.1:8080/api/v1/export/events.csv?source=all&limit=100"
+```
+
+Overview JSON export:
+
+```powershell
+curl http://127.0.0.1:8080/api/v1/export/overview.json
+```
+
+Service status exports:
+
+```powershell
+curl http://127.0.0.1:8080/api/v1/export/gateway-status.json
+curl http://127.0.0.1:8080/api/v1/export/emulator-status.json
+```

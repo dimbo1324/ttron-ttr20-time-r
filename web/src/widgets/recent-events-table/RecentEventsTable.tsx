@@ -1,47 +1,64 @@
 import { Fragment, useState } from 'react';
 import type { FrameEvent } from '../../entities/events/types';
+import { displaySource } from '../../shared/lib/display';
+import { formatTime, localeForLanguage } from '../../shared/lib/format';
+import { useI18n } from '../../shared/i18n/useI18n';
 import { Badge } from '../../shared/ui/Badge';
 import { EmptyState } from '../../shared/ui/State';
 import { HexBlock } from '../../shared/ui/HexBlock';
-import { formatTime } from '../../shared/lib/format';
 
-export function RecentEventsTable({ events }: { events: FrameEvent[] }) {
+export function RecentEventsTable({ events, maxHeightClass = 'max-h-[340px]' }: { events: FrameEvent[]; maxHeightClass?: string }) {
+  const { t, language } = useI18n();
   const [expanded, setExpanded] = useState<string | null>(null);
-  if (events.length === 0) return <EmptyState label="No recent frames" />;
+  const locale = localeForLanguage(language);
+  if (events.length === 0) return <EmptyState label={t('common.noRecentFrames')} />;
   return (
-    <div className="overflow-hidden rounded-lg border border-line">
+    <div className={`overflow-auto rounded-md border border-line ${maxHeightClass}`}>
       <table className="w-full border-collapse text-left text-sm">
-        <thead className="bg-black/20 text-xs uppercase text-zinc-500">
+        <thead className="sticky top-0 z-[1] bg-muted text-xs uppercase text-subtle">
           <tr>
-            <th className="px-3 py-2">Time</th>
-            <th className="px-3 py-2">Source</th>
-            <th className="px-3 py-2">Direction</th>
-            <th className="px-3 py-2">Command</th>
-            <th className="px-3 py-2">Remote</th>
-            <th className="px-3 py-2">Message</th>
+            <th className="px-3 py-2">{t('table.time')}</th>
+            <th className="px-3 py-2">{t('table.source')}</th>
+            <th className="px-3 py-2">{t('table.direction')}</th>
+            <th className="px-3 py-2">{t('table.command')}</th>
+            <th className="px-3 py-2">{t('table.remote')}</th>
+            <th className="px-3 py-2">{t('table.message')}</th>
           </tr>
         </thead>
         <tbody>
           {events.map((event, index) => {
             const rowKey = `${event.source}-${event.id}-${event.direction}-${event.timestamp}-${event.command ?? ''}-${index}`;
+            const selected = expanded === rowKey;
+            const toggle = () => setExpanded(selected ? null : rowKey);
 
             return (
             <Fragment key={rowKey}>
               <tr
-                className="cursor-pointer border-t border-line/70 text-zinc-300 hover:bg-white/5"
-                onClick={() => setExpanded(expanded === rowKey ? null : rowKey)}
+                aria-expanded={selected}
+                aria-label={t('events.expandHint')}
+                className="cursor-pointer border-t border-line text-ink transition hover:bg-muted focus-visible:bg-muted"
+                onClick={toggle}
+                onKeyDown={(keyboardEvent) => {
+                  if (keyboardEvent.key === 'Enter' || keyboardEvent.key === ' ') {
+                    keyboardEvent.preventDefault();
+                    toggle();
+                  }
+                }}
+                role="button"
+                tabIndex={0}
               >
-                <td className="px-3 py-2 text-xs text-zinc-400">{formatTime(event.timestamp)}</td>
-                <td className="px-3 py-2">{event.source}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-xs text-subtle">{formatTime(event.timestamp, t('common.notAvailable'), locale)}</td>
+                <td className="px-3 py-2">{displaySource(event.source, t)}</td>
                 <td className="px-3 py-2"><Badge value={event.direction} tone={event.direction} /></td>
                 <td className="px-3 py-2 font-mono text-xs">{event.command || '-'}</td>
                 <td className="px-3 py-2 text-xs">{event.remoteAddr || '-'}</td>
-                <td className="px-3 py-2 text-xs text-zinc-400">{event.error || event.message || '-'}</td>
+                <td className="max-w-[280px] truncate px-3 py-2 text-xs text-subtle">{event.error || event.message || '-'}</td>
               </tr>
-              {expanded === rowKey ? (
-                <tr className="border-t border-line/70 bg-black/20">
+              {selected ? (
+                <tr className="border-t border-line bg-muted">
                   <td colSpan={6} className="px-3 py-3">
-                    <HexBlock value={event.rawHex} />
+                    <div className="mb-2 text-xs font-semibold uppercase text-subtle">{t('events.rowDetails')}</div>
+                    {event.rawHex ? <HexBlock value={event.rawHex} /> : <EmptyState label={t('events.noRawHex')} />}
                   </td>
                 </tr>
               ) : null}

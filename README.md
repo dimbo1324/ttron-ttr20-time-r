@@ -5,7 +5,8 @@
 Industrial protocol simulation platform for an FT1.2-like/TTR20 time-reading
 workflow. The project combines a Go protocol core, TCP device emulator, gateway
 polling service, gRPC control plane, HTTP/JSON API, React Web UI, Docker
-Compose runtime, CI quality gates, and a small observability baseline.
+Compose runtime, CI quality gates, a small observability baseline, bilingual
+dashboard UX, local analysis exports, and compact protocol infographics.
 
 ## Demo
 
@@ -42,8 +43,12 @@ Web UI talks only to `/api`.
 - TCP emulator with fault modes, sessions, status counters, and recent events.
 - Gateway poller with reconnect/backoff and start/stop controls.
 - gRPC control APIs for emulator and gateway.
-- HTTP/JSON API with health, readiness, events, controls, and metrics.
-- React/Vite/TypeScript/Tailwind dashboard.
+- HTTP/JSON API with health, readiness, events, controls, metrics, and JSON/CSV exports.
+- React/Vite/TypeScript/Tailwind dashboard with Russian-by-default and English UI.
+- Persisted dark/light themes for the local dashboard.
+- Compact responsive Web UI for laptop and desktop monitoring.
+- Protocol flow, frame anatomy, polling timeline, and event distribution infographics.
+- Events export as JSON/CSV plus overview and service status JSON exports.
 - Docker Compose stack with nginx static serving and API proxy.
 - Non-root container runtimes and service healthchecks.
 - Optional Prometheus scrape profile.
@@ -66,6 +71,8 @@ Open:
 - API health: `http://localhost:8080/health`
 - API readiness: `http://localhost:8080/api/v1/ready`
 - API metrics: `http://localhost:8080/metrics`
+- Events CSV export: `http://localhost:8080/api/v1/export/events.csv`
+- Overview JSON export: `http://localhost:8080/api/v1/export/overview.json`
 
 Optional Prometheus:
 
@@ -110,7 +117,8 @@ npm run dev
 ```
 
 Open `http://localhost:5173`. Vite proxies `/api` and `/health` to the local
-API on `localhost:8080`.
+API on `localhost:8080`. The UI starts in Russian, can switch to English, and
+stores language/theme choices in browser `localStorage`.
 
 Release-style local check:
 
@@ -192,7 +200,9 @@ This is a simulation, learning, and portfolio platform. It is not certified for
 direct control of real industrial equipment. There is no authentication, TLS,
 persistence, production secrets management, or hardened public deployment
 profile yet. Do not expose the API, Web UI, or gRPC ports to untrusted networks
-without additional review and hardening.
+without additional review and hardening. Exported JSON/CSV files may contain
+protocol diagnostic data, raw frame hex, endpoint addresses, and service
+counters; treat them as local troubleshooting artifacts.
 
 ## Contributing And Security
 

@@ -18,6 +18,7 @@ The current baseline includes tests for:
 - stable event ring IDs and snapshot copy behavior;
 - shared gRPC mapper behavior;
 - HTTP API config, handlers, error shape, CORS, readiness, metrics, events merge, controls, security headers, JSON body limits, invalid JSON, and invalid limits;
+- HTTP export endpoints, JSON download envelopes, CSV escaping, and export limit validation;
 - runtime logging helpers and cleanup dry-run scripts;
 - hex dump formatting.
 
@@ -59,6 +60,9 @@ curl http://127.0.0.1:8080/health
 curl http://127.0.0.1:8080/api/v1/ready
 curl http://127.0.0.1:8080/api/v1/overview
 curl http://127.0.0.1:8080/api/v1/events
+curl http://127.0.0.1:8080/api/v1/export/events.json
+curl http://127.0.0.1:8080/api/v1/export/events.csv
+curl http://127.0.0.1:8080/api/v1/export/overview.json
 curl http://127.0.0.1:8080/metrics
 docker compose down -v
 ```
@@ -76,8 +80,9 @@ mandatory yet because no stable fuzz corpus is configured for this milestone.
 
 Manual smoke coverage should include client/emulator in `sum` and `crc16`,
 gateway/emulator in `sum` and `crc16`, HTTP API health/readiness/status/events
-endpoints, Docker Compose, and the Web UI dashboard in a browser when the
-environment supports it.
+and export endpoints, Docker Compose, and the Web UI dashboard, RU/EN language
+switching, dark/light themes, exports, diagnostics, and Guide page in a browser
+when the environment supports it.
 
 Future optional milestones can add deeper Web UI/API contract coverage and
 release artifact automation.
