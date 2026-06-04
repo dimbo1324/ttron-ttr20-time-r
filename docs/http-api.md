@@ -14,6 +14,8 @@ go run ./cmd/ft12-api -http-listen 127.0.0.1:8080 -emulator-grpc 127.0.0.1:9100 
 
 - `GET /health`
 - `GET /api/v1/health`
+- `GET /api/v1/ready`
+- `GET /metrics`
 - `GET /api/v1/config`
 - `GET /api/v1/overview`
 - `GET /api/v1/emulator/status`
@@ -57,6 +59,17 @@ Errors are returned consistently:
 
 The adapter maps malformed JSON and validation errors to `400`, unsupported
 methods to `405`, upstream gRPC failures to `502`/`503`, and deadlines to `504`.
+
+## Readiness
+
+`GET /api/v1/ready` checks that the API process can reach both upstream gRPC
+services. It returns `200` when emulator and gateway status calls succeed, and
+`503` when either upstream is unavailable.
+
+## Metrics
+
+`GET /metrics` returns Prometheus-compatible text metrics for HTTP request
+counts and total request duration by method, path, and status.
 
 ## Architecture
 

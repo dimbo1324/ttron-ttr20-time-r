@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,17 +12,22 @@ import (
 	"time"
 
 	ft12v1 "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/metrics"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/http/middleware"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type fakeEmulator struct {
-	status *ft12v1.EmulatorStatus
-	fault  *ft12v1.FaultMode
-	events []*ft12v1.FrameEvent
+	status    *ft12v1.EmulatorStatus
+	statusErr error
+	fault     *ft12v1.FaultMode
+	events    []*ft12v1.FrameEvent
 }
 
 func (f *fakeEmulator) GetStatus(context.Context) (*ft12v1.EmulatorStatus, error) {
+	if f.statusErr != nil {
+		return nil, f.statusErr
+	}
 	return f.status, nil
 }
 
@@ -39,13 +45,17 @@ func (f *fakeEmulator) GetRecentEvents(context.Context, uint32) ([]*ft12v1.Frame
 }
 
 type fakeGateway struct {
-	status  *ft12v1.GatewayStatus
-	started bool
-	stopped bool
-	events  []*ft12v1.FrameEvent
+	status    *ft12v1.GatewayStatus
+	statusErr error
+	started   bool
+	stopped   bool
+	events    []*ft12v1.FrameEvent
 }
 
 func (f *fakeGateway) GetStatus(context.Context) (*ft12v1.GatewayStatus, error) {
+	if f.statusErr != nil {
+		return nil, f.statusErr
+	}
 	return f.status, nil
 }
 
@@ -78,7 +88,7 @@ func testHandler() (*Handler, *fakeEmulator, *fakeGateway) {
 		status: &ft12v1.GatewayStatus{State: ft12v1.ServiceState_SERVICE_STATE_RUNNING, TargetAddr: "127.0.0.1:9000", ChecksumMode: ft12v1.ChecksumMode_CHECKSUM_MODE_SUM},
 		events: []*ft12v1.FrameEvent{{Id: 2, Timestamp: timestamppb.New(time.Unix(2, 0).UTC()), Service: "gateway", Direction: ft12v1.EventDirection_EVENT_DIRECTION_TX}},
 	}
-	return New(emulator, gateway, Config{RequestTimeout: time.Second, EmulatorGRPC: "127.0.0.1:9100", GatewayGRPC: "127.0.0.1:9200"}), emulator, gateway
+	return New(emulator, gateway, Config{RequestTimeout: time.Second, EmulatorGRPC: "127.0.0.1:9100", GatewayGRPC: "127.0.0.1:9200", Metrics: metrics.NewRegistry()}), emulator, gateway
 }
 
 func TestHealthEndpoint(t *testing.T) {
@@ -90,6 +100,46 @@ func TestHealthEndpoint(t *testing.T) {
 		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
 	}
 	if !strings.Contains(rec.Body.String(), `"service":"ft12-api"`) {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+}
+
+func TestReadyEndpoint(t *testing.T) {
+	handler, _, _ := testHandler()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/ready", nil)
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"status":"ready"`) {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+}
+
+func TestReadyEndpointReportsUnavailableUpstream(t *testing.T) {
+	handler, _, gateway := testHandler()
+	gateway.statusErr = errors.New("gateway unavailable")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/ready", nil)
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"gateway":"unavailable"`) {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+}
+
+func TestMetricsEndpoint(t *testing.T) {
+	handler, _, _ := testHandler()
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "ft12_http_requests_total") {
 		t.Fatalf("body = %s", rec.Body.String())
 	}
 }

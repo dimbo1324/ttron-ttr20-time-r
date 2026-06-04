@@ -2,12 +2,12 @@
 
 A Go-based industrial protocol playground for FT1.2-like/TTR20 time-reading
 communication. The current baseline provides a TCP emulator, a polling client,
-shared protocol helpers, and a monorepo structure for future gateway, gRPC, Web
-UI, Docker, CI, and observability work.
+shared protocol helpers, a Web UI, Docker Compose, CI, and observability
+baseline.
 
 ## Current Status
 
-Implemented through Step 6:
+Implemented through Step 7:
 
 - root Go monorepo module;
 - active Go client command;
@@ -28,14 +28,19 @@ Implemented through Step 6:
 - architecture boundary check scripts;
 - HTTP/JSON API adapter over internal gRPC clients;
 - React/Vite/TypeScript Web UI dashboard;
+- Docker and Docker Compose local stack;
+- non-root container runtime images and healthchecks;
+- API readiness and metrics endpoints;
+- optional Prometheus scrape profile;
+- GitHub Actions CI for backend, frontend, architecture, Docker, and race checks;
 - future CLI command placeholder;
 - proto, web, deploy, docs, and legacy scaffolding;
 - Python and old Go implementations preserved under `legacy/`.
 
 Planned but not implemented yet:
 
-- Web UI;
-- Docker, CI, metrics, tracing, and release polish.
+- final docs and release polish;
+- auth, TLS, persistence, multi-device fleet features, Kubernetes/Helm, and cloud deployment.
 
 ## Repository Layout
 
@@ -59,8 +64,8 @@ internal/             active Go packages
   logging/            baseline logger
   util/               shared helpers
 proto/                protobuf/gRPC contract sources
-web/                  React/Vite dashboard
-deploy/               future Docker/Compose assets
+web/                  React/Vite dashboard and nginx runtime image
+deploy/               Docker and observability assets
 docs/                 architecture, protocol, development, testing, roadmap
 legacy/               retained reference implementations
 task/                 original assignment document
@@ -116,6 +121,25 @@ npm run dev
 ```
 
 Open `http://localhost:5173`.
+
+Run the full Docker Compose stack:
+
+```powershell
+docker compose up --build
+```
+
+Open:
+
+- Web UI: `http://localhost:5173`
+- API health: `http://localhost:8080/health`
+- API readiness: `http://localhost:8080/api/v1/ready`
+- API metrics: `http://localhost:8080/metrics`
+
+Stop the stack:
+
+```powershell
+docker compose down -v
+```
 
 CRC16 mode:
 
@@ -190,6 +214,8 @@ HTTP API:
 Core endpoints:
 
 - `GET /health`
+- `GET /api/v1/ready`
+- `GET /metrics`
 - `GET /api/v1/overview`
 - `GET /api/v1/emulator/status`
 - `GET /api/v1/emulator/fault-mode`
@@ -199,7 +225,32 @@ Core endpoints:
 - `POST /api/v1/gateway/stop`
 - `GET /api/v1/events?source=all&limit=100`
 
-See [HTTP API](docs/http-api.md).
+See [HTTP API](docs/http-api.md), [Docker](docs/docker.md), and
+[Observability](docs/observability.md).
+
+## Docker Compose Services
+
+| Service | Purpose | Host ports |
+| --- | --- | --- |
+| `ft12-emulator` | FT1.2-like TCP emulator and gRPC control | `9000`, `9100` |
+| `ft12-gateway` | polling gateway and gRPC control | `9200` |
+| `ft12-api` | HTTP/JSON adapter, readiness, metrics | `8080` |
+| `ft12-web` | nginx static Web UI and `/api` proxy | `5173` |
+| `prometheus` | optional metrics scrape profile | `9090` |
+
+The Web UI uses relative `/api` requests. In Docker Compose, nginx proxies them
+to `ft12-api:8080`, so the browser never needs to resolve Compose service DNS.
+
+## Observability
+
+- `GET /health`: API liveness.
+- `GET /api/v1/ready`: API readiness plus emulator/gateway upstream checks.
+- `GET /metrics`: minimal Prometheus-compatible HTTP request metrics.
+- `docker compose --profile observability up -d --build`: optional Prometheus
+  on `http://localhost:9090`.
+
+Logs use key-value style fields for startup config, listen addresses, request
+IDs, HTTP method/path/status/duration, errors, and shutdown.
 
 ## Development Commands
 
@@ -213,10 +264,16 @@ go build -o bin/ft12-emulator ./cmd/ft12-emulator
 go build -o bin/ft12-gateway ./cmd/ft12-gateway
 go build -o bin/ft12-cli ./cmd/ft12-cli
 go build -o bin/ft12-api ./cmd/ft12-api
+go build -o bin/ft12-healthcheck ./cmd/ft12-healthcheck
 go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -interval 5s
 make proto
 make verify
+docker compose config
+docker compose build
 ```
+
+Security note: the local API and Web UI do not implement auth or TLS yet. Do not
+expose them to untrusted networks.
 
 A root `Makefile` is also provided for Unix-like shells and environments with
 `make`.
@@ -228,6 +285,9 @@ A root `Makefile` is also provided for Unix-like shells and environments with
 - [ADR 0005: Architecture Hardening Before Web UI](docs/architecture/decisions/0005-architecture-hardening-before-web-ui.md)
 - [HTTP API](docs/http-api.md)
 - [Web UI](docs/web-ui.md)
+- [Docker](docs/docker.md)
+- [Observability](docs/observability.md)
+- [CI](docs/ci.md)
 - [Protocol](docs/protocol.md)
 - [Development](docs/development.md)
 - [Testing](docs/testing.md)

@@ -38,6 +38,11 @@ UI. It does not call emulator or gateway service packages directly.
 The Web UI under `web/` is a React/Vite app that talks to `/api/v1` with
 HTTP/JSON. gRPC remains an internal service API.
 
+Docker Compose runs emulator, gateway, API, and web services on a private
+Compose network. The web container serves the static Vite build with nginx and
+proxies browser `/api` requests to the API service. The API exposes liveness,
+readiness, and metrics endpoints for local operations and CI smoke tests.
+
 ## Step 5.5 Hardening
 
 Command entrypoints are intentionally thin. Process bootstrap lives in:
@@ -64,6 +69,7 @@ cmd/ft12-client   -> internal/client   -> internal/protocol
 app/* gRPC wiring -> internal/api/grpc  -> internal/{emulator,gateway}
 cmd/ft12-api      -> internal/app/apiapp -> internal/api/http -> internal/api/grpc/client
 web/              -> HTTP/JSON only
+docker-compose    -> cmd services via flags; no protocol or business logic changes
 ```
 
 `internal/protocol` depends only on the Go standard library. It does not depend
@@ -78,3 +84,6 @@ See also:
 - [ADR 0005: Architecture hardening before Web UI](architecture/decisions/0005-architecture-hardening-before-web-ui.md)
 - [HTTP API](http-api.md)
 - [Web UI](web-ui.md)
+- [Docker](docker.md)
+- [Observability](observability.md)
+- [CI](ci.md)

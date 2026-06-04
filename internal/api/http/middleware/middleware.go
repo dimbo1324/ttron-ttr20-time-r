@@ -60,9 +60,23 @@ func Logging(logger Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			next.ServeHTTP(w, r)
+			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+			next.ServeHTTP(rec, r)
 			if logger != nil {
-				logger.Printf("request id=%s method=%s path=%s duration=%s", RequestIDFromContext(r.Context()), r.Method, r.URL.Path, time.Since(start))
+				logger.Printf("request id=%s method=%s path=%s status=%d duration=%s", RequestIDFromContext(r.Context()), r.Method, r.URL.Path, rec.status, time.Since(start))
+			}
+		})
+	}
+}
+
+func Metrics(observe func(method, path string, status int, elapsed time.Duration)) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+			next.ServeHTTP(rec, r)
+			if observe != nil {
+				observe(r.Method, r.URL.Path, rec.status, time.Since(start))
 			}
 		})
 	}
@@ -88,4 +102,14 @@ func CORS(origin string) func(http.Handler) http.Handler {
 func RequestIDFromContext(ctx context.Context) string {
 	id, _ := ctx.Value(requestIDKey).(string)
 	return id
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(status int) {
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
 }

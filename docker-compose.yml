@@ -1,0 +1,119 @@
+services:
+  ft12-emulator:
+    build:
+      context: .
+      dockerfile: deploy/docker/go-service.Dockerfile
+      args:
+        SERVICE: ft12-emulator
+    command:
+      - -listen
+      - :9000
+      - -grpc-listen
+      - :9100
+      - -mode
+      - sum
+      - -recent
+      - "200"
+    ports:
+      - "9000:9000"
+      - "9100:9100"
+    healthcheck:
+      test: ["CMD", "/app/ft12-healthcheck", "-tcp", "127.0.0.1:9100", "-timeout", "2s"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    restart: unless-stopped
+
+  ft12-gateway:
+    build:
+      context: .
+      dockerfile: deploy/docker/go-service.Dockerfile
+      args:
+        SERVICE: ft12-gateway
+    command:
+      - -target
+      - ft12-emulator:9000
+      - -grpc-listen
+      - :9200
+      - -mode
+      - sum
+      - -interval
+      - 1s
+      - -recent
+      - "200"
+    ports:
+      - "9200:9200"
+    depends_on:
+      ft12-emulator:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/ft12-healthcheck", "-tcp", "127.0.0.1:9200", "-timeout", "2s"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    restart: unless-stopped
+
+  ft12-api:
+    build:
+      context: .
+      dockerfile: deploy/docker/go-service.Dockerfile
+      args:
+        SERVICE: ft12-api
+    command:
+      - -http-listen
+      - :8080
+      - -emulator-grpc
+      - ft12-emulator:9100
+      - -gateway-grpc
+      - ft12-gateway:9200
+      - -cors-origin
+      - ""
+    ports:
+      - "8080:8080"
+    depends_on:
+      ft12-emulator:
+        condition: service_healthy
+      ft12-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/ft12-healthcheck", "-url", "http://127.0.0.1:8080/api/v1/ready", "-timeout", "2s"]
+      interval: 10s
+      timeout: 3s
+      retries: 8
+      start_period: 5s
+    restart: unless-stopped
+
+  ft12-web:
+    build:
+      context: web
+      dockerfile: Dockerfile
+    ports:
+      - "5173:8080"
+    depends_on:
+      ft12-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    profiles:
+      - observability
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    volumes:
+      - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      ft12-api:
+        condition: service_healthy
+    restart: unless-stopped

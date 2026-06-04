@@ -20,6 +20,8 @@ go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 5s
 go run ./cmd/ft12-api -http-listen 127.0.0.1:8080
 make verify
 make proto
+docker compose config
+docker compose up --build
 ```
 
 Individual builds:
@@ -59,6 +61,16 @@ npm run dev
 
 Open `http://localhost:5173`. Vite proxies `/api` to the local HTTP API.
 
+Docker Compose:
+
+```powershell
+docker compose up --build
+docker compose down -v
+```
+
+Open `http://localhost:5173`. The nginx web container proxies `/api`, `/health`,
+and `/metrics` to the API service.
+
 ## Active And Legacy Code
 
 Active Go code lives in `cmd/` and `internal/`.
@@ -86,3 +98,22 @@ sh scripts/check-architecture.sh
 The checks keep `internal/protocol` independent from transports, config,
 logging, service packages, gRPC adapters, and future adapter layers. They also
 ensure active code does not import `legacy/`.
+
+## Local CI Flow
+
+When all tools are available, use:
+
+```powershell
+go fmt ./...
+.\scripts\check-architecture.ps1
+go test ./...
+go build ./...
+cd web
+npm ci
+npm run typecheck
+npm run lint
+npm run build
+cd ..
+docker compose config
+docker compose build
+```
