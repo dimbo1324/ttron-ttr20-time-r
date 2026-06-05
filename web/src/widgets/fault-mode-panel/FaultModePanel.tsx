@@ -6,13 +6,14 @@ import { useI18n } from '../../shared/i18n/useI18n';
 import { Button } from '../../shared/ui/Button';
 import { Card } from '../../shared/ui/Card';
 import { Toggle } from '../../shared/ui/Toggle';
-import { ErrorBanner } from '../../shared/ui/State';
+import { ActionNotice, ErrorBanner } from '../../shared/ui/State';
 
 export function FaultModePanel({ faultMode, onUpdated }: { faultMode?: FaultMode; onUpdated: () => Promise<void> }) {
   const { t } = useI18n();
   const [draft, setDraft] = useState<FaultMode | null>(faultMode ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (faultMode) setDraft(faultMode);
@@ -24,9 +25,11 @@ export function FaultModePanel({ faultMode, onUpdated }: { faultMode?: FaultMode
     if (!draft) return;
     setSaving(true);
     setError(null);
+    setNotice(null);
     try {
       await updateFaultMode(draft);
       await onUpdated();
+      setNotice(t('fault.appliedNotice'));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('fault.updateFailed'));
     } finally {
@@ -41,6 +44,7 @@ export function FaultModePanel({ faultMode, onUpdated }: { faultMode?: FaultMode
         <p className="text-wrap-safe text-sm text-subtle">{t('fault.subtitle')}</p>
       </div>
       <ErrorBanner message={error} />
+      <ActionNotice message={notice} />
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <Toggle label={t('fault.corruptChecksum')} checked={draft.corruptChecksum} onChange={(value) => setDraft({ ...draft, corruptChecksum: value, corruptChecksumProbability: value ? Math.max(draft.corruptChecksumProbability, 0.25) : 0 })} />
         <Toggle label={t('fault.fragmentResponse')} checked={draft.fragmentResponse} onChange={(value) => setDraft({ ...draft, fragmentResponse: value, fragmentProbability: value ? Math.max(draft.fragmentProbability, 0.25) : 0 })} />
@@ -66,7 +70,7 @@ export function FaultModePanel({ faultMode, onUpdated }: { faultMode?: FaultMode
         </label>
       </div>
       <div className="button-row">
-        <Button variant="primary" icon={<Save size={16} />} onClick={() => void save()} disabled={saving}>
+        <Button variant="primary" icon={<Save size={16} />} tooltip={t('fault.applyTooltip')} onClick={() => void save()} disabled={saving}>
           {saving ? t('common.applying') : t('fault.apply')}
         </Button>
       </div>

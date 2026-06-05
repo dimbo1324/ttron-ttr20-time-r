@@ -6,11 +6,11 @@ talks to the Go HTTP API with ordinary HTTP/JSON and does not use gRPC-Web.
 ## Pages
 
 - Dashboard: compact emulator/gateway/API overview, status cards, protocol flow,
-  event distribution, and recent events.
+  event distribution, live process terminal, and recent events.
 - Emulator: emulator counters, runtime status, frame anatomy, and fault-mode controls.
 - Gateway: gateway counters, polling timeline, timing details, and start/stop controls.
 - Events / Frames: source/direction filters, frame anatomy, event distribution,
-  expandable raw hex, and JSON/CSV export controls.
+  live process terminal, expandable raw hex, and JSON/CSV export controls.
 - Diagnostics: API health/readiness, service counters, metrics summary, docs
   links, and export controls.
 - Guide / Руководство: bilingual project guide and safety note.
@@ -75,8 +75,27 @@ and errors to wrap instead of overlapping or being silently clipped. Shared
 Dashboard, Emulator, Gateway, Events, Diagnostics, Settings, and Guide pages.
 
 Interactive controls include hover/press feedback, disabled states, visible
-keyboard focus, keyboard-expandable event rows, compact toggles, and reduced
-motion support through `prefers-reduced-motion`.
+keyboard focus, keyboard-expandable event rows, compact toggles, tooltips,
+action result notices, and reduced motion support through
+`prefers-reduced-motion`.
+
+Main sections are deep-linkable with hash URLs such as `/#events`,
+`/#emulator`, and `/#diagnostics`, so screenshots, bookmarks, and support links
+can point users to the exact screen they should inspect.
+
+## Live Terminal
+
+Dashboard and Events include a live process terminal. It is a compact
+operator-style feed built from the same recent event data as the tables:
+
+- a running ticker summarizes the latest RX/TX/ERR/SYSTEM activity;
+- the log area keeps recent frame/process lines in timestamp order;
+- directions use the same signal colors as badges and charts;
+- empty state text explains that the stack or gateway polling may need time to
+  produce events.
+
+The terminal is visual only; it does not open a shell and does not execute user
+commands.
 
 ## Infographics
 
@@ -149,7 +168,11 @@ npm run build
   readable without text clipping.
 - Emulator fault toggles and numeric inputs update through the API.
 - Gateway start/stop buttons show disabled/busy state during requests.
+- Buttons show smooth press feedback, hover tooltips, and action result notices
+  after polling, fault-mode, export, or copy actions.
 - Events source/direction filters work.
+- Live terminal renders recent events and its running ticker without overlapping
+  surrounding content.
 - Event rows expand with mouse, Enter, and Space.
 - Raw hex is readable in both themes.
 - JSON/CSV export buttons download files and do not fail on empty data.

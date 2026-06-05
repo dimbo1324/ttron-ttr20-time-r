@@ -4,19 +4,22 @@ import { startGatewayPolling, stopGatewayPolling } from '../../entities/gateway/
 import { useI18n } from '../../shared/i18n/useI18n';
 import { Button } from '../../shared/ui/Button';
 import { Card } from '../../shared/ui/Card';
-import { ErrorBanner } from '../../shared/ui/State';
+import { ActionNotice, ErrorBanner } from '../../shared/ui/State';
 
 export function PollingControlPanel({ onUpdated }: { onUpdated: () => Promise<void> }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState<'start' | 'stop' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function start() {
     setBusy('start');
     setError(null);
+    setNotice(null);
     try {
       await startGatewayPolling();
       await onUpdated();
+      setNotice(t('polling.startedNotice'));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.requestFailed'));
     } finally {
@@ -27,9 +30,11 @@ export function PollingControlPanel({ onUpdated }: { onUpdated: () => Promise<vo
   async function stop() {
     setBusy('stop');
     setError(null);
+    setNotice(null);
     try {
       await stopGatewayPolling();
       await onUpdated();
+      setNotice(t('polling.stoppedNotice'));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('common.requestFailed'));
     } finally {
@@ -42,11 +47,12 @@ export function PollingControlPanel({ onUpdated }: { onUpdated: () => Promise<vo
       <h2 className="text-wrap-safe text-base font-semibold text-ink">{t('polling.title')}</h2>
       <p className="text-wrap-safe mt-1 text-sm text-subtle">{t('polling.subtitle')}</p>
       <ErrorBanner message={error} />
+      <ActionNotice message={notice} />
       <div className="button-row mt-3">
-        <Button variant="primary" icon={<Play size={16} />} onClick={() => void start()} disabled={busy !== null}>
+        <Button variant="primary" icon={<Play size={16} />} tooltip={t('polling.startTooltip')} onClick={() => void start()} disabled={busy !== null}>
           {busy === 'start' ? t('polling.starting') : t('polling.start')}
         </Button>
-        <Button variant="danger" icon={<Square size={16} />} onClick={() => void stop()} disabled={busy !== null}>
+        <Button variant="danger" icon={<Square size={16} />} tooltip={t('polling.stopTooltip')} onClick={() => void stop()} disabled={busy !== null}>
           {busy === 'stop' ? t('polling.stopping') : t('polling.stop')}
         </Button>
       </div>

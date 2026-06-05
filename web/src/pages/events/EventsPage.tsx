@@ -12,6 +12,7 @@ import { ErrorBanner, LoadingState } from '../../shared/ui/State';
 import { EventDistribution } from '../../widgets/infographics/EventDistribution';
 import { FrameAnatomy } from '../../widgets/infographics/FrameAnatomy';
 import { RecentEventsTable } from '../../widgets/recent-events-table/RecentEventsTable';
+import { RuntimeTerminal } from '../../widgets/runtime-terminal/RuntimeTerminal';
 
 const directions: Array<'all' | EventDirection> = ['all', 'RX', 'TX', 'ERR', 'SYSTEM'];
 const sources: EventSource[] = ['all', 'emulator', 'gateway'];
@@ -63,6 +64,7 @@ export function EventsPage() {
           <EventDistribution events={filtered} />
           <FrameAnatomy event={latestFrame} />
         </div>
+        <RuntimeTerminal events={filtered} updatedAt={events.updatedAt} maxLines={16} />
         <Card>
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-ink">{t('events.table')}</h2>

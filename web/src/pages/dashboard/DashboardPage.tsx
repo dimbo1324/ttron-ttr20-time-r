@@ -13,6 +13,7 @@ import { ErrorBanner, LoadingState } from '../../shared/ui/State';
 import { EventDistribution } from '../../widgets/infographics/EventDistribution';
 import { ProtocolFlow } from '../../widgets/infographics/ProtocolFlow';
 import { RecentEventsTable } from '../../widgets/recent-events-table/RecentEventsTable';
+import { RuntimeTerminal } from '../../widgets/runtime-terminal/RuntimeTerminal';
 
 export function DashboardPage() {
   const { t, language } = useI18n();
@@ -50,6 +51,7 @@ export function DashboardPage() {
             <ProtocolFlow overview={data} />
             <EventDistribution events={data.events} />
           </div>
+          <RuntimeTerminal events={data.events} updatedAt={overview.updatedAt} />
           <div className="grid gap-3 xl:grid-cols-[0.9fr_1.4fr]">
             <Card>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

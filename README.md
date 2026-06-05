@@ -2,20 +2,34 @@
 
 [![CI](https://github.com/dimbo1324/ttron-ttr20-time-r/actions/workflows/ci.yml/badge.svg)](https://github.com/dimbo1324/ttron-ttr20-time-r/actions/workflows/ci.yml)
 
-Industrial protocol simulation platform for an FT1.2-like/TTR20 time-reading
-workflow. The project combines a Go protocol core, TCP device emulator, gateway
-polling service, gRPC control plane, HTTP/JSON API, React Web UI, Docker
-Compose runtime, CI quality gates, a small observability baseline, bilingual
-dashboard UX, local analysis exports, and compact protocol infographics.
+Local industrial protocol simulation platform for an FT1.2-like/TTR20
+time-reading workflow. It lets you run a TCP device emulator, watch a gateway
+poll the device, inspect raw protocol frames, switch fault modes, export
+diagnostics, and see the whole process in a bilingual Web UI.
+
+The project combines a Go protocol core, TCP emulator, gateway polling service,
+gRPC control plane, HTTP/JSON API, React Web UI, Docker Compose runtime, CI
+quality gates, a small observability baseline, local analysis exports, compact
+protocol infographics, and a live process terminal.
 
 ## Demo
 
-Real screenshots are stored under `docs/assets/screenshots/` when the local
-Docker/browser smoke environment is available.
+Real screenshots are stored under `docs/assets/screenshots/`. They show the
+actual local Docker/Web UI smoke environment, not mockups.
 
 ![Dashboard](docs/assets/screenshots/dashboard.png)
 ![Emulator controls](docs/assets/screenshots/emulator.png)
 ![Events table](docs/assets/screenshots/events.png)
+
+## What You Can Do In The UI
+
+| Area | What it helps with |
+| --- | --- |
+| Dashboard | See emulator/gateway health, device time, event distribution, protocol flow, and the live process terminal. |
+| Emulator | Toggle fault modes such as delayed responses, fragmented frames, checksum corruption, no-response, and close-after-request. |
+| Gateway | Start/stop polling, inspect connection state, backoff/reconnect counters, and the latest read-time cycle. |
+| Events | Filter RX/TX/ERR/SYSTEM frames, expand raw hex, export JSON/CSV, and watch the terminal-style event feed. |
+| Diagnostics | Check health/readiness, service counters, metrics summary, and export operational snapshots. |
 
 ## Architecture
 
@@ -50,6 +64,9 @@ Web UI talks only to `/api`.
 - Polished container-safe UI primitives for wrapped labels, stable buttons,
   readable badges, detail lists, and non-overlapping protocol tiles.
 - Protocol flow, frame anatomy, polling timeline, and event distribution infographics.
+- Live process terminal with a running event ticker and recent frame log.
+- Smooth button press feedback, hover tooltips, and action result notices for
+  controls and exports.
 - Events export as JSON/CSV plus overview and service status JSON exports.
 - Docker Compose stack with nginx static serving and API proxy.
 - Non-root container runtimes and service healthchecks.
@@ -75,6 +92,12 @@ Open:
 - API metrics: `http://localhost:8080/metrics`
 - Events CSV export: `http://localhost:8080/api/v1/export/events.csv`
 - Overview JSON export: `http://localhost:8080/api/v1/export/overview.json`
+
+Open the Dashboard first. The live terminal shows the running RX/TX/ERR stream
+while the gateway polls the emulator. Use the Emulator page to introduce faults,
+then return to Dashboard or Events to see how the system reacts.
+Sections are also deep-linkable with hash URLs such as
+`http://localhost:5173/#events` and `http://localhost:5173/#emulator`.
 
 Optional Prometheus:
 

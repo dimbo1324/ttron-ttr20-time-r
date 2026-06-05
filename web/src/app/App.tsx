@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Languages, Moon, Sun } from 'lucide-react';
 import { appIcon as AppIcon, routes, type RouteID } from './routes';
 import type { Language } from '../shared/i18n/types';
@@ -8,9 +8,23 @@ import { useTheme } from '../shared/theme/useTheme';
 export function App() {
   const { t, language, setLanguage } = useI18n();
   const { theme, toggleTheme } = useTheme();
-  const [routeID, setRouteID] = useState<RouteID>('dashboard');
+  const [routeID, setRouteID] = useState<RouteID>(() => readRouteFromHash());
   const active = useMemo(() => routes.find((route) => route.id === routeID) ?? routes[0], [routeID]);
   const Page = active.component;
+  const selectRoute = useCallback((id: RouteID) => {
+    setRouteID(id);
+    if (typeof window === 'undefined') return;
+    const nextHash = `#${id}`;
+    if (window.location.hash !== nextHash) {
+      window.location.hash = id;
+    }
+  }, []);
+
+  useEffect(() => {
+    const syncRoute = () => setRouteID(readRouteFromHash());
+    window.addEventListener('hashchange', syncRoute);
+    return () => window.removeEventListener('hashchange', syncRoute);
+  }, []);
 
   return (
     <div className="min-h-screen text-ink">
@@ -32,7 +46,7 @@ export function App() {
               <button
                 key={route.id}
                 className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-sm leading-snug transition ${selected ? 'border-signal/50 bg-signal/15 text-signal' : 'border-transparent text-subtle hover:border-line hover:bg-muted hover:text-ink'}`}
-                onClick={() => setRouteID(route.id)}
+                onClick={() => selectRoute(route.id)}
                 title={t(route.labelKey)}
               >
                 <Icon className="shrink-0" size={16} />
@@ -51,7 +65,7 @@ export function App() {
       </aside>
       <header className="sticky top-0 z-10 border-b border-line bg-graphite p-3 md:hidden">
         <div className="flex gap-2">
-          <select className="app-field min-w-0 flex-1 px-3 py-2" value={routeID} onChange={(event) => setRouteID(event.target.value as RouteID)}>
+          <select className="app-field min-w-0 flex-1 px-3 py-2" value={routeID} onChange={(event) => selectRoute(event.target.value as RouteID)}>
             {routes.map((route) => <option key={route.id} value={route.id}>{t(route.labelKey)}</option>)}
           </select>
           <button className="app-button app-button--secondary px-2" aria-label={t('app.language')} onClick={() => setLanguage(language === 'ru' ? 'en' : 'ru')}>
@@ -68,6 +82,12 @@ export function App() {
       </main>
     </div>
   );
+}
+
+function readRouteFromHash(): RouteID {
+  if (typeof window === 'undefined') return 'dashboard';
+  const raw = window.location.hash.replace(/^#\/?/, '');
+  return routes.some((route) => route.id === raw) ? (raw as RouteID) : 'dashboard';
 }
 
 function LanguageSwitcher({ language, setLanguage }: { language: Language; setLanguage: (language: Language) => void }) {
