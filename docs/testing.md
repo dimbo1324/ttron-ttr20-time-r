@@ -46,11 +46,6 @@ make verify
 Frontend checks:
 
 ```powershell
-cd web
-npm ci
-npm run typecheck
-npm run build
-npm run lint
 ```
 
 Docker checks:
@@ -83,11 +78,11 @@ mandatory yet because no stable fuzz corpus is configured for this milestone.
 
 Manual smoke coverage should include client/emulator in `sum` and `crc16`,
 gateway/emulator in `sum` and `crc16`, HTTP API health/readiness/status/events
-and export endpoints, Docker Compose, and the Web UI dashboard, RU/EN language
+and export endpoints, and Docker Compose, RU/EN language
 switching, dark/light themes, exports, diagnostics, and Guide page in a browser
 when the environment supports it. Browser layout audits should also report no
 text overflow, no body-level horizontal scroll, and no non-nested overlaps in
 the main dashboard/events/gateway views.
 
-Future optional milestones can add deeper Web UI/API contract coverage and
+Future optional milestones can add deeper API contract coverage and
 release artifact automation.

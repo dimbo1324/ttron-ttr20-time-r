@@ -32,10 +32,7 @@ for rel in \
   runtime \
   bin \
   dist \
-  coverage.out \
-  web/dist \
-  web/.vite \
-  web/tsconfig.app.tsbuildinfo
+  coverage.out
 do
   remove_path "$root/$rel"
 done

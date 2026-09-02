@@ -54,16 +54,6 @@ go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -grpc-listen 127.0.0.1:9100
 go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -grpc-listen 127.0.0.1:9200
 ```
 
-Web dashboard:
-
-```powershell
-cd web
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173`. Vite proxies `/api` to the local HTTP API.
-
 Docker Compose:
 
 ```powershell
@@ -71,8 +61,8 @@ docker compose up --build
 docker compose down -v
 ```
 
-Open `http://localhost:5173`. The nginx web container proxies `/api`, `/health`,
-and `/metrics` to the API service.
+The API is available on `http://localhost:8080` and serves `/api`, `/health`,
+and `/metrics`.
 
 ## Active And Legacy Code
 
@@ -141,12 +131,6 @@ go fmt ./...
 .\scripts\check-architecture.ps1
 go test ./...
 go build ./...
-cd web
-npm ci
-npm run typecheck
-npm run lint
-npm run build
-cd ..
 docker compose config
 docker compose build
 .\scripts\check-doc-links.ps1

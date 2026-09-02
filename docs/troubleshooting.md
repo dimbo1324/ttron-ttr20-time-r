@@ -16,20 +16,6 @@ Actions:
 - Run `go version`.
 - Run `go env GOMOD` from the repository root.
 
-## Node And npm
-
-Use Node 22 or another modern LTS release.
-
-If `npm ci` fails on Windows with `EPERM` under `web/node_modules`, stop any
-running Vite/npm processes and remove `web/node_modules` before retrying:
-
-```powershell
-Get-CimInstance Win32_Process | Where-Object { $_.Name -like 'node*' } | Select-Object ProcessId,CommandLine
-Remove-Item -Recurse -Force web\node_modules
-cd web
-npm ci
-```
-
 ## Docker Daemon Unavailable
 
 Symptoms:
@@ -41,12 +27,12 @@ Actions:
 
 - Start Docker Desktop or the Docker service.
 - Run `docker info`.
-- If Docker is unavailable, still run Go, frontend, architecture, and doc-link checks.
+- If Docker is unavailable, still run Go, architecture, and doc-link checks.
 
 ## Docker Registry EOF Or Pull Errors
 
-Transient registry/network errors can happen while pulling `golang`, `nginx`,
-`node`, distroless, or Prometheus images.
+Transient registry/network errors can happen while pulling `golang`,
+distroless, or Prometheus images.
 
 Actions:
 
@@ -62,13 +48,12 @@ Default ports:
 - `9100`: emulator gRPC
 - `9200`: gateway gRPC
 - `8080`: HTTP API
-- `5173`: Web UI
 - `9090`: Prometheus
 
 Windows check:
 
 ```powershell
-Get-NetTCPConnection -LocalPort 9000,9100,9200,8080,5173,9090 -ErrorAction SilentlyContinue
+Get-NetTCPConnection -LocalPort 9000,9100,9200,8080,9090 -ErrorAction SilentlyContinue
 ```
 
 Stop stale Compose services:
@@ -90,18 +75,15 @@ Actions:
   - `-emulator-grpc ft12-emulator:9100` in Compose
   - `-gateway-grpc ft12-gateway:9200` in Compose
 
-## Web UI Cannot Reach API
+## HTTP Client Cannot Reach API
 
-In local Vite development, `/api` proxies to `http://localhost:8080`.
-
-In Docker Compose, nginx proxies `/api` to `http://ft12-api:8080`.
+The API listens on `http://localhost:8080` locally and in Docker Compose.
 
 Actions:
 
-- Check `http://localhost:5173/health`.
 - Check `http://localhost:8080/health`.
-- Inspect browser devtools network errors.
-- Ensure `VITE_API_BASE_URL` is empty for same-origin proxy deployment.
+- Check `http://localhost:8080/api/v1/ready`.
+- Check `docker compose logs ft12-api`.
 
 ## Prometheus Target Unavailable
 

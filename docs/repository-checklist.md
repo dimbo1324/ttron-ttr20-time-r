@@ -5,9 +5,8 @@ Use this checklist before public demos or GitHub releases.
 ## Source Hygiene
 
 - `git status` is clean.
-- No `bin/`, `dist/`, `tmp/`, logs, local `.exe`, `web/node_modules`, or
-  `web/dist` files are tracked.
-- `.gitignore`, `.dockerignore`, and `web/.dockerignore` cover runtime artifacts.
+- No `bin/`, `dist/`, `tmp/`, logs, or local `.exe` files are tracked.
+- `.gitignore` and `.dockerignore` cover runtime artifacts.
 
 ## Checks
 
@@ -15,7 +14,6 @@ Use this checklist before public demos or GitHub releases.
 - `go test ./...`
 - `go build ./...`
 - `.\scripts\check-architecture.ps1`
-- `cd web && npm ci && npm run typecheck && npm run lint && npm run build`
 - `docker compose config`
 - `docker compose build`
 - `.\scripts\check-doc-links.ps1`
@@ -32,8 +30,6 @@ Use this checklist before public demos or GitHub releases.
 - `GET /api/v1/export/events.csv` returns `200`.
 - `GET /api/v1/export/overview.json` returns `200`.
 - `GET /metrics` returns `200`.
-- Web UI opens at `http://localhost:5173`.
-- Web UI language switch, theme switch, exports, diagnostics, and Guide page work.
 
 ## Documentation
 
@@ -41,7 +37,6 @@ Use this checklist before public demos or GitHub releases.
 - Docs index links all major docs.
 - Troubleshooting covers known local issues.
 - Release notes/changelog are current.
-- Screenshots are real and not stale.
 
 ## Safety
 

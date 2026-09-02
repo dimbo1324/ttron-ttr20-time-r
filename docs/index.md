@@ -17,7 +17,6 @@ Start here when navigating the project documentation.
 - [Gateway](gateway.md)
 - [gRPC API](grpc-api.md)
 - [HTTP API](http-api.md)
-- [Web UI](web-ui.md)
 
 ## Operations
 

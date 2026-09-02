@@ -4,7 +4,7 @@
 
 Step 2 adds a typed FT1.2-like protocol core under `internal/protocol`.
 
-The core is intentionally independent from TCP, gRPC, Web UI, Docker, config,
+The core is intentionally independent from TCP, gRPC, Docker, config,
 logging, and emulator/gateway service logic. It uses the Go standard library
 only.
 
@@ -56,10 +56,6 @@ responses with bit `0x80` set on the request control byte.
 - computed over `CONTROL + ADDRESS + DATA`.
 
 Decoding is mode-aware because checksum length changes the expected frame size.
-
-The Web UI Guide and Events pages include a frame anatomy infographic that uses
-the same layout. It is a display aid only; this milestone does not change the
-FT1.2-like wire format.
 
 ## Read-Time Command
 
@@ -143,7 +139,7 @@ implementation. The current frame format is FT1.2-like and intentionally narrow:
 - real TTR20/FT1.2 device behavior may require additional frame variants,
   address handling, control semantics, timing rules, and certification work;
 - serial transport, security, and expanded command coverage remain future work.
-  gRPC, gateway polling, Web UI, Docker, CI, and observability are implemented
+  gRPC, gateway polling, Docker, CI, and observability are implemented
   around this protocol core without changing its package boundaries.
 
 The original task document and retained protocol PDF live under `task/` and

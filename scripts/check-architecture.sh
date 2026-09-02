@@ -34,10 +34,6 @@ if grep -R --include='*.go' -n 'github.com/dimbo1324/ttron-ttr20-time-r/legacy' 
   fail 'active code must not import legacy/'
 fi
 
-if grep -R --include='*.go' -n 'github.com/dimbo1324/ttron-ttr20-time-r/web' cmd internal proto >/dev/null 2>&1; then
-  fail 'Go packages must not import web source'
-fi
-
 for file in internal/api/grpc/ft12/v1/*.pb.go; do
   if ! grep -q 'Code generated' "$file"; then
     fail "$file must contain Code generated marker"

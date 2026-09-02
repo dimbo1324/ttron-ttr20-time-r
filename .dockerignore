@@ -15,10 +15,6 @@ coverage.*
 *.coverprofile
 profile.cov
 node_modules/
-web/node_modules/
-web/dist/
-web/.vite/
-web/*.tsbuildinfo
 legacy/
 docs/files/
 task/

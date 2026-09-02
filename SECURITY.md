@@ -27,5 +27,5 @@ include:
 - production secrets management;
 - production deployment hardening.
 
-Do not expose the API, Web UI, gRPC ports, or emulator TCP port to untrusted
+Do not expose the API, gRPC ports, or emulator TCP port to untrusted
 networks without additional hardening.

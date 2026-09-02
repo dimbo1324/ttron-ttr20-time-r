@@ -75,6 +75,6 @@ service.
 
 ## Notes
 
-The HTTP API and Web UI are implemented as later layers on top of this gRPC
+The HTTP API is implemented as a later layer on top of this gRPC
 control plane. TLS, auth, database persistence, and OpenTelemetry tracing remain
 future optional work.

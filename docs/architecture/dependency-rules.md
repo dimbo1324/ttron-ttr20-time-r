@@ -1,6 +1,6 @@
 # Dependency Rules
 
-Step 5.5 adds explicit architecture checks before Web UI work.
+Step 5.5 adds explicit architecture checks for service boundaries.
 
 ## Core Rule
 
@@ -12,7 +12,7 @@ Step 5.5 adds explicit architecture checks before Web UI work.
 - gRPC adapters;
 - HTTP adapters;
 - app bootstrap packages;
-- future HTTP/Web adapters;
+- HTTP adapters;
 - deployment or observability stacks.
 
 This keeps FT1.2-like frame parsing, checksums, commands, and codecs reusable
@@ -38,8 +38,6 @@ direction, event, timestamp, and service-state logic.
 The HTTP API lives under `internal/api/http` and may import gRPC clients,
 protobuf DTOs, config, and platform helpers. It must not import
 `internal/emulator` or `internal/gateway` service packages directly.
-
-Go packages must not import `web/`; the Web UI communicates through HTTP/JSON.
 
 ## Legacy Boundary
 

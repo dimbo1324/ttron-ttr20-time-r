@@ -34,12 +34,6 @@ if ($legacyImports) {
     Fail "active code must not import legacy/"
 }
 
-$webImports = Get-ChildItem -Path cmd,internal,proto -Recurse -Filter *.go -ErrorAction SilentlyContinue |
-    Select-String -Pattern "github.com/dimbo1324/ttron-ttr20-time-r/web" -SimpleMatch
-if ($webImports) {
-    Fail "Go packages must not import web source"
-}
-
 Get-ChildItem -Path "internal/api/grpc/ft12/v1" -Filter "*.pb.go" | ForEach-Object {
     if (-not (Select-String -Path $_.FullName -Pattern "Code generated" -SimpleMatch -Quiet)) {
         Fail "$($_.FullName) must contain Code generated marker"

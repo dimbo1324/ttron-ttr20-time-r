@@ -10,10 +10,7 @@ $relativeTargets = @(
     "runtime",
     "bin",
     "dist",
-    "coverage.out",
-    "web/dist",
-    "web/.vite",
-    "web/tsconfig.app.tsbuildinfo"
+    "coverage.out"
 )
 $filePatterns = @("*.log", "*.out", "*.tsbuildinfo")
 

@@ -3,7 +3,7 @@
 BIN_DIR := bin
 PROTO_FILES := proto/ft12/v1/common.proto proto/ft12/v1/emulator.proto proto/ft12/v1/gateway.proto
 
-.PHONY: help fmt check-go-format test test-race test-fuzz build build-client build-emulator build-gateway build-cli build-api build-healthcheck run-emulator run-client run-gateway run-api proto check-architecture check-doc-links release-check clean-runtime clean-runtime-dry-run web-install web-dev web-build web-typecheck web-lint verify-web compose-config docker-build docker-up docker-down docker-logs docker-ps docker-smoke metrics-smoke ci-local verify clean
+.PHONY: help fmt check-go-format test test-race test-fuzz build build-client build-emulator build-gateway build-cli build-api build-healthcheck run-emulator run-client run-gateway run-api proto check-architecture check-doc-links release-check clean-runtime clean-runtime-dry-run compose-config docker-build docker-up docker-down docker-logs docker-ps docker-smoke metrics-smoke ci-local verify clean
 
 help:
 	@echo "Targets:"
@@ -29,11 +29,6 @@ help:
 	@echo "  release-check   run release-style local checks"
 	@echo "  clean-runtime   remove ignored runtime/build artifacts"
 	@echo "  clean-runtime-dry-run preview ignored runtime/build cleanup"
-	@echo "  web-install     npm install in web/"
-	@echo "  web-dev         run Vite dev server"
-	@echo "  web-build       build web app"
-	@echo "  web-typecheck   typecheck web app"
-	@echo "  web-lint        lint web app"
 	@echo "  compose-config  validate docker compose configuration"
 	@echo "  docker-build    build compose images"
 	@echo "  docker-up       run full compose stack"
@@ -126,21 +121,6 @@ else
 	bash scripts/clean-runtime.sh --dry-run
 endif
 
-web-install:
-	cd web && npm install
-
-web-dev:
-	cd web && npm run dev
-
-web-build:
-	cd web && npm run build
-
-web-typecheck:
-	cd web && npm run typecheck
-
-web-lint:
-	cd web && npm run lint
-
 compose-config:
 	docker compose config
 
@@ -168,18 +148,11 @@ docker-smoke:
 	docker compose down -v
 
 metrics-smoke:
-	docker compose up -d --build ft12-api ft12-web
+	docker compose up -d --build ft12-api
 	docker compose exec -T ft12-api /app/ft12-healthcheck -url http://127.0.0.1:8080/metrics
 	docker compose down -v
 
-verify-web:
-ifeq ($(OS),Windows_NT)
-	@if where npm >NUL 2>NUL; then cd web && npm run typecheck && npm run build; else echo "npm not found; skipping web verification"; fi
-else
-	@if command -v npm >/dev/null 2>&1; then cd web && npm run typecheck && npm run build; else echo "npm not found; skipping web verification"; fi
-endif
-
-ci-local: fmt check-go-format check-architecture test build web-typecheck web-lint web-build compose-config check-doc-links clean-runtime-dry-run
+ci-local: fmt check-go-format check-architecture test build compose-config check-doc-links clean-runtime-dry-run
 
 release-check:
 ifeq ($(OS),Windows_NT)
@@ -188,7 +161,7 @@ else
 	sh scripts/release-check.sh
 endif
 
-verify: fmt check-architecture test build verify-web
+verify: fmt check-architecture test build
 
 clean:
 	rm -rf $(BIN_DIR)

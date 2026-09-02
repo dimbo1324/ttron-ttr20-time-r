@@ -23,7 +23,6 @@ Concurrency cancels older runs for the same Git ref.
 | `backend` | Ubuntu, Windows, macOS | Go formatting, tests, build |
 | `architecture` | Ubuntu | dependency boundary script |
 | `cleanup` | Ubuntu, Windows | cleanup script dry-run |
-| `frontend` | Ubuntu | npm ci, typecheck, lint, build |
 | `docker` | Ubuntu | compose config, compose build, compose smoke |
 | `race` | Ubuntu | `go test -race ./...` |
 
@@ -35,12 +34,6 @@ go fmt ./...
 .\scripts\check-architecture.ps1
 go test ./...
 go build ./...
-cd web
-npm ci
-npm run typecheck
-npm run lint
-npm run build
-cd ..
 docker compose config
 docker compose build
 docker compose up -d

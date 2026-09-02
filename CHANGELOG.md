@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+
+- Frontend Web UI (`web/`), its Docker Compose service, CI job, Makefile
+  targets, and related documentation. The platform is now backend-only and is
+  driven through the HTTP/JSON API.
+
 ## v0.1.0 - Initial portfolio release
 
 Planned initial release scope:

@@ -12,8 +12,7 @@ try {
     $files = git ls-files "*.go" |
         Where-Object {
             $_ -and
-            -not $_.StartsWith("legacy/") -and
-            -not $_.StartsWith("web/node_modules/")
+            -not $_.StartsWith("legacy/")
         }
 
     foreach ($file in $files) {

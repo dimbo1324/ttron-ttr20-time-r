@@ -15,8 +15,7 @@ production deployment.
 
 - Docker Go services use multi-stage builds and distroless non-root runtime
   images.
-- The Web UI serves static files from nginx as a non-root user.
-- Build contexts exclude `.env`, logs, binaries, `node_modules`, and build
+- Build contexts exclude `.env`, logs, binaries, and build
   outputs.
 - The HTTP API keeps recovery middleware and request IDs.
 - The HTTP API sets `X-Content-Type-Options`, `X-Frame-Options`, and
@@ -32,7 +31,7 @@ production deployment.
 
 ## Do Not Expose Publicly
 
-Do not expose the API, Web UI, gRPC ports, or emulator TCP port to untrusted
+Do not expose the API, gRPC ports, or emulator TCP port to untrusted
 networks without adding authentication, TLS, authorization, rate limiting, and
 deployment-specific hardening.
 

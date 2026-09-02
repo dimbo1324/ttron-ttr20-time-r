@@ -70,4 +70,4 @@ structured logging and tracing are intentionally deferred.
 ## Security Notes
 
 Observability endpoints are unauthenticated in this local development baseline.
-Do not expose the API or Web UI directly to untrusted networks.
+Do not expose the API directly to untrusted networks.

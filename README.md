@@ -5,37 +5,28 @@
 Local industrial protocol simulation platform for an FT1.2-like/TTR20
 time-reading workflow. It lets you run a TCP device emulator, watch a gateway
 poll the device, inspect raw protocol frames, switch fault modes, export
-diagnostics, and see the whole process in a bilingual Web UI.
+diagnostics, and drive everything through an HTTP/JSON API.
 
 The project combines a Go protocol core, TCP emulator, gateway polling service,
-gRPC control plane, HTTP/JSON API, React Web UI, Docker Compose runtime, CI
+gRPC control plane, HTTP/JSON API, Docker Compose runtime, CI
 quality gates, a small observability baseline, local analysis exports, compact
-protocol infographics, and a live process terminal.
+protocol documentation.
 
-## Demo
-
-Real screenshots are stored under `docs/assets/screenshots/`. They show the
-actual local Docker/Web UI smoke environment, not mockups.
-
-![Dashboard](docs/assets/screenshots/dashboard.png)
-![Emulator controls](docs/assets/screenshots/emulator.png)
-![Events table](docs/assets/screenshots/events.png)
-
-## What You Can Do In The UI
+## What You Can Do Through The API
 
 | Area | What it helps with |
 | --- | --- |
-| Dashboard | See emulator/gateway health, device time, event distribution, protocol flow, and the live process terminal. |
+| Overview | Read emulator/gateway health, device time, and event distribution. |
 | Emulator | Toggle fault modes such as delayed responses, fragmented frames, checksum corruption, no-response, and close-after-request. |
 | Gateway | Start/stop polling, inspect connection state, backoff/reconnect counters, and the latest read-time cycle. |
-| Events | Filter RX/TX/ERR/SYSTEM frames, expand raw hex, export JSON/CSV, and watch the terminal-style event feed. |
+| Events | Filter RX/TX/ERR/SYSTEM frames, read raw hex, and export JSON/CSV. |
 | Diagnostics | Check health/readiness, service counters, metrics summary, and export operational snapshots. |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  Web["React Web UI"] --> API["HTTP API"]
+  Client["HTTP client"] --> API["HTTP API"]
   API --> EG["gRPC EmulatorService"]
   API --> GG["gRPC GatewayService"]
   Gateway["Gateway Poller"] --> TCP["FT1.2-like TCP"]
@@ -44,9 +35,8 @@ flowchart LR
   GG --> Gateway
 ```
 
-The FT1.2-like TCP path stays separate from the HTTP/Web control surface. The
-HTTP API talks to emulator and gateway through the existing gRPC clients; the
-Web UI talks only to `/api`.
+The FT1.2-like TCP path stays separate from the HTTP control surface. The
+HTTP API talks to emulator and gateway through the existing gRPC clients.
 
 ## Features
 
@@ -58,20 +48,11 @@ Web UI talks only to `/api`.
 - Gateway poller with reconnect/backoff and start/stop controls.
 - gRPC control APIs for emulator and gateway.
 - HTTP/JSON API with health, readiness, events, controls, metrics, and JSON/CSV exports.
-- React/Vite/TypeScript/Tailwind dashboard with Russian-by-default and English UI.
-- Persisted dark/light themes for the local dashboard.
-- Compact responsive Web UI for laptop and desktop monitoring.
-- Polished container-safe UI primitives for wrapped labels, stable buttons,
-  readable badges, detail lists, and non-overlapping protocol tiles.
-- Protocol flow, frame anatomy, polling timeline, and event distribution infographics.
-- Live process terminal with a running event ticker and recent frame log.
-- Smooth button press feedback, hover tooltips, and action result notices for
-  controls and exports.
 - Events export as JSON/CSV plus overview and service status JSON exports.
-- Docker Compose stack with nginx static serving and API proxy.
+- Docker Compose stack for emulator, gateway, and API services.
 - Non-root container runtimes and service healthchecks.
 - Optional Prometheus scrape profile.
-- GitHub Actions CI across Go, frontend, Docker, architecture, and race tests.
+- GitHub Actions CI across Go, Docker, architecture, and race tests.
 - Architecture boundary scripts and local release checks.
 - Runtime logs under ignored `runtime/logs/` and cleanup scripts for local build
   output.
@@ -86,18 +67,15 @@ docker compose up --build
 
 Open:
 
-- Web UI: `http://localhost:5173`
 - API health: `http://localhost:8080/health`
 - API readiness: `http://localhost:8080/api/v1/ready`
 - API metrics: `http://localhost:8080/metrics`
 - Events CSV export: `http://localhost:8080/api/v1/export/events.csv`
 - Overview JSON export: `http://localhost:8080/api/v1/export/overview.json`
 
-Open the Dashboard first. The live terminal shows the running RX/TX/ERR stream
-while the gateway polls the emulator. Use the Emulator page to introduce faults,
-then return to Dashboard or Events to see how the system reacts.
-Sections are also deep-linkable with hash URLs such as
-`http://localhost:5173/#events` and `http://localhost:5173/#emulator`.
+Start with `/api/v1/overview` while the gateway polls the emulator. Use the
+emulator control endpoints to introduce faults, then read `/api/v1/events` to
+see how the system reacts.
 
 Optional Prometheus:
 
@@ -133,18 +111,6 @@ go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 1s -grpc-li
 go run ./cmd/ft12-api -http-listen 127.0.0.1:8080 -emulator-grpc 127.0.0.1:9100 -gateway-grpc 127.0.0.1:9200
 ```
 
-Frontend development:
-
-```powershell
-cd web
-npm ci
-npm run dev
-```
-
-Open `http://localhost:5173`. Vite proxies `/api` and `/health` to the local
-API on `localhost:8080`. The UI starts in Russian, can switch to English, and
-stores language/theme choices in browser `localStorage`.
-
 Release-style local check:
 
 ```powershell
@@ -158,7 +124,7 @@ Local service logs default to:
 - `runtime/logs/ft12-api.log`
 
 Use `-log=` to keep a service on stdout, or pass another `-log` path for local
-diagnostics. `runtime/`, `tmp/`, logs, `web/dist`, and similar generated output
+diagnostics. `runtime/`, `tmp/`, logs, and similar generated output
 are ignored by Git. Cleanup helpers:
 
 ```powershell
@@ -179,7 +145,6 @@ bash scripts/clean-runtime.sh
 | `ft12-emulator` | gRPC control | `9100` |
 | `ft12-gateway` | gRPC control | `9200` |
 | `ft12-api` | HTTP/JSON API, health, readiness, metrics | `8080` |
-| `ft12-web` | nginx static Web UI and `/api` proxy | `5173` |
 | `prometheus` | optional metrics scrape profile | `9090` |
 
 ## Project Structure
@@ -188,7 +153,6 @@ bash scripts/clean-runtime.sh
 cmd/        command entrypoints
 internal/   Go packages for protocol, services, API, config, platform helpers
 proto/      protobuf/gRPC contract sources
-web/        React/Vite dashboard and nginx runtime image
 deploy/     Docker and observability assets
 docs/       architecture, protocol, operations, release, examples
 scripts/    architecture, docs-link, and release-check scripts
@@ -205,7 +169,6 @@ task/       original assignment documents
 - [Gateway](docs/gateway.md)
 - [gRPC API](docs/grpc-api.md)
 - [HTTP API](docs/http-api.md)
-- [Web UI](docs/web-ui.md)
 - [Docker](docs/docker.md)
 - [Observability](docs/observability.md)
 - [CI](docs/ci.md)
@@ -224,7 +187,7 @@ task/       original assignment documents
 This is a simulation, learning, and portfolio platform. It is not certified for
 direct control of real industrial equipment. There is no authentication, TLS,
 persistence, production secrets management, or hardened public deployment
-profile yet. Do not expose the API, Web UI, or gRPC ports to untrusted networks
+profile yet. Do not expose the API or gRPC ports to untrusted networks
 without additional review and hardening. Exported JSON/CSV files may contain
 protocol diagnostic data, raw frame hex, endpoint addresses, and service
 counters; treat them as local troubleshooting artifacts.
@@ -237,4 +200,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup and quality gates. See
 ## License
 
 MIT. See [LICENSE](LICENSE). Third-party dependencies are managed through
-`go.mod`, `go.sum`, `web/package.json`, and `web/package-lock.json`.
+`go.mod` and `go.sum`.

@@ -22,7 +22,7 @@ result = subprocess.run(
 
 failures = []
 for rel in result.stdout.splitlines():
-    if not rel or rel.startswith("legacy/") or rel.startswith("web/node_modules/"):
+    if not rel or rel.startswith("legacy/"):
         continue
     path = root / rel
     formatted = subprocess.run(
