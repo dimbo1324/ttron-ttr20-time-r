@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { useDictionary } from "@/components/locale-provider";
 import { Badge } from "@/components/ui/badge";
+import { CopyButton } from "@/components/ui/copy-button";
 import {
   asciiGlyph,
   decodeFrame,
@@ -86,9 +87,16 @@ const FIELD_STYLE: Record<FieldKind, { text: string; bg: string; border: string;
   },
 };
 
-function useFieldLabels() {
+/**
+ * Field labels, keyed by the decoder's own union.
+ *
+ * `satisfies` rather than a cast: the dictionary section and `FieldKind` are
+ * two lists that must stay in step, and this is what makes them fail to
+ * compile when they drift instead of rendering `undefined`.
+ */
+function useFieldLabels(): Record<FieldKind, string> {
   const dict = useDictionary();
-  return dict.protocol.fields as Record<FieldKind, string>;
+  return dict.protocol.fields satisfies Record<FieldKind, string>;
 }
 
 /**
@@ -193,6 +201,7 @@ export function ByteGrid({ decoded }: { decoded: DecodedFrame }) {
               onMouseLeave={() => setHovered((current) => (current === cell.offset ? null : current))}
               onFocus={() => setHovered(cell.offset)}
               onBlur={() => setHovered((current) => (current === cell.offset ? null : current))}
+              aria-label={`${labels[cell.kind]}, ${dict.protocol.offset} ${cell.offset}, 0x${toHex(cell.value)}`}
               className={cn(
                 "group relative flex w-11 flex-col items-center rounded border py-1 outline-none transition-colors duration-150",
                 style.bg,
@@ -362,15 +371,20 @@ export function FrameInspector({
       {!compact ? <FrameLayoutBar decoded={decoded} /> : null}
       <ByteGrid decoded={decoded} />
       <CommandDecode decoded={decoded} />
-      {decoded.expectedChecksum.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2.5 text-xs">
-          <span className="text-faint-foreground">{dict.protocol.computed}</span>
-          <span className="font-mono text-field-checksum tabular">
-            {formatHex(decoded.expectedChecksum)}
-          </span>
-          <span className="text-faint-foreground">· {dict.protocol.payloadSpan}</span>
-        </div>
-      ) : null}
+      <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2.5 text-xs">
+        {decoded.expectedChecksum.length > 0 ? (
+          <>
+            <span className="text-faint-foreground">{dict.protocol.computed}</span>
+            <span className="font-mono text-field-checksum tabular">
+              {formatHex(decoded.expectedChecksum)}
+            </span>
+            <span className="text-faint-foreground">· {dict.protocol.payloadSpan}</span>
+          </>
+        ) : null}
+        <span className="ml-auto">
+          <CopyButton value={formatHex(bytes)} label={dict.protocol.copyFrame} />
+        </span>
+      </div>
     </div>
   );
 }

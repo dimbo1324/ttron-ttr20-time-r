@@ -51,6 +51,24 @@ import {
 
 export type EventDirection = "tx" | "rx" | "err" | "sys";
 
+/**
+ * Everything the engine can say, as closed unions.
+ *
+ * These were plain strings, which meant the log rendered whatever the engine
+ * happened to emit — and three of the codes had no dictionary entry at all, so
+ * a timeout showed the operator the word "timeout" in both languages. A union
+ * makes the dictionary lookup exhaustive: a code added here fails to compile
+ * until both locales can name it.
+ */
+export type BenchErrorCode = "invalidChecksum" | "noResponse" | "timeout" | "connectionClosed";
+
+export type BenchNote =
+  | "pollingStarted"
+  | "pollingStopped"
+  | "deviceStateChanged"
+  | "clockStateChanged"
+  | "reconnected";
+
 export interface BenchEvent {
   id: number;
   /** Simulated wall clock of the event, ms since epoch. */
@@ -60,9 +78,9 @@ export interface BenchEvent {
   command: string;
   bytes: number[];
   /** Dictionary key for a system note, when the event is not a frame. */
-  note?: string;
-  noteArgs?: Record<string, string | number>;
-  errorCode?: string;
+  note?: BenchNote;
+  noteArgs?: { from: string; to: string };
+  errorCode?: BenchErrorCode;
   cycle: number;
   attempt: number;
   latencyMs?: number;

@@ -87,7 +87,9 @@ describe("AppShell status strip", () => {
     });
     renderWithLocale(<AppShell>x</AppShell>);
 
-    expect(screen.getByText("+1.50s")).toBeInTheDocument();
+    // The strip formats skew with the shared duration formatter, so its units
+    // read the same as every other reading on the bench.
+    expect(screen.getByText("+1.50 s")).toBeInTheDocument();
   });
 
   it("reports a device that has gone offline", () => {

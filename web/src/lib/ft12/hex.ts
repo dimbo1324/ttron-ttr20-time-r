@@ -31,9 +31,9 @@ export function parseHex(input: string): HexParseResult {
   }
 
   const bytes: number[] = [];
-  for (let index = 0; index + 1 < digits.length + 1; index += 2) {
-    const pair = digits.slice(index, index + 2);
-    if (pair.length === 2) bytes.push(Number.parseInt(pair, 16));
+  // A trailing half-byte is reported through `truncated` rather than guessed at.
+  for (let index = 0; index + 1 < digits.length; index += 2) {
+    bytes.push(Number.parseInt(digits.slice(index, index + 2), 16));
   }
 
   return { bytes, invalid, truncated: digits.length % 2 === 1 };

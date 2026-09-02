@@ -1,17 +1,18 @@
 "use client";
 
 import { CalendarClock, Repeat, Router, ShieldAlert } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { ScheduleTimeline, SkewHistory } from "@/components/dashboard/charts";
 import { useDictionary } from "@/components/locale-provider";
 import { Badge } from "@/components/ui/badge";
 import { Field, SegmentedControl, Select } from "@/components/ui/controls";
 import { DefRow, Panel, PanelBody, PanelHeader, Stat } from "@/components/ui/panel";
+import { StateBadge } from "@/components/ui/state-badge";
 import { StatusDot } from "@/components/ui/status-dot";
 import type { ScheduleMode } from "@/lib/bench/domain";
 import { formatDuration } from "@/lib/format";
-import { useMounted } from "@/lib/use-mounted";
+import { useNow } from "@/lib/use-now";
 import { useBenchStore, useClockReport } from "@/stores/bench-store";
 
 /**
@@ -44,13 +45,7 @@ export function GatewayPanel() {
   const patchGateway = useBenchStore((state) => state.patchGateway);
   const clock = useClockReport();
 
-  const mounted = useMounted();
-  const [now, setNow] = useState(0);
-  useEffect(() => {
-    setNow(Date.now());
-    const id = window.setInterval(() => setNow(Date.now()), 250);
-    return () => window.clearInterval(id);
-  }, []);
+  const now = useNow();
 
   // One tick per request that opened a cycle — retries inside a cycle are not
   // schedule events and would make a regular schedule look ragged.
@@ -230,7 +225,7 @@ export function GatewayPanel() {
             <div className="grid grid-cols-2 gap-3">
               <Stat
                 label={dict.overview.nextPoll}
-                value={mounted && running ? formatDuration(Math.max(0, nextPoll - now)) : dict.common.stopped}
+                value={now && running ? formatDuration(Math.max(0, nextPoll - now)) : dict.common.stopped}
                 mono
                 tone={running ? "primary" : "muted"}
               />
@@ -313,10 +308,7 @@ export function GatewayPanel() {
                 label={dict.gateway.successesShort}
                 value={health.consecutiveSuccesses}
               />
-              <DefRow
-                label={dict.states.online}
-                value={dict.states[health.state as keyof typeof dict.states] ?? dict.states.unknown}
-              />
+              <DefRow label={dict.gateway.deviceState} value={<StateBadge kind="health" state={health.state} />} />
             </div>
           </PanelBody>
         </Panel>

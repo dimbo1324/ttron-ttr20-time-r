@@ -63,10 +63,14 @@ beforeEach(() => {
 });
 
 describe("ExchangeMonitor log", () => {
-  it("renders one row per event", () => {
-    renderWithLocale(<ExchangeMonitor />);
+  it("renders one row per event under a labelled header", () => {
+    const { dict } = renderWithLocale(<ExchangeMonitor />);
 
-    expect(screen.getAllByRole("row")).toHaveLength(LOG.length);
+    // The header is a row too — five unlabelled columns of hex are not a table.
+    expect(screen.getAllByRole("row")).toHaveLength(LOG.length + 1);
+    expect(screen.getByRole("columnheader", { name: dict.monitor.time })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: dict.monitor.raw })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: dict.monitor.latency })).toBeInTheDocument();
   });
 
   it("shows the raw frame of a protocol event", () => {
@@ -78,13 +82,16 @@ describe("ExchangeMonitor log", () => {
   it("translates an error row", () => {
     const { dict } = renderWithLocale(<ExchangeMonitor />);
 
-    expect(screen.getByText(dict.protocol.errors.invalidChecksum)).toBeInTheDocument();
+    expect(screen.getByText(dict.events.errors.invalidChecksum)).toBeInTheDocument();
   });
 
-  it("renders a system event with its transition", () => {
-    renderWithLocale(<ExchangeMonitor />);
+  it("renders a system event with both states translated", () => {
+    const { dict } = renderWithLocale(<ExchangeMonitor />);
 
-    expect(screen.getByText(/unknown → online/)).toBeInTheDocument();
+    expect(screen.getByText(dict.events.deviceStateChanged)).toBeInTheDocument();
+    expect(
+      screen.getByText(`${dict.states.unknown} → ${dict.states.online}`),
+    ).toBeInTheDocument();
   });
 
   it("shows the measured latency of a response", () => {
@@ -108,7 +115,7 @@ describe("ExchangeMonitor filters", () => {
 
     await userEvent.click(screen.getByRole("radio", { name: dict.directions.rx }));
 
-    expect(screen.getAllByRole("row")).toHaveLength(2);
+    expect(screen.getAllByRole("row")).toHaveLength(3);
   });
 
   it("searches the hex and the command", async () => {
@@ -116,7 +123,7 @@ describe("ExchangeMonitor filters", () => {
     const search = screen.getByPlaceholderText(dict.monitor.search);
 
     await userEvent.type(search, "read-identity");
-    expect(screen.getAllByRole("row")).toHaveLength(1);
+    expect(screen.getAllByRole("row")).toHaveLength(2);
 
     await userEvent.clear(search);
     await userEvent.type(search, formatHex(REQUEST).slice(0, 8));
@@ -166,11 +173,12 @@ describe("ExchangeMonitor detail", () => {
   });
 
   it("explains a selected system event", async () => {
-    renderWithLocale(<ExchangeMonitor />);
+    const { dict } = renderWithLocale(<ExchangeMonitor />);
 
-    await userEvent.click(screen.getByText(/unknown → online/));
+    await userEvent.click(screen.getByText(dict.events.deviceStateChanged));
 
     expect(screen.getAllByText("device-state").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(dict.events.deviceStateChanged).length).toBeGreaterThan(1);
   });
 });
 

@@ -19,8 +19,10 @@ import { useEffect, type ReactNode } from "react";
 import { useDictionary, useLocale } from "@/components/locale-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { StatusDot, type StatusTone } from "@/components/ui/status-dot";
+import { StateBadge } from "@/components/ui/state-badge";
 import { LOCALE_SHORT, locales, withLocale } from "@/i18n";
+import { formatDuration } from "@/lib/format";
+import { CLOCK_TONE } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { useBenchStore, useClockReport } from "@/stores/bench-store";
 
@@ -46,13 +48,6 @@ const NAV = [
 ] as const;
 
 const SECTIONS = ["sectionWork", "sectionControl", "sectionLearn"] as const;
-
-const HEALTH_TONE: Record<string, StatusTone> = {
-  online: "online",
-  degraded: "degraded",
-  offline: "offline",
-  unknown: "unknown",
-};
 
 export function AppShell({ children }: { children: ReactNode }) {
   const dict = useDictionary();
@@ -82,14 +77,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [running, tick]);
 
   const base = `/${locale}`;
-  const clockTone =
-    clock.state === "ok"
-      ? "success"
-      : clock.state === "warn"
-        ? "warning"
-        : clock.state === "critical"
-          ? "danger"
-          : "neutral";
 
   return (
     <div className="flex min-h-screen bg-background bench-grid">
@@ -168,22 +155,23 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur">
-          <div className="flex items-center gap-2">
-            <StatusDot tone={HEALTH_TONE[health] ?? "unknown"} pulse={running && health === "online"} />
-            <span className="text-[0.8125rem] text-muted-foreground">
-              {dict.states[health as keyof typeof dict.states] ?? dict.states.unknown}
-            </span>
+        <header
+          className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur"
+          aria-label={dict.shell.statusStrip}
+        >
+          {/* The two states that decide whether anything else on screen can be
+              trusted, announced when they change rather than only drawn. */}
+          <div className="flex items-center gap-2" aria-live="polite">
+            <StateBadge kind="health" state={health} pulse={running && health === "online"} />
+            <Badge tone={CLOCK_TONE[clock.state]}>
+              {dict.overview.skew}
+              <span className="font-mono tabular">
+                {clock.samples === 0
+                  ? dict.common.none
+                  : formatDuration(clock.skewMs, { signed: true })}
+              </span>
+            </Badge>
           </div>
-
-          <span className="h-4 w-px bg-border" />
-
-          <Badge tone={clockTone as "neutral"}>
-            {dict.overview.skew}
-            <span className="font-mono tabular">
-              {clock.samples === 0 ? "—" : `${clock.skewMs >= 0 ? "+" : ""}${(clock.skewMs / 1000).toFixed(2)}s`}
-            </span>
-          </Badge>
 
           <div className="ml-auto flex items-center gap-1.5">
             <Button

@@ -32,6 +32,13 @@ beforeAll(() => {
     Element.prototype.scrollIntoView = jest.fn();
   }
 
+  if (!navigator.clipboard) {
+    Object.defineProperty(navigator, "clipboard", {
+      writable: true,
+      value: { writeText: jest.fn(async () => undefined) },
+    });
+  }
+
   global.ResizeObserver = class {
     observe() {}
     unobserve() {}

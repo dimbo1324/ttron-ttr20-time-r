@@ -11,6 +11,7 @@ import { Input, SegmentedControl } from "@/components/ui/controls";
 import { Panel, PanelBody, PanelHeader, Stat } from "@/components/ui/panel";
 import { formatClock, formatDuration } from "@/lib/format";
 import { formatHex } from "@/lib/ft12";
+import { DIRECTION_BG, DIRECTION_TEXT, DIRECTION_TONE } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { useBenchStore, type BenchEvent, type EventDirection } from "@/stores/bench-store";
 
@@ -23,27 +24,6 @@ import { useBenchStore, type BenchEvent, type EventDirection } from "@/stores/be
  * sits under a sequence diagram that draws the same events against real
  * milliseconds, and selecting a row decodes it in full beside both.
  */
-
-const DIRECTION_TONE: Record<EventDirection, "tx" | "rx" | "err" | "sys"> = {
-  tx: "tx",
-  rx: "rx",
-  err: "err",
-  sys: "sys",
-};
-
-const DIRECTION_TEXT: Record<EventDirection, string> = {
-  tx: "text-signal-tx",
-  rx: "text-signal-rx",
-  err: "text-signal-err",
-  sys: "text-signal-sys",
-};
-
-const DIRECTION_BG: Record<EventDirection, string> = {
-  tx: "bg-signal-tx",
-  rx: "bg-signal-rx",
-  err: "bg-signal-err",
-  sys: "bg-signal-sys",
-};
 
 type Filter = "all" | EventDirection;
 
@@ -148,6 +128,25 @@ export function ExchangeMonitor() {
               </div>
             ) : (
               <table className="w-full border-collapse">
+                <thead className="sticky top-0 z-10 bg-card">
+                  <tr className="border-b border-border text-left">
+                    <th scope="col" className="w-[5.5rem] px-3.5 py-1 text-[0.625rem] font-medium tracking-wide text-faint-foreground uppercase">
+                      {dict.monitor.time}
+                    </th>
+                    <th scope="col" className="w-11 py-1 text-[0.625rem] font-medium tracking-wide text-faint-foreground uppercase">
+                      {dict.monitor.dir}
+                    </th>
+                    <th scope="col" className="w-[7.5rem] py-1 text-[0.625rem] font-medium tracking-wide text-faint-foreground uppercase">
+                      {dict.monitor.commandColumn}
+                    </th>
+                    <th scope="col" className="py-1 text-[0.625rem] font-medium tracking-wide text-faint-foreground uppercase">
+                      {dict.monitor.raw}
+                    </th>
+                    <th scope="col" className="w-14 py-1 pr-3.5 text-right text-[0.625rem] font-medium tracking-wide text-faint-foreground uppercase">
+                      {dict.monitor.latency}
+                    </th>
+                  </tr>
+                </thead>
                 <tbody>
                   {filtered.map((event) => (
                     <EventRow
@@ -204,12 +203,11 @@ function EventRow({
   onSelect: () => void;
 }) {
   const dict = useDictionary();
-  const errors = dict.protocol.errors as Record<string, string>;
-  const notes = SYSTEM_NOTES(dict);
 
   return (
     <tr
       onClick={onSelect}
+      aria-selected={selected}
       className={cn(
         "cursor-pointer border-b border-border/50 transition-colors",
         selected ? "bg-primary/10" : "hover:bg-surface-raised/60",
@@ -233,14 +231,14 @@ function EventRow({
           </span>
         ) : event.errorCode ? (
           <span className="text-[0.6875rem] text-destructive">
-            {errors[event.errorCode] ?? event.errorCode}
+            {dict.events.errors[event.errorCode]}
           </span>
         ) : event.note ? (
           <span className="text-[0.6875rem] text-signal-sys">
-            {notes[event.note] ?? event.note}
+            {dict.events[event.note]}
             {event.noteArgs ? (
               <span className="ml-1 text-faint-foreground">
-                {String(event.noteArgs.from ?? "")} → {String(event.noteArgs.to ?? "")}
+                {stateLabel(dict, event.noteArgs.from)} → {stateLabel(dict, event.noteArgs.to)}
               </span>
             ) : null}
           </span>
@@ -255,8 +253,6 @@ function EventRow({
 
 function SystemEventDetail({ event }: { event: BenchEvent }) {
   const dict = useDictionary();
-  const errors = dict.protocol.errors as Record<string, string>;
-  const notes = SYSTEM_NOTES(dict);
 
   return (
     <div className="space-y-2">
@@ -268,14 +264,14 @@ function SystemEventDetail({ event }: { event: BenchEvent }) {
       </div>
       <p className="text-sm text-foreground">
         {event.errorCode
-          ? (errors[event.errorCode] ?? event.errorCode)
+          ? dict.events.errors[event.errorCode]
           : event.note
-            ? (notes[event.note] ?? event.note)
-            : "—"}
+            ? dict.events[event.note]
+            : dict.common.none}
       </p>
       {event.noteArgs ? (
-        <p className="font-mono text-xs text-faint-foreground">
-          {String(event.noteArgs.from ?? "")} → {String(event.noteArgs.to ?? "")}
+        <p className="text-xs text-faint-foreground">
+          {stateLabel(dict, event.noteArgs.from)} → {stateLabel(dict, event.noteArgs.to)}
         </p>
       ) : null}
     </div>
@@ -357,13 +353,13 @@ function SequenceDiagram({ events }: { events: BenchEvent[] }) {
   );
 }
 
-/** System-event copy lives in the dictionary; this maps the store's keys onto it. */
-function SYSTEM_NOTES(dict: ReturnType<typeof useDictionary>): Record<string, string> {
-  return {
-    pollingStarted: dict.gateway.pollingRunning,
-    pollingStopped: dict.gateway.pollingStopped,
-    deviceStateChanged: dict.gateway.healthPolicy,
-    clockStateChanged: dict.overview.skew,
-    reconnected: dict.overview.reconnects,
-  };
+/**
+ * Names a state carried in an event's arguments.
+ *
+ * The engine records transitions as raw state names because it has no
+ * dictionary; translating them here keeps the log readable in both languages
+ * without teaching the store about locales.
+ */
+function stateLabel(dict: ReturnType<typeof useDictionary>, state: string): string {
+  return state in dict.states ? dict.states[state as keyof typeof dict.states] : state;
 }

@@ -20,11 +20,14 @@ export function Sparkline({
   className,
   tone = "primary",
   height = 40,
+  label,
 }: {
   values: number[];
   className?: string;
   tone?: "primary" | "warning" | "danger";
   height?: number;
+  /** Announced in place of the drawing, which is silent on its own. */
+  label?: string;
 }) {
   const stroke = {
     primary: "var(--signal-rx)",
@@ -55,7 +58,9 @@ export function Sparkline({
       preserveAspectRatio="none"
       className={cn("w-full rounded bg-surface-sunken", className)}
       style={{ height }}
-      aria-hidden
+      role={label ? "img" : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
     >
       <path d={`${path} L100,100 L0,100 Z`} fill={stroke} opacity={0.12} />
       <path d={path} fill="none" stroke={stroke} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />

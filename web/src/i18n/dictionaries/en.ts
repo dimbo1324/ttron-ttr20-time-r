@@ -39,6 +39,7 @@ export const en: Dictionary = {
       "Data comes from the built-in device model. No backend needed — this is the teaching and demo mode.",
     liveMode: "Live data",
     liveModeHint: "Data is read from the Go API at /upstream.",
+    statusStrip: "Bench status",
     language: "Language",
     collapse: "Collapse panel",
     expand: "Expand panel",
@@ -165,6 +166,7 @@ export const en: Dictionary = {
     streamTitle: "Stream scan",
     streamHint:
       "Paste an arbitrary byte stream: the parser extracts frames, drops noise and shows the remainder.",
+    copyFrame: "Copy frame",
     streamFrames: "Frames found",
     streamRest: "Buffer remainder",
     fields: {
@@ -197,6 +199,20 @@ export const en: Dictionary = {
     },
   },
 
+  events: {
+    pollingStarted: "Polling started",
+    pollingStopped: "Polling stopped",
+    deviceStateChanged: "Device state changed",
+    clockStateChanged: "Clock state changed",
+    reconnected: "Connection re-established",
+    errors: {
+      invalidChecksum: "Checksum did not match — frame discarded",
+      noResponse: "The device did not answer in time",
+      timeout: "Response timeout expired",
+      connectionClosed: "The device closed the connection",
+    },
+  },
+
   monitor: {
     title: "Exchange monitor",
     subtitle: "Live frame stream between gateway and device",
@@ -210,6 +226,7 @@ export const en: Dictionary = {
     dir: "Dir",
     source: "Source",
     commandColumn: "Command",
+    latency: "Latency",
     raw: "Frame",
     detail: "Frame decode",
     detailHint: "Pick a row from the log",
@@ -279,6 +296,7 @@ export const en: Dictionary = {
     recoverAfter: "Recover after",
     failuresShort: "fail",
     successesShort: "ok",
+    deviceState: "Device state",
     connection: "Connection",
     backoff: "Reconnect backoff",
     timeline: "Schedule timeline",

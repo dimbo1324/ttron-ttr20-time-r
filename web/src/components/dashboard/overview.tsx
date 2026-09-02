@@ -1,15 +1,16 @@
 "use client";
 
 import { Clock, CircuitBoard, Gauge, Router, Waves } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { useDictionary } from "@/components/locale-provider";
 import { OutcomeStrip, SkewHistory, SkewMeter, Sparkline } from "@/components/dashboard/charts";
 import { Badge } from "@/components/ui/badge";
 import { Panel, PanelBody, PanelHeader, DefRow, Stat } from "@/components/ui/panel";
-import { StatusDot, type StatusTone } from "@/components/ui/status-dot";
+import { StateBadge } from "@/components/ui/state-badge";
+import { StatusDot } from "@/components/ui/status-dot";
 import { availability, percentile } from "@/lib/bench/domain";
-import { useMounted } from "@/lib/use-mounted";
+import { useNow } from "@/lib/use-now";
 import { formatClock, formatDriftPerDay, formatDuration, formatPercent } from "@/lib/format";
 import { formatDeviceTime } from "@/lib/ft12";
 import { selectActiveFaultCount, useBenchStore, useClockReport } from "@/stores/bench-store";
@@ -41,17 +42,7 @@ export function Overview() {
   const activeFaults = useBenchStore(selectActiveFaultCount);
   const clock = useClockReport();
 
-  // A ticking readout needs its own clock: the store only changes when a poll
-  // resolves, and a countdown that only moves every five seconds is not one.
-  // It starts at 0 so the server and the first client render agree — the real
-  // time only arrives after mount.
-  const mounted = useMounted();
-  const [now, setNow] = useState(0);
-  useEffect(() => {
-    setNow(Date.now());
-    const id = window.setInterval(() => setNow(Date.now()), 250);
-    return () => window.clearInterval(id);
-  }, []);
+  const now = useNow();
 
   const frameRate = useMemo(() => {
     const buckets = new Array(60).fill(0) as number[];
@@ -64,24 +55,6 @@ export function Overview() {
     return buckets;
   }, [events, now]);
 
-  const clockTone: StatusTone =
-    clock.state === "ok"
-      ? "online"
-      : clock.state === "warn"
-        ? "degraded"
-        : clock.state === "critical"
-          ? "offline"
-          : "unknown";
-
-  const healthTone: StatusTone =
-    health.state === "online"
-      ? "online"
-      : health.state === "degraded"
-        ? "degraded"
-        : health.state === "offline"
-          ? "offline"
-          : "unknown";
-
   const countdown = Math.max(0, nextPoll - now);
   const latencies = health.latencies;
 
@@ -93,22 +66,7 @@ export function Overview() {
             icon={<Clock className="size-4" />}
             title={dict.overview.skew}
             hint={dict.overview.skewHint}
-            actions={
-              <Badge
-                tone={
-                  clock.state === "ok"
-                    ? "success"
-                    : clock.state === "warn"
-                      ? "warning"
-                      : clock.state === "critical"
-                        ? "danger"
-                        : "neutral"
-                }
-              >
-                <StatusDot tone={clockTone} />
-                {dict.states[clock.state as keyof typeof dict.states] ?? dict.states.unknown}
-              </Badge>
-            }
+            actions={<StateBadge kind="clock" state={clock.state} />}
           />
           <PanelBody className="space-y-3">
             <div className="flex items-baseline gap-2">
@@ -150,20 +108,11 @@ export function Overview() {
             icon={<Gauge className="size-4" />}
             title={dict.gateway.healthPolicy}
             actions={
-              <Badge
-                tone={
-                  health.state === "online"
-                    ? "success"
-                    : health.state === "degraded"
-                      ? "warning"
-                      : health.state === "offline"
-                        ? "danger"
-                        : "neutral"
-                }
-              >
-                <StatusDot tone={healthTone} pulse={running && health.state === "online"} />
-                {dict.states[health.state as keyof typeof dict.states] ?? dict.states.unknown}
-              </Badge>
+              <StateBadge
+                kind="health"
+                state={health.state}
+                pulse={running && health.state === "online"}
+              />
             }
           />
           <PanelBody className="space-y-3">
@@ -194,11 +143,11 @@ export function Overview() {
             hint={dict.overview.eventRateHint}
           />
           <PanelBody className="space-y-3">
-            <Sparkline values={frameRate} height={56} />
+            <Sparkline values={frameRate} height={56} label={dict.overview.eventRateHint} />
             <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
               <Stat
                 label={dict.overview.nextPoll}
-                value={mounted && running ? formatDuration(countdown) : dict.common.stopped}
+                value={now && running ? formatDuration(countdown) : dict.common.stopped}
                 mono
                 tone={running ? "primary" : "muted"}
               />
@@ -237,7 +186,7 @@ export function Overview() {
               />
               <Stat
                 label={dict.overview.serverTime}
-                value={mounted ? formatDeviceTime(new Date(now)) : "—"}
+                value={now ? formatDeviceTime(new Date(now)) : dict.common.none}
                 mono
                 tone="muted"
               />

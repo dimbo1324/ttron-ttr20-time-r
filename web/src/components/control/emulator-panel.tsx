@@ -38,7 +38,15 @@ import {
  * number in a form.
  */
 
-const PRESETS: { key: string; faults: Partial<DeviceFaults> }[] = [
+/** Keys into the emulator dictionary section, so a rename cannot slip through. */
+type PresetKey =
+  | "presetHealthy"
+  | "presetNoisyLine"
+  | "presetSlowDevice"
+  | "presetDriftingClock"
+  | "presetDeadDevice";
+
+const PRESETS: { key: PresetKey; faults: Partial<DeviceFaults> }[] = [
   { key: "presetHealthy", faults: { ...DEFAULT_FAULTS } },
   {
     key: "presetNoisyLine",
@@ -196,7 +204,7 @@ export function EmulatorPanel() {
                 variant="outline"
                 onClick={() => patchFaults({ ...DEFAULT_FAULTS, ...preset.faults })}
               >
-                {dict.emulator[preset.key as keyof typeof dict.emulator] as string}
+                {dict.emulator[preset.key]}
               </Button>
             ))}
           </PanelBody>

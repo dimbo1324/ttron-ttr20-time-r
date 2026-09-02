@@ -21,6 +21,7 @@ import {
   locales,
   withLocale,
 } from "@/i18n";
+import { formatDuration } from "@/lib/format";
 import { renderWithLocale, resetBenchStore } from "@/test/utils";
 
 /**
@@ -110,7 +111,7 @@ describe("AppShell clock tones", () => {
     });
     renderWithLocale(<AppShell>x</AppShell>);
 
-    expect(screen.getByText(`+${(skewMs / 1000).toFixed(2)}s`)).toBeInTheDocument();
+    expect(screen.getByText(formatDuration(skewMs, { signed: true }))).toBeInTheDocument();
   });
 
   it("renders a device stuck in a degraded state", () => {
@@ -197,28 +198,31 @@ describe("ExchangeMonitor unusual rows", () => {
     });
     const { dict } = renderWithLocale(<ExchangeMonitor />);
 
-    expect(screen.getAllByText(dict.gateway.pollingRunning).length).toBeGreaterThan(0);
+    expect(screen.getByText(dict.events.pollingStarted)).toBeInTheDocument();
   });
 
-  it("falls back to the raw key for a note it cannot translate", () => {
-    resetBenchStore({
-      events: [
-        {
-          id: 1,
-          at: NOW,
-          direction: "sys",
-          source: "gateway",
-          command: "custom",
-          bytes: [],
-          note: "somethingNew",
-          cycle: 0,
-          attempt: 0,
-        },
-      ],
-    });
-    renderWithLocale(<ExchangeMonitor />);
+  it("names every note and error the engine can emit", () => {
+    const { dict } = renderWithLocale(<ExchangeMonitor />);
 
-    expect(screen.getByText("somethingNew")).toBeInTheDocument();
+    // The unions in the store are what make this exhaustive: a code added
+    // there fails to compile until both locales can name it.
+    for (const note of [
+      "pollingStarted",
+      "pollingStopped",
+      "deviceStateChanged",
+      "clockStateChanged",
+      "reconnected",
+    ] as const) {
+      expect(dict.events[note]).toBeTruthy();
+    }
+    for (const code of [
+      "invalidChecksum",
+      "noResponse",
+      "timeout",
+      "connectionClosed",
+    ] as const) {
+      expect(dict.events.errors[code]).toBeTruthy();
+    }
   });
 
   it("renders a row that carries neither frame nor note", () => {

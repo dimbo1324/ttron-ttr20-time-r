@@ -38,6 +38,7 @@ export const ru = {
       "Данные формирует встроенная модель прибора. Backend не требуется — режим для обучения и демонстрации.",
     liveMode: "Живые данные",
     liveModeHint: "Данные читаются из Go API по адресу /upstream.",
+    statusStrip: "Состояние стенда",
     language: "Язык",
     collapse: "Свернуть панель",
     expand: "Развернуть панель",
@@ -164,6 +165,7 @@ export const ru = {
     streamTitle: "Разбор потока",
     streamHint:
       "Вставьте произвольный поток байтов: парсер выделит кадры, отбросит шум и покажет остаток.",
+    copyFrame: "Скопировать кадр",
     streamFrames: "Найдено кадров",
     streamRest: "Остаток буфера",
     fields: {
@@ -196,6 +198,20 @@ export const ru = {
     },
   },
 
+  events: {
+    pollingStarted: "Опрос запущен",
+    pollingStopped: "Опрос остановлен",
+    deviceStateChanged: "Состояние прибора изменилось",
+    clockStateChanged: "Состояние часов изменилось",
+    reconnected: "Соединение восстановлено",
+    errors: {
+      invalidChecksum: "Контрольная сумма не совпала — кадр отброшен",
+      noResponse: "Прибор не ответил в отведённое время",
+      timeout: "Истёк таймаут ожидания ответа",
+      connectionClosed: "Прибор закрыл соединение",
+    },
+  },
+
   monitor: {
     title: "Монитор обмена",
     subtitle: "Живой поток кадров между шлюзом и прибором",
@@ -209,6 +225,7 @@ export const ru = {
     dir: "Напр.",
     source: "Источник",
     commandColumn: "Команда",
+    latency: "Задержка",
     raw: "Кадр",
     detail: "Разбор кадра",
     detailHint: "Выберите строку журнала",
@@ -279,6 +296,7 @@ export const ru = {
     recoverAfter: "Восстановление после",
     failuresShort: "неуд.",
     successesShort: "усп.",
+    deviceState: "Состояние прибора",
     connection: "Соединение",
     backoff: "Пауза перед переподключением",
     timeline: "Лента расписания",
