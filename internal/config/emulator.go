@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,6 +29,11 @@ type EmulatorConfig struct {
 	ReadTimeoutDuration  time.Duration
 	WriteTimeoutDuration time.Duration
 	RecentSize           int
+	ClockOffset          time.Duration
+	ClockDrift           time.Duration
+	IdentityModel        string
+	IdentitySerial       string
+	IdentityFirmware     string
 }
 
 func DefaultEmulator() EmulatorConfig {
@@ -43,6 +49,11 @@ func DefaultEmulator() EmulatorConfig {
 		ReadTimeoutDuration:  300 * time.Second,
 		WriteTimeoutDuration: 5 * time.Second,
 		RecentSize:           100,
+		ClockOffset:          0,
+		ClockDrift:           0,
+		IdentityModel:        "TTR20",
+		IdentitySerial:       "SN-0000001",
+		IdentityFirmware:     "1.0.0",
 	}
 }
 
@@ -70,6 +81,11 @@ func LoadEmulator(args []string) (*EmulatorConfig, error) {
 	fs.DurationVar(&c.ReadTimeoutDuration, "read-timeout", c.ReadTimeoutDuration, "connection read timeout")
 	fs.DurationVar(&c.WriteTimeoutDuration, "write-timeout", c.WriteTimeoutDuration, "connection write timeout")
 	fs.IntVar(&c.RecentSize, "recent", c.RecentSize, "recent frame/event buffer size")
+	fs.DurationVar(&c.ClockOffset, "clock-offset", c.ClockOffset, "constant device clock offset applied to read-time responses")
+	fs.DurationVar(&c.ClockDrift, "clock-drift", c.ClockDrift, "simulated device clock drift per day")
+	fs.StringVar(&c.IdentityModel, "identity-model", c.IdentityModel, "device model reported by read-identity")
+	fs.StringVar(&c.IdentitySerial, "identity-serial", c.IdentitySerial, "device serial reported by read-identity")
+	fs.StringVar(&c.IdentityFirmware, "identity-firmware", c.IdentityFirmware, "device firmware reported by read-identity")
 	if err := fs.Parse(args); err != nil {
 		return nil, err
 	}
@@ -106,6 +122,15 @@ func (c *EmulatorConfig) Normalize() {
 	}
 	if c.ReadTimeoutDuration == 300*time.Second && c.ReadTimeout != 300 {
 		c.ReadTimeoutDuration = time.Duration(c.ReadTimeout) * time.Second
+	}
+	if strings.TrimSpace(c.IdentityModel) == "" {
+		c.IdentityModel = "TTR20"
+	}
+	if strings.TrimSpace(c.IdentitySerial) == "" {
+		c.IdentitySerial = "SN-0000001"
+	}
+	if strings.TrimSpace(c.IdentityFirmware) == "" {
+		c.IdentityFirmware = "1.0.0"
 	}
 }
 

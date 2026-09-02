@@ -1,0 +1,36 @@
+{
+  "devices": [
+    {
+      "id": "tekon-01",
+      "name": "TEKON via TTR20 teleport, feeder 1",
+      "target": "127.0.0.1:9000",
+      "checksumMode": "sum",
+      "adapterAddr": 1,
+      "scheduleMode": "aligned",
+      "pollInterval": "1m0s",
+      "pollOffset": "5s",
+      "requestTimeout": "1.5s",
+      "connectTimeout": "2s",
+      "clockWarn": "2s",
+      "clockCritical": "30s",
+      "degradeAfter": 3,
+      "offlineAfter": 10,
+      "recoverAfter": 2,
+      "enabled": true
+    },
+    {
+      "id": "tekon-02",
+      "name": "TEKON via TTR20 teleport, feeder 2",
+      "target": "127.0.0.1:9001",
+      "checksumMode": "crc16",
+      "adapterAddr": 2,
+      "scheduleMode": "interval",
+      "pollInterval": "5s",
+      "requestTimeout": "1.5s",
+      "connectTimeout": "2s",
+      "clockWarn": "5s",
+      "clockCritical": "60s",
+      "enabled": false
+    }
+  ]
+}

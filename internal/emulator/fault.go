@@ -15,6 +15,8 @@ type FaultMode struct {
 	FragmentDelay     time.Duration
 	NoResponse        bool
 	CloseAfterRequest bool
+	ClockOffset       time.Duration
+	ClockDriftPerDay  time.Duration
 }
 
 func FaultModeFromConfig(cfg *config.EmulatorConfig) FaultMode {
@@ -25,6 +27,8 @@ func FaultModeFromConfig(cfg *config.EmulatorConfig) FaultMode {
 		FragmentDelay:     cfg.FragmentDelay,
 		NoResponse:        cfg.NoResponse,
 		CloseAfterRequest: cfg.CloseAfterRequest,
+		ClockOffset:       cfg.ClockOffset,
+		ClockDriftPerDay:  cfg.ClockDrift,
 	}
 }
 

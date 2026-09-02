@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,6 +14,7 @@ import (
 	gatewaygrpc "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/gateway"
 	grpcserver "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/server"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/config"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/devices"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/gateway"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/platform/lifecycle"
 	platformlogging "github.com/dimbo1324/ttron-ttr20-time-r/internal/platform/logging"
@@ -30,25 +32,22 @@ func Run(args []string) int {
 	}
 
 	logger := platformlogging.New(cfg.LogFile)
-	logger.Printf("starting ft12 gateway (target=%s crc=%s interval=%s timeout=%s grpc=%s)",
-		cfg.Target, cfg.CRCMode, cfg.PollInterval, cfg.RequestTimeout, cfg.GRPCListen)
-
-	service, err := gateway.NewService(cfg, logger)
-	if err != nil {
-		logger.Printf("gateway service creation failed: %v", err)
-		return 1
-	}
+	logger.Printf("starting ft12 gateway (target=%s crc=%s schedule=%s interval=%s offset=%s timeout=%s retries=%d grpc=%s devices=%q)",
+		cfg.Target, cfg.CRCMode, cfg.ScheduleMode, cfg.PollInterval, cfg.PollOffset,
+		cfg.RequestTimeout, cfg.RetryAttempts, cfg.GRPCListen, cfg.DevicesFile)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
 	group := lifecycle.NewGroup(logger)
-	group.Add("gateway", func(ctx context.Context) error {
-		service.Start(ctx)
-		<-ctx.Done()
-		return service.Stop()
-	})
-	if cfg.GRPCListen != "" {
+
+	service, err := buildRuntime(ctx, cfg, group, logger)
+	if err != nil {
+		logger.Printf("gateway runtime creation failed: %v", err)
+		return 1
+	}
+
+	if cfg.GRPCListen != "" && service != nil {
 		control := grpcserver.New(cfg.GRPCListen, func(s *grpc.Server) {
 			ft12v1.RegisterGatewayServiceServer(s, gatewaygrpc.New(ctx, service))
 		})
@@ -62,4 +61,43 @@ func Run(args []string) int {
 	}
 	logger.Println("gateway stopped")
 	return 0
+}
+
+func buildRuntime(ctx context.Context, cfg *config.GatewayConfig, group *lifecycle.Group, logger *log.Logger) (*gateway.Service, error) {
+	if cfg.DevicesFile == "" {
+		service, err := gateway.NewService(cfg, logger)
+		if err != nil {
+			return nil, err
+		}
+		group.Add("gateway", func(ctx context.Context) error {
+			service.Start(ctx)
+			<-ctx.Done()
+			return service.Stop()
+		})
+		return service, nil
+	}
+
+	registry, err := devices.Load(cfg.DevicesFile)
+	if err != nil {
+		return nil, err
+	}
+	supervisor, err := gateway.NewSupervisor(cfg, registry, logger)
+	if err != nil {
+		return nil, err
+	}
+	logger.Printf("gateway device inventory loaded file=%s devices=%d enabled=%d",
+		cfg.DevicesFile, registry.Len(), len(registry.Enabled()))
+	group.Add("gateway-supervisor", supervisor.Run)
+
+	primary, ok := supervisor.Primary()
+	if !ok {
+		if cfg.GRPCListen != "" {
+			logger.Printf("gateway gRPC control disabled: device inventory has no enabled devices")
+		}
+		return nil, nil
+	}
+	if cfg.GRPCListen != "" {
+		logger.Printf("gateway gRPC control bound to primary device=%s", primary.DeviceID())
+	}
+	return primary, nil
 }

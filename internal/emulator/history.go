@@ -21,7 +21,7 @@ func (s *Service) recordFrame(direction events.Direction, remote, rawHex, cmd, e
 }
 
 func (s *Service) recordRX(remote string, req frame.Frame) {
-	s.recordFrame(events.DirectionRX, remote, util.HexDump(req.RawBytes()), commandName(req.DataBytes()), "")
+	s.recordFrame(events.DirectionRX, remote, util.HexDump(req.RawBytes()), s.commandName(req.DataBytes()), "")
 	s.recordRequest()
 }
 

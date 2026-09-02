@@ -57,3 +57,34 @@ func (c Codec) EncodeACK(request frame.Frame, data []byte) ([]byte, error) {
 	payload := append([]byte{cmd}, []byte("OK")...)
 	return frame.Encode(frame.New(request.Control|0x80, request.Address, payload), c.Mode)
 }
+
+func (c Codec) EncodeReadIdentityRequest() ([]byte, error) {
+	return frame.Encode(frame.New(c.Control, c.Address, command.BuildReadIdentityRequest()), c.Mode)
+}
+
+func (c Codec) DecodeReadIdentityRequest(raw []byte) (frame.Frame, error) {
+	f, err := frame.Decode(raw, c.Mode)
+	if err != nil {
+		return frame.Frame{}, err
+	}
+	if err := command.ParseReadIdentityRequest(f.DataBytes()); err != nil {
+		return frame.Frame{}, err
+	}
+	return f, nil
+}
+
+func (c Codec) EncodeReadIdentityResponse(request frame.Frame, identity command.Identity) ([]byte, error) {
+	return frame.Encode(frame.New(request.Control|0x80, request.Address, command.BuildReadIdentityResponse(identity)), c.Mode)
+}
+
+func (c Codec) DecodeReadIdentityResponse(raw []byte) (frame.Frame, command.Identity, error) {
+	f, err := frame.Decode(raw, c.Mode)
+	if err != nil {
+		return frame.Frame{}, command.Identity{}, err
+	}
+	identity, err := command.ParseReadIdentityResponse(f.DataBytes())
+	if err != nil {
+		return frame.Frame{}, command.Identity{}, err
+	}
+	return f, identity, nil
+}

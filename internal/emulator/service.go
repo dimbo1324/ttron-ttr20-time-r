@@ -11,6 +11,7 @@ import (
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/observability/events"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/checksum"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/codec"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/command"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/transport/tcp"
 )
 
@@ -21,6 +22,10 @@ type Service struct {
 	logger *log.Logger
 	fault  FaultMode
 	now    func() time.Time
+	clock  *DeviceClock
+
+	commands *command.Registry
+	identity command.Identity
 
 	history *events.Ring
 	server  *tcp.Server
@@ -37,13 +42,21 @@ func NewService(cfg *config.EmulatorConfig, logger *log.Logger) (*Service, error
 	if cfg.RecentSize <= 0 {
 		cfg.RecentSize = 100
 	}
+	fault := FaultModeFromConfig(cfg)
 	s := &Service{
-		cfg:     cfg,
-		mode:    mode,
-		wire:    codec.New(mode, 0x00, byte(cfg.AdapterAddr&0xFF)),
-		logger:  logger,
-		fault:   FaultModeFromConfig(cfg),
-		now:     time.Now,
+		cfg:      cfg,
+		mode:     mode,
+		wire:     codec.New(mode, 0x00, byte(cfg.AdapterAddr&0xFF)),
+		logger:   logger,
+		fault:    fault,
+		now:      time.Now,
+		clock:    NewDeviceClock(time.Now, fault.ClockOffset, fault.ClockDriftPerDay),
+		commands: command.DefaultRegistry(),
+		identity: command.Identity{
+			Model:    cfg.IdentityModel,
+			Serial:   cfg.IdentitySerial,
+			Firmware: cfg.IdentityFirmware,
+		},
 		history: events.NewRing(cfg.RecentSize),
 	}
 	s.status = Status{
@@ -102,13 +115,30 @@ func (s *Service) FaultMode() FaultMode {
 func (s *Service) SetFaultMode(fault FaultMode) FaultMode {
 	fault.BadChecksumProb = clampProbability(fault.BadChecksumProb)
 	fault.FragmentProb = clampProbability(fault.FragmentProb)
+	s.clock.Configure(fault.ClockOffset, fault.ClockDriftPerDay)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.fault = fault
 	s.status.FaultMode = fault
-	s.logger.Printf("emulator fault mode updated responseDelay=%s badChecksum=%.3f fragment=%.3f fragmentDelay=%s noResponse=%t closeAfterRequest=%t",
-		fault.ResponseDelay, fault.BadChecksumProb, fault.FragmentProb, fault.FragmentDelay, fault.NoResponse, fault.CloseAfterRequest)
+	s.logger.Printf("emulator fault mode updated responseDelay=%s badChecksum=%.3f fragment=%.3f fragmentDelay=%s noResponse=%t closeAfterRequest=%t clockOffset=%s clockDrift=%s/day",
+		fault.ResponseDelay, fault.BadChecksumProb, fault.FragmentProb, fault.FragmentDelay,
+		fault.NoResponse, fault.CloseAfterRequest, fault.ClockOffset, fault.ClockDriftPerDay)
 	return fault
+}
+
+func (s *Service) Identity() command.Identity {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.identity
+}
+
+func (s *Service) Commands() *command.Registry {
+	return s.commands
+}
+
+func (s *Service) DeviceTime() time.Time {
+	return s.clock.Now()
 }
 
 func (s *Service) Timeouts() (time.Duration, time.Duration) {
