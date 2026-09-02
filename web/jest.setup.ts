@@ -33,8 +33,11 @@ beforeAll(() => {
   }
 
   if (!navigator.clipboard) {
+    // Configurable on purpose: `userEvent.setup()` installs a clipboard stub of
+    // its own, and a non-configurable one makes that throw before the test runs.
     Object.defineProperty(navigator, "clipboard", {
       writable: true,
+      configurable: true,
       value: { writeText: jest.fn(async () => undefined) },
     });
   }
