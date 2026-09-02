@@ -2,7 +2,7 @@
 
 import * as SwitchPrimitive from "@radix-ui/react-switch";
 import type * as React from "react";
-import { useId } from "react";
+import { cloneElement, isValidElement, useId } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -28,15 +28,29 @@ export function Field({
   children: React.ReactNode;
   className?: string;
 }) {
+  /**
+   * The label is bound to its control automatically.
+   *
+   * Requiring every caller to invent an id and pass it twice is a rule that
+   * gets forgotten, and a forgotten one leaves a label pointing at nothing —
+   * which reads fine on screen and is invisible to a screen reader. So the
+   * field mints an id, hands it to its child, and only steps aside when the
+   * caller has supplied one of their own.
+   */
+  const generated = useId();
+  const child = isValidElement(children) ? (children as React.ReactElement<{ id?: string }>) : null;
+  const controlId = htmlFor ?? child?.props.id ?? generated;
+  const control = child && !htmlFor && !child.props.id ? cloneElement(child, { id: controlId }) : children;
+
   return (
     <div className={cn("min-w-0 space-y-1.5", className)}>
       <label
-        htmlFor={htmlFor}
+        htmlFor={controlId}
         className="block text-[0.6875rem] font-medium tracking-wide text-faint-foreground uppercase"
       >
         {label}
       </label>
-      {children}
+      {control}
       {hint ? <p className="text-xs leading-snug text-faint-foreground">{hint}</p> : null}
     </div>
   );

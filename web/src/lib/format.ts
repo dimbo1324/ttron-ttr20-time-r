@@ -9,6 +9,9 @@
 /** Compact duration: 940 ms, 1.42 s, 2 м 05 с. */
 export function formatDuration(ms: number, options: { signed?: boolean } = {}): string {
   if (!Number.isFinite(ms)) return "—";
+  // Exactly zero is a reading, not a measurement to two decimal places.
+  if (ms === 0) return "0 ms";
+
   const sign = ms < 0 ? "-" : options.signed && ms > 0 ? "+" : "";
   const value = Math.abs(ms);
 

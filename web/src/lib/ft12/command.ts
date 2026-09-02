@@ -43,7 +43,7 @@ export interface ParsedPayload {
   /** Rendered value — a timestamp, an identity triple, an ACK body. */
   value?: string;
   fields?: { label: string; value: string }[];
-  error?: "emptyPayload" | "invalidTimestamp" | "invalidIdentity" | "invalidLength";
+  error?: "emptyPayload" | "invalidTimestamp" | "invalidIdentity" | "invalidLengthPayload";
 }
 
 const asciiOf = (bytes: readonly number[]): string =>
@@ -78,7 +78,9 @@ export function parsePayload(data: readonly number[], isResponse: boolean): Pars
         commandId: id,
         commandName: name,
         value: text,
-        error: "invalidLength",
+        // Distinct from the frame-level length error: the frame was fine, its
+        // payload was not, and the two want different words on screen.
+        error: "invalidLengthPayload",
       };
     }
     return {

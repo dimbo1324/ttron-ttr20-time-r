@@ -20,7 +20,16 @@ export const END_BYTE = 0x16;
 
 /** Smallest legal frame: header(3) + control + address + checksum(1) + end. */
 export const MIN_FRAME_LENGTH = 7;
-export const MAX_FRAME_LENGTH = 261;
+
+/**
+ * Largest frame the format can express.
+ *
+ * LEN is a single byte, so a payload tops out at 255: header(3) + 255 +
+ * crc16(2) + end(1). There is deliberately no "frame too large" branch in the
+ * decoder — the bound is structural rather than a limit worth enforcing, and a
+ * guard that cannot fire is a guard nobody can test.
+ */
+export const MAX_FRAME_LENGTH = 3 + 0xff + 2 + 1;
 
 export interface Ft12Frame {
   control: number;
@@ -59,8 +68,7 @@ export type FrameErrorCode =
   | "invalidStartRepeat"
   | "invalidLength"
   | "invalidChecksum"
-  | "invalidEnd"
-  | "tooLarge";
+  | "invalidEnd";
 
 export interface FrameIssue {
   code: FrameErrorCode;
@@ -152,10 +160,6 @@ export function decodeFrame(raw: readonly number[], mode: ChecksumMode): Decoded
   }
 
   const total = 3 + payloadLength + sumLength + 1;
-  if (total > MAX_FRAME_LENGTH) {
-    issues.push({ code: "tooLarge", offset: 1, actual: [payloadLength] });
-    return { ok: false, mode, fields, issues, expectedChecksum, consumed: 0 };
-  }
   if (raw.length < total) {
     issues.push({ code: "tooShort", actual: [...raw] });
     return { ok: false, mode, fields, issues, expectedChecksum, consumed: 0 };
