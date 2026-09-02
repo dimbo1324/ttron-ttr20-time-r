@@ -296,29 +296,245 @@ export const en: Dictionary = {
   },
 
   reference: {
-    title: "Protocol reference",
-    subtitle: "Frame format, checksums, commands and the error vocabulary",
-    frameFormat: "Frame format",
-    frameFormatBody:
-      "A variable-length frame: two 0x68 start bytes with the length byte between them, then the control byte, the device address, the command data, the checksum and the 0x16 end byte. The length byte counts CONTROL + ADDRESS + DATA.",
-    checksums: "Checksums",
-    checksumSum: "Additive checksum modulo 256, one byte.",
-    checksumCrc:
-      "CRC-16/Modbus, polynomial 0xA001, initial value 0xFFFF, little-endian on the wire.",
-    checksumSpan: "Both are computed over CONTROL + ADDRESS + DATA.",
-    commands: "Commands",
-    commandId: "ID",
-    commandName: "Name",
-    commandDescription: "Purpose",
-    requestFormat: "Request",
-    responseFormat: "Response",
+    title: "Reference",
+    subtitle: "From zero: what happens here, how to read a frame and what every symbol means",
+
+    basics: {
+      title: "Start here",
+      lead: "If this is your first time at the bench, read this section — everything after it will make sense.",
+      body: [
+        "An electricity meter sits on site and counts consumption. It has no network of its own: beside it stands a TTR20 teleport adapter that translates network requests onto the meter serial line and back.",
+        "A gateway program periodically asks the meter for its current time, and the meter answers. That exchange is everything this bench does.",
+        "Why ask for the time? The meter records consumption in half-hourly and hourly slices and stamps each record from its own clock. If that clock drifts, the whole archive shifts with it: consumption that happened at 09:00 lands in the 08:30 slice. That is why clock skew is tracked separately and continuously — it is the headline figure on this bench.",
+      ],
+    },
+
+    exchange: {
+      title: "How an exchange works",
+      body: [
+        "The line is master and slave. The gateway always speaks first: it sends a request and waits. The device stays silent and answers only when addressed.",
+        "One request, one answer. The next request does not go out until the answer arrives or the timeout expires, which is why log rows come in pairs — a transmit followed immediately by a receive.",
+      ],
+      lanes: [
+        { label: "TX", meaning: "The gateway asks — a frame went out on the line" },
+        { label: "RX", meaning: "The device answered — a frame came back" },
+        { label: "ERR", meaning: "No answer, or one that arrived damaged" },
+        { label: "SYS", meaning: "The bench reporting a state change of its own" },
+      ],
+    },
+
+    numbers: {
+      title: "Bytes and hexadecimal",
+      body: [
+        "What travels on the line is not letters but bytes. A byte is a number from 0 to 255 — eight binary digits, or bits.",
+        "Writing bytes in decimal is awkward, so hexadecimal is used instead: sixteen digits, 0–9 and A–F, where A means 10, B means 11 and so on up to F, which is 15. One byte is exactly two of those digits.",
+        "The 0x prefix means that a hexadecimal number follows. So 0x68 is the familiar 104, 0x16 is 22 and 0xFF is 255. In the log and the analyzer, bytes appear as digit pairs with no prefix: 68 03 68 and so on.",
+        "A bit is one binary digit of a byte. When something is described as having bit 0x80 set, that is the highest of the eight: it adds 128 to the value. That is the mark the device uses to say a frame is an answer rather than a request.",
+      ],
+    },
+
+    frame: {
+      title: "Frame format",
+      lead: "A frame is one complete message: a wrapper of housekeeping bytes with the useful data inside it.",
+      body: [
+        "Frames vary in length, so the receiver has to work out for itself where a message began and where it ended. The start bytes, the length byte and the end byte are what let it.",
+      ],
+      walkthrough: {
+        title: "Byte by byte",
+        hint: "A read-time request in sum mode, taken apart: 68 03 68 00 01 01 02 16",
+        columns: { byte: "Byte", name: "Field", meaning: "What it means" },
+        rows: [
+          {
+            byte: "68",
+            name: "Start byte",
+            meaning: "The frame begins. Anything that arrived earlier is noise, and the receiver discards it.",
+          },
+          {
+            byte: "03",
+            name: "Length",
+            meaning:
+              "How many bytes CONTROL, ADDRESS and DATA occupy together. Three here: one control byte, one address byte and one byte of data.",
+          },
+          {
+            byte: "68",
+            name: "Repeated start byte",
+            meaning:
+              "The same byte again. It marks a variable-length frame and guards against a chance match in the stream.",
+          },
+          {
+            byte: "00",
+            name: "CONTROL",
+            meaning:
+              "The housekeeping byte. 0x00 means a request from the gateway; in an answer the device sets bit 0x80 and the byte becomes 0x80.",
+          },
+          {
+            byte: "01",
+            name: "ADDRESS",
+            meaning:
+              "The address of the device on the line. Several devices can share one line, and each answers only to its own address.",
+          },
+          {
+            byte: "01",
+            name: "DATA",
+            meaning: "The payload. Its first byte is the command id: 0x01 means read the time.",
+          },
+          {
+            byte: "02",
+            name: "Checksum",
+            meaning:
+              "A check number computed over CONTROL, ADDRESS and DATA. A mismatch means the frame was damaged on the way.",
+          },
+          {
+            byte: "16",
+            name: "End byte",
+            meaning: "The frame ends. After it, the message counts as read in full.",
+          },
+        ],
+      },
+    },
+
+    checksums: {
+      title: "Checksums",
+      body: [
+        "A line is never perfect: interference flips a bit and a byte arrives as a different byte. Such a frame looks perfectly ordinary, so a check number is carried inside it.",
+        "The sender computes a checksum over the contents of the frame and writes it in. The receiver computes it again over the same bytes and compares. A mismatch means the frame is discarded and the gateway asks again.",
+        "The checksum covers CONTROL, ADDRESS and DATA only. The start bytes, the length byte and the end byte are outside it — their position in the frame already checks them.",
+      ],
+      modes: [
+        {
+          name: "sum",
+          body:
+            "A plain addition of every byte modulo 256 — the remainder of the total divided by 256. One byte. It catches single corruptions, but two bytes swapped would slip past it.",
+        },
+        {
+          name: "crc16",
+          body:
+            "CRC-16/Modbus, a cyclic redundancy check: polynomial 0xA001, initial value 0xFFFF. Two bytes, sent least significant byte first. It catches considerably more kinds of damage than a plain sum.",
+        },
+      ],
+      calculator: "Calculator",
+      calculatorHint: "Enter the payload bytes — both checksums are recomputed as you type.",
+      calculatorInput: "CONTROL + ADDRESS + DATA bytes",
+    },
+
+    commands: {
+      title: "Commands",
+      body: [
+        "A command is what the gateway asks the device for. Its id is always the first byte of DATA, and whatever follows in that field is the substance of the answer.",
+        "An answer carries the same command id as the request. The only thing separating them is bit 0x80 in the control byte.",
+      ],
+      columns: {
+        id: "ID",
+        name: "Name",
+        purpose: "Purpose",
+        request: "Request",
+        response: "Response",
+      },
+    },
+
+    stream: {
+      title: "Streams and resynchronisation",
+      body: [
+        "A line carries a continuous stream of bytes, not messages. One frame can arrive in two pieces and two frames in one; that is normal behaviour, not a fault.",
+        "So the receiver does not read one frame at a time. It accumulates bytes and extracts frames itself. When it meets rubbish mid-stream it looks for the next start byte and carries on from there — that is resynchronisation.",
+        "You can try it in the analyzer: paste several frames in a row mixed with stray bytes and watch what it extracts and what it leaves in the remainder.",
+      ],
+    },
+
+    faults: {
+      title: "What the fault modes model",
+      body: [
+        "The emulator panel reproduces failures that really happen on a line. Each one exercises a different part of the gateway.",
+      ],
+      rows: [
+        {
+          name: "Response delay",
+          meaning: "The device is busy, or the line is slow. Exercises the request timeout.",
+        },
+        {
+          name: "Checksum corruption",
+          meaning:
+            "Interference on the line. Exercises whether the gateway retries instead of dropping the connection.",
+        },
+        {
+          name: "Frame fragmentation",
+          meaning: "The answer arrives in pieces. Exercises the streaming parser.",
+        },
+        {
+          name: "Silence",
+          meaning: "The device is powered down or off the line. Exercises timeouts and the fall to offline.",
+        },
+        {
+          name: "Drop after request",
+          meaning: "A broken link or a rebooting adapter. Exercises reconnection.",
+        },
+        {
+          name: "Clock offset and drift",
+          meaning:
+            "The device clock wanders. Exercises skew monitoring — the one fault where the protocol works flawlessly and the data is wrong anyway.",
+        },
+      ],
+    },
+
+    zone: {
+      title: "The time-zone trap",
+      body: [
+        "The timestamp travels as the text 2026-09-02 22:41:15 — with no zone attached.",
+        "That means sender and receiver must agree on which zone it is written in. If the device writes local time and the program reads it as UTC, every reading is offset by exactly the difference between them — and the monitor reports a skew on a device whose clock is fine.",
+        "This project made that mistake once and the tests found it. It is why encoding and decoding here take the zone explicitly rather than trusting a default.",
+      ],
+    },
+
+    glossary: {
+      title: "Glossary",
+      hint: "Words that appear on the bench panels.",
+      terms: [
+        { term: "Frame", definition: "One complete message, from the start byte to the end byte." },
+        { term: "Poll", definition: "The gateway addressing the device on a schedule." },
+        {
+          term: "Cycle",
+          definition: "One full exchange: request sent, answer parsed. Retries belong to the same cycle.",
+        },
+        {
+          term: "Round trip",
+          definition:
+            "The time from sending a request to receiving the answer. Half of it is the correction applied when computing clock skew.",
+        },
+        {
+          term: "Clock skew",
+          definition:
+            "The difference between device time and the reference, corrected for the line. The sign matters: plus means the device runs fast, minus means it runs slow.",
+        },
+        {
+          term: "Drift",
+          definition: "The rate at which skew grows. Estimated over a window of samples and quoted per day.",
+        },
+        {
+          term: "Median",
+          definition:
+            "The middle value of a sample set. Clock state is judged on it so that a single outlier does not raise an alarm.",
+        },
+        { term: "Availability", definition: "The share of successful polls in the most recent window." },
+        {
+          term: "Hysteresis",
+          definition:
+            "Different thresholds for entering and leaving a state. It stops a device flapping between online and offline on an unstable line.",
+        },
+        {
+          term: "Retry",
+          definition:
+            "Another attempt on the same connection after a frame error. A dropped link is a different case and needs a reconnection.",
+        },
+        {
+          term: "Aligned schedule",
+          definition:
+            "Polls land on calendar boundaries — the fifth second of every minute, say — rather than every five seconds counted from startup.",
+        },
+      ],
+    },
+
     errorsTitle: "Decode errors",
-    errorsHint: "The same codes the Go core returns.",
-    zoneTitle: "Time zone",
-    zoneBody:
-      "The timestamp travels without a zone. Encoder and decoder must agree on which zone it means, or every reading is offset by exactly their difference — which is what produces a false clock skew.",
-    calculator: "Checksum calculator",
-    calculatorHint: "Enter the payload bytes — both checksums are computed live.",
-    calculatorInput: "CONTROL + ADDRESS + DATA bytes",
+    errorsHint: "The same codes the project Go core returns.",
   },
+
 };
