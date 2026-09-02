@@ -42,12 +42,89 @@ func TestBuildAndParseReadTimeResponse(t *testing.T) {
 		t.Fatalf("BuildReadTimeResponse() timestamp = %q, want %q", string(payload[1:]), wantRaw)
 	}
 
-	got, err := ParseReadTimeResponse(payload)
+	got, err := ParseReadTimeResponseIn(payload, time.UTC)
 	if err != nil {
-		t.Fatalf("ParseReadTimeResponse() error = %v", err)
+		t.Fatalf("ParseReadTimeResponseIn() error = %v", err)
 	}
 	if got.Raw != wantRaw || !got.Time.Equal(ts) {
-		t.Fatalf("ParseReadTimeResponse() = %+v", got)
+		t.Fatalf("ParseReadTimeResponseIn() = %+v", got)
+	}
+}
+
+func TestReadTimeRoundTripIsZoneSymmetric(t *testing.T) {
+	locations := []*time.Location{
+		time.UTC,
+		time.Local,
+		time.FixedZone("UTC+3", 3*60*60),
+		time.FixedZone("UTC-5", -5*60*60),
+	}
+
+	for _, location := range locations {
+		t.Run(location.String(), func(t *testing.T) {
+			ts := time.Date(2026, 6, 2, 12, 34, 56, 0, location)
+
+			got, err := ParseReadTimeResponseIn(BuildReadTimeResponse(ts), location)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !got.Time.Equal(ts) {
+				t.Fatalf("round trip in %s produced %s, want %s", location, got.Time, ts)
+			}
+		})
+	}
+}
+
+func TestParseReadTimeResponseInterpretsNaiveTimestampInLocation(t *testing.T) {
+	payload := append([]byte{byte(ReadTime)}, []byte("2026-06-02 12:34:56")...)
+	zone := time.FixedZone("UTC+3", 3*60*60)
+
+	got, err := ParseReadTimeResponseIn(payload, zone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := time.Date(2026, 6, 2, 12, 34, 56, 0, zone)
+	if !got.Time.Equal(want) {
+		t.Fatalf("ParseReadTimeResponseIn() = %s, want %s", got.Time, want)
+	}
+
+	inUTC, err := ParseReadTimeResponseIn(payload, time.UTC)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inUTC.Time.Equal(got.Time) {
+		t.Fatal("the same naive timestamp must denote different instants in different zones")
+	}
+}
+
+func TestParseReadTimeResponseDefaultsToLocalZone(t *testing.T) {
+	payload := append([]byte{byte(ReadTime)}, []byte("2026-06-02 12:34:56")...)
+
+	got, err := ParseReadTimeResponse(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := ParseReadTimeResponseIn(payload, time.Local)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Time.Equal(want.Time) {
+		t.Fatalf("ParseReadTimeResponse() = %s, want the local interpretation %s", got.Time, want.Time)
+	}
+}
+
+func TestParseReadTimeResponseInNilLocationFallsBackToLocal(t *testing.T) {
+	payload := append([]byte{byte(ReadTime)}, []byte("2026-06-02 12:34:56")...)
+
+	got, err := ParseReadTimeResponseIn(payload, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := ParseReadTimeResponseIn(payload, time.Local)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Time.Equal(want.Time) {
+		t.Fatalf("ParseReadTimeResponseIn(nil) = %s, want %s", got.Time, want.Time)
 	}
 }
 

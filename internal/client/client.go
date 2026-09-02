@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -202,7 +203,7 @@ func (c *Client) reconnect() error {
 	}
 	c.mu.Unlock()
 
-	addr := fmt.Sprintf("%s:%d", c.cfg.Host, c.cfg.Port)
+	addr := net.JoinHostPort(c.cfg.Host, strconv.Itoa(c.cfg.Port))
 	c.logger.Printf("[dial] reconnecting to %s...", addr)
 	conn, err := net.DialTimeout("tcp", addr, 2*time.Second)
 	if err != nil {

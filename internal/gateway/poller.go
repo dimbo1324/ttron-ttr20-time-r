@@ -18,13 +18,15 @@ func (s *Service) Run(ctx context.Context) error {
 			return nil
 		}
 		s.incrementConnectionAttempts()
-		s.logger.Printf("gateway connecting target=%s mode=%s", s.cfg.Target, s.mode)
+		s.logger.Printf("gateway connecting target=%s mode=%s schedule=%s", s.cfg.Target, s.mode, s.schedule.String())
 		conn, err := transporttcp.Dial(ctx, transporttcp.ClientConfig{
 			Address:        s.cfg.Target,
 			ConnectTimeout: s.cfg.ConnectTimeout,
 		})
 		if err != nil {
-			s.recordFailure(fmt.Errorf("connect failed: %w", err))
+			failure := fmt.Errorf("connect failed: %w", err)
+			s.recordFailure(failure)
+			s.observeHealthFailure(failure)
 			delay := backoff.Next()
 			s.logger.Printf("gateway connect failed target=%s error=%v backoff=%s", s.cfg.Target, err, delay)
 			if !sleepContext(ctx, delay) {
@@ -43,7 +45,6 @@ func (s *Service) Run(ctx context.Context) error {
 			return nil
 		}
 		if err != nil {
-			s.recordFailure(err)
 			s.incrementReconnects()
 			s.logger.Printf("gateway session error: %v", err)
 		}

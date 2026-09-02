@@ -8,7 +8,13 @@ import (
 type ID byte
 
 const (
-	ReadTime ID = 0x01
+	ReadTime     ID = 0x01
+	ReadIdentity ID = 0x02
+)
+
+const (
+	NameReadTime     = "read-time"
+	NameReadIdentity = "read-identity"
 )
 
 var (
@@ -16,6 +22,10 @@ var (
 	ErrUnexpectedCommand = errors.New("unexpected command")
 	ErrInvalidPayload    = errors.New("invalid command payload")
 	ErrInvalidTime       = errors.New("invalid read-time timestamp")
+	ErrInvalidIdentity   = errors.New("invalid identity payload")
+	ErrUnknownCommand    = errors.New("unknown command")
+	ErrDuplicateCommand  = errors.New("duplicate command registration")
+	ErrInvalidDescriptor = errors.New("invalid command descriptor")
 )
 
 func ParseID(data []byte) (ID, error) {

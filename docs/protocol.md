@@ -57,6 +57,18 @@ responses with bit `0x80` set on the request control byte.
 
 Decoding is mode-aware because checksum length changes the expected frame size.
 
+## Commands
+
+Commands are registered in a small registry (`command.DefaultRegistry`) that
+maps IDs to names and descriptions. Two commands are modeled as first-class:
+
+```text
+0x01  read-time
+0x02  read-identity
+```
+
+Unknown command IDs are answered by the emulator with a generic ACK frame.
+
 ## Read-Time Command
 
 Command ID:
@@ -90,7 +102,48 @@ Timestamp layout:
 ```
 
 The command package validates command IDs, timestamp length, and timestamp
-format. Parsed timestamps use Go's `time.Parse` with the fixed layout above.
+format.
+
+### Timestamp Zone
+
+The wire timestamp is a naive local wall clock: it carries no zone or offset.
+Encoding and decoding must therefore agree on which zone that wall clock
+belongs to, or every reading is offset by the difference between them.
+
+`BuildReadTimeResponse` renders whatever zone the supplied `time.Time` carries.
+`ParseReadTimeResponseIn` interprets the timestamp in an explicit location, and
+`ParseReadTimeResponse` defaults to `time.Local`. The codec carries the same
+choice in `Codec.Location` (also `time.Local` by default, overridable with
+`WithLocation`), and uses it for both directions so a round trip is symmetric.
+
+This matters for clock skew monitoring: reading a device timestamp as UTC while
+the device rendered local wall-clock time produces a false skew exactly equal to
+the zone offset.
+
+## Read-Identity Command
+
+Command ID:
+
+```text
+0x02
+```
+
+Read-identity request payload:
+
+```text
+DATA = 0x02
+```
+
+Read-identity response payload:
+
+```text
+DATA = 0x02 + ASCII("MODEL|SERIAL|FIRMWARE")
+```
+
+The three fields are separated by `|`, must all be non-empty, and the body is
+capped at 96 bytes. The gateway probes this command once per connection and
+remembers a device that does not support it, so an unsupported device costs one
+request per connection and never fails a poll.
 
 ## Streaming Parser
 
@@ -135,7 +188,8 @@ Runtime code logs protocol errors without panicking.
 This is a simulation/learning protocol core, not a certified industrial
 implementation. The current frame format is FT1.2-like and intentionally narrow:
 
-- only the read-time command is modeled as a first-class command;
+- only the read-time and read-identity commands are modeled as first-class
+  commands;
 - real TTR20/FT1.2 device behavior may require additional frame variants,
   address handling, control semantics, timing rules, and certification work;
 - serial transport, security, and expanded command coverage remain future work.

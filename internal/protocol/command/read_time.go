@@ -28,6 +28,13 @@ func BuildReadTimeResponse(t time.Time) []byte {
 }
 
 func ParseReadTimeResponse(data []byte) (ReadTimeResponse, error) {
+	return ParseReadTimeResponseIn(data, time.Local)
+}
+
+func ParseReadTimeResponseIn(data []byte, location *time.Location) (ReadTimeResponse, error) {
+	if location == nil {
+		location = time.Local
+	}
 	if err := Expect(data, ReadTime); err != nil {
 		return ReadTimeResponse{}, err
 	}
@@ -36,7 +43,7 @@ func ParseReadTimeResponse(data []byte) (ReadTimeResponse, error) {
 	}
 
 	raw := string(data[1:])
-	parsed, err := time.Parse(ReadTimeLayout, raw)
+	parsed, err := time.ParseInLocation(ReadTimeLayout, raw, location)
 	if err != nil {
 		return ReadTimeResponse{}, fmt.Errorf("%w: %v", ErrInvalidTime, err)
 	}
