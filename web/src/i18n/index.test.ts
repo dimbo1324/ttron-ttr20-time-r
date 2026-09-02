@@ -72,3 +72,23 @@ describe("dictionary parity", () => {
     }
   });
 });
+
+describe("locale-sensitive formatting", () => {
+  it("gives every locale its own unit symbols", () => {
+    const ru = getDictionary("ru").units;
+    const en = getDictionary("en").units;
+
+    expect(ru.ms).not.toBe(en.ms);
+    expect(ru.s).not.toBe(en.s);
+    expect(ru.perDay).not.toBe(en.perDay);
+  });
+
+  it("carries a unit for every magnitude a duration can reach", () => {
+    for (const locale of locales) {
+      const units = getDictionary(locale).units;
+      for (const key of ["ms", "s", "m", "h", "perDay"] as const) {
+        expect(units[key]).toBeTruthy();
+      }
+    }
+  });
+});

@@ -68,3 +68,13 @@ export function resetBenchStore(overrides: Partial<BenchStoreState> = {}) {
     ...overrides,
   });
 }
+
+/**
+ * Intl separates a number from its unit with a non-breaking space, and
+ * Testing Library normalises whitespace in the DOM before matching. Expected
+ * strings have to make the same trip or a correct assertion fails on an
+ * invisible character.
+ */
+export function plain(value: string): string {
+  return value.replace(/[\u00A0\u202F]/g, " ");
+}

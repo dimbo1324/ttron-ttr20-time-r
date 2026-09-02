@@ -1,124 +1,154 @@
-import {
-  formatClock,
-  formatCount,
-  formatDate,
-  formatDriftPerDay,
-  formatDuration,
-  formatPercent,
-} from "./format";
+import { getDictionary } from "@/i18n";
 
-describe("formatDuration", () => {
+import { createFormatter, SI_UNITS } from "./format";
+
+const en = createFormatter("en", getDictionary("en").units);
+const ru = createFormatter("ru", getDictionary("ru").units);
+
+describe("duration in English", () => {
   it.each([
     { ms: 0.5, want: "0.50 ms" },
     { ms: 12, want: "12 ms" },
     { ms: 940, want: "940 ms" },
     { ms: 1420, want: "1.42 s" },
     { ms: 12_400, want: "12.4 s" },
-    { ms: 125_000, want: "2m 05s" },
-    { ms: 3_725_000, want: "1h 02m" },
+    { ms: 125_000, want: "2 m 05 s" },
+    { ms: 3_725_000, want: "1 h 02 m" },
   ])("renders $ms as $want", ({ ms, want }) => {
-    expect(formatDuration(ms)).toBe(want);
+    expect(en.duration(ms)).toBe(want);
   });
 
   it("keeps the sign of a negative value", () => {
-    expect(formatDuration(-1420)).toBe("-1.42 s");
-    expect(formatDuration(-940)).toBe("-940 ms");
+    expect(en.duration(-1420)).toBe("-1.42 s");
+    expect(en.duration(-940)).toBe("-940 ms");
   });
 
   it("adds an explicit plus only when asked", () => {
-    expect(formatDuration(1420, { signed: true })).toBe("+1.42 s");
-    expect(formatDuration(1420)).toBe("1.42 s");
-    expect(formatDuration(-1420, { signed: true })).toBe("-1.42 s");
+    expect(en.duration(1420, { signed: true })).toBe("+1.42 s");
+    expect(en.duration(1420)).toBe("1.42 s");
+    expect(en.duration(-1420, { signed: true })).toBe("-1.42 s");
   });
 
   it("renders exactly zero without a sign or decimals", () => {
-    expect(formatDuration(0, { signed: true })).toBe("0 ms");
-    expect(formatDuration(0)).toBe("0 ms");
-  });
-
-  it("still uses two decimals below a millisecond", () => {
-    expect(formatDuration(0.5)).toBe("0.50 ms");
+    expect(en.duration(0, { signed: true })).toBe("0 ms");
+    expect(en.duration(0)).toBe("0 ms");
   });
 
   it("renders a non-finite value as a dash", () => {
-    expect(formatDuration(Number.NaN)).toBe("—");
-    expect(formatDuration(Number.POSITIVE_INFINITY)).toBe("—");
+    expect(en.duration(Number.NaN)).toBe("—");
+    expect(en.duration(Number.POSITIVE_INFINITY)).toBe("—");
   });
 });
 
-describe("formatDriftPerDay", () => {
+describe("duration in Russian", () => {
+  it("uses Russian unit symbols", () => {
+    expect(ru.duration(940)).toBe("940 мс");
+    expect(ru.duration(125_000)).toBe("2 мин 05 с");
+    expect(ru.duration(3_725_000)).toBe("1 ч 02 мин");
+  });
+
+  it("uses a comma as the decimal separator", () => {
+    expect(ru.duration(1420)).toContain(",");
+    expect(ru.duration(1420)).toContain("с");
+    expect(en.duration(1420)).toContain(".");
+  });
+
+  it("keeps the sign in both languages", () => {
+    expect(ru.duration(-1420, { signed: true }).startsWith("-")).toBe(true);
+    expect(ru.duration(1420, { signed: true }).startsWith("+")).toBe(true);
+  });
+});
+
+describe("driftPerDay", () => {
+  it("always carries its direction and its period", () => {
+    expect(en.driftPerDay(24_000)).toBe("+24.0 s/day");
+    expect(en.driftPerDay(-48_000)).toBe("-48.0 s/day");
+    expect(en.driftPerDay(0)).toBe("0 s/day");
+  });
+
   it.each([
-    { ms: 0, want: "0 s" },
-    { ms: 500, want: "+500 ms" },
-    { ms: 24_000, want: "+24.0 s" },
-    { ms: -48_000, want: "-48.0 s" },
-    { ms: 120_000, want: "+2.0 m" },
+    { ms: 500, want: "+500 ms/day" },
+    { ms: 5000, want: "+5.00 s/day" },
+    { ms: 120_000, want: "+2.0 m/day" },
   ])("renders $ms as $want", ({ ms, want }) => {
-    expect(formatDriftPerDay(ms)).toBe(want);
+    expect(en.driftPerDay(ms)).toBe(want);
+  });
+
+  it("is localised", () => {
+    expect(ru.driftPerDay(24_000)).toContain("с/сут");
+    expect(ru.driftPerDay(500)).toContain("мс/сут");
   });
 
   it("renders a non-finite value as zero", () => {
-    expect(formatDriftPerDay(Number.NaN)).toBe("0 s");
+    expect(en.driftPerDay(Number.NaN)).toBe("0 s/day");
   });
 });
 
-describe("formatPercent", () => {
+describe("percent", () => {
   it.each([
     { ratio: 1, digits: 1, want: "100.0%" },
     { ratio: 0, digits: 1, want: "0.0%" },
     { ratio: 0.5, digits: 0, want: "50%" },
     { ratio: 0.9876, digits: 2, want: "98.76%" },
   ])("renders $ratio as $want", ({ ratio, digits, want }) => {
-    expect(formatPercent(ratio, digits)).toBe(want);
+    expect(en.percent(ratio, digits)).toBe(want);
   });
 
   it("renders a non-finite value as a dash", () => {
-    expect(formatPercent(Number.NaN)).toBe("—");
+    expect(en.percent(Number.NaN)).toBe("—");
+  });
+
+  it("uses the Russian separator", () => {
+    expect(ru.percent(0.5, 1)).toContain(",");
+    expect(ru.percent(0.5, 1)).toContain("%");
   });
 });
 
-describe("formatClock", () => {
+describe("clock", () => {
   const moment = new Date(2026, 8, 2, 17, 3, 7, 42).getTime();
 
   it("includes milliseconds by default", () => {
-    expect(formatClock(moment)).toBe("17:03:07.042");
+    expect(en.clock(moment)).toBe("17:03:07.042");
   });
 
   it("can omit milliseconds", () => {
-    expect(formatClock(moment, false)).toBe("17:03:07");
+    expect(en.clock(moment, false)).toBe("17:03:07");
   });
 
   it("pads every component", () => {
-    expect(formatClock(new Date(2026, 0, 1, 1, 2, 3, 4).getTime())).toBe("01:02:03.004");
+    expect(en.clock(new Date(2026, 0, 1, 1, 2, 3, 4).getTime())).toBe("01:02:03.004");
   });
 });
 
-describe("formatDate", () => {
-  it("renders an ISO calendar date", () => {
-    expect(formatDate(new Date(2026, 8, 2).getTime())).toBe("2026-09-02");
+describe("date", () => {
+  it("is ISO in both locales, because 03-09 must not be a guess", () => {
+    const at = new Date(2026, 8, 2).getTime();
+
+    expect(en.date(at)).toBe("2026-09-02");
+    expect(ru.date(at)).toBe("2026-09-02");
   });
 
   it("pads month and day", () => {
-    expect(formatDate(new Date(2026, 0, 5).getTime())).toBe("2026-01-05");
+    expect(en.date(new Date(2026, 0, 5).getTime())).toBe("2026-01-05");
   });
 });
 
-describe("formatCount", () => {
-  it("groups thousands", () => {
-    expect(formatCount(1234567).replace(/ | /g, " ")).toBe("1 234 567");
+describe("count", () => {
+  it("groups thousands for the locale", () => {
+    expect(en.count(1234567)).toBe("1,234,567");
+    expect(ru.count(1234567)).not.toBe("1,234,567");
   });
 
   it("leaves small numbers alone", () => {
-    expect(formatCount(42)).toBe("42");
+    expect(en.count(42)).toBe("42");
   });
 });
 
-describe("formatDriftPerDay precision", () => {
-  it("uses two decimals below ten seconds", () => {
-    expect(formatDriftPerDay(5000)).toBe("+5.00 s");
-  });
+describe("default units", () => {
+  it("fall back to SI symbols when no dictionary is supplied", () => {
+    const bare = createFormatter("en");
 
-  it("uses one decimal from ten seconds up", () => {
-    expect(formatDriftPerDay(12_000)).toBe("+12.0 s");
+    expect(bare.duration(940)).toBe(`940 ${SI_UNITS.ms}`);
+    expect(bare.driftPerDay(24_000)).toBe(`+24.0 ${SI_UNITS.s}${SI_UNITS.perDay}`);
   });
 });

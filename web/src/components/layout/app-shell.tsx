@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StateBadge } from "@/components/ui/state-badge";
 import { LOCALE_SHORT, locales, withLocale } from "@/i18n";
-import { formatDuration } from "@/lib/format";
+import { useFormat } from "@/lib/use-format";
 import { CLOCK_TONE } from "@/lib/status";
 import { cn } from "@/lib/utils";
 import { useBenchStore, useClockReport } from "@/stores/bench-store";
@@ -52,6 +52,7 @@ const SECTIONS = ["sectionWork", "sectionControl", "sectionLearn"] as const;
 export function AppShell({ children }: { children: ReactNode }) {
   const dict = useDictionary();
   const locale = useLocale();
+  const format = useFormat();
   const pathname = usePathname();
 
   const running = useBenchStore((state) => state.running);
@@ -168,7 +169,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="font-mono tabular">
                 {clock.samples === 0
                   ? dict.common.none
-                  : formatDuration(clock.skewMs, { signed: true })}
+                  : format.duration(clock.skewMs, { signed: true })}
               </span>
             </Badge>
           </div>

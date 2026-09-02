@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { defaultLocale } from "@/i18n";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,7 +19,9 @@ export const metadata: Metadata = {
  */
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html suppressHydrationWarning>
+    // `lang` is the default rather than the truth: the locale is a segment
+    // below this layout, so `[locale]/layout.tsx` narrows it for its subtree.
+    <html lang={defaultLocale} suppressHydrationWarning>
       <body className="min-h-screen antialiased">{children}</body>
     </html>
   );

@@ -3,10 +3,16 @@ import userEvent from "@testing-library/user-event";
 
 import { formatDeviceTime } from "@/lib/ft12";
 import { useBenchStore } from "@/stores/bench-store";
-import { renderWithLocale, resetBenchStore } from "@/test/utils";
+import { getDictionary } from "@/i18n";
+import { createFormatter } from "@/lib/format";
+import { plain, renderWithLocale, resetBenchStore } from "@/test/utils";
 
 import { EmulatorPanel } from "./emulator-panel";
 import { GatewayPanel } from "./gateway-panel";
+
+/** Readouts are locale-formatted, so expectations are derived, not hardcoded. */
+const format = createFormatter("ru", getDictionary("ru").units);
+
 
 const NOW = Date.UTC(2026, 8, 2, 12, 0, 0);
 
@@ -78,10 +84,10 @@ describe("EmulatorPanel faults", () => {
     });
     renderWithLocale(<EmulatorPanel />);
 
-    expect(screen.getByText("900 ms")).toBeInTheDocument();
-    expect(screen.getByText("35%")).toBeInTheDocument();
-    expect(screen.getByText("25%")).toBeInTheDocument();
-    expect(screen.getByText("+4.00 s")).toBeInTheDocument();
+    expect(screen.getByText(format.duration(900))).toBeInTheDocument();
+    expect(screen.getByText(plain(format.percent(0.35, 0)))).toBeInTheDocument();
+    expect(screen.getByText(plain(format.percent(0.25, 0)))).toBeInTheDocument();
+    expect(screen.getByText(format.duration(4000, { signed: true }))).toBeInTheDocument();
   });
 });
 

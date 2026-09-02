@@ -2,10 +2,16 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { useBenchStore } from "@/stores/bench-store";
+import { getDictionary } from "@/i18n";
+import { createFormatter } from "@/lib/format";
 import { renderWithLocale, resetBenchStore } from "@/test/utils";
 
 import { EmulatorPanel } from "./emulator-panel";
 import { GatewayPanel } from "./gateway-panel";
+
+/** Readouts are locale-formatted, so expectations are derived, not hardcoded. */
+const format = createFormatter("ru", getDictionary("ru").units);
+
 
 const NOW = Date.UTC(2026, 8, 2, 12, 0, 0);
 
@@ -67,7 +73,7 @@ describe("EmulatorPanel sliders", () => {
     });
     const { dict } = renderWithLocale(<EmulatorPanel />);
 
-    expect(screen.getByText(`-48.0 s${dict.common.perDay}`)).toBeInTheDocument();
+    expect(screen.getByText(format.driftPerDay(-48_000))).toBeInTheDocument();
   });
 
   it("edits the model and the firmware", async () => {
@@ -101,7 +107,7 @@ describe("GatewayPanel while polling", () => {
   it("counts down to the next poll", () => {
     renderWithLocale(<GatewayPanel />);
 
-    expect(screen.getByText("2.50 s")).toBeInTheDocument();
+    expect(screen.getByText(format.duration(2500))).toBeInTheDocument();
   });
 
   it("explains the aligned schedule while it is selected", () => {

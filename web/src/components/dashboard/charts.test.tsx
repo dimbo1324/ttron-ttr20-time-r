@@ -1,4 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+
+import { renderWithLocale as render } from "@/test/utils";
 
 import { OutcomeStrip, ScheduleTimeline, SkewHistory, SkewMeter, Sparkline } from "./charts";
 

@@ -2,9 +2,15 @@ import { screen } from "@testing-library/react";
 
 import { EMPTY_HEALTH, type HealthSnapshot } from "@/lib/bench/domain";
 import { buildReadTimeRequest, encodeFrame } from "@/lib/ft12";
-import { renderWithLocale, resetBenchStore } from "@/test/utils";
+import { getDictionary } from "@/i18n";
+import { createFormatter } from "@/lib/format";
+import { plain, renderWithLocale, resetBenchStore } from "@/test/utils";
 
 import { Overview } from "./overview";
+
+/** Readouts are locale-formatted, so expectations are derived, not hardcoded. */
+const format = createFormatter("ru", getDictionary("ru").units);
+
 
 const NOW = Date.UTC(2026, 8, 2, 12, 0, 0);
 
@@ -98,7 +104,7 @@ describe("Overview with a healthy run", () => {
   it("reports full availability and the device online", () => {
     const { dict } = renderWithLocale(<Overview />);
 
-    expect(screen.getByText("100.0%")).toBeInTheDocument();
+    expect(screen.getByText(plain(format.percent(1)))).toBeInTheDocument();
     expect(screen.getByText(dict.states.online)).toBeInTheDocument();
   });
 
@@ -112,7 +118,7 @@ describe("Overview with a healthy run", () => {
   it("counts down to the next poll", () => {
     renderWithLocale(<Overview />);
 
-    expect(screen.getByText("3.00 s")).toBeInTheDocument();
+    expect(screen.getByText(format.duration(3000))).toBeInTheDocument();
   });
 
   it("shows the device identity once it has been read", () => {
@@ -156,7 +162,7 @@ describe("Overview with a drifting clock", () => {
     });
     renderWithLocale(<Overview />);
 
-    expect(screen.getByText(/\/сутки/)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(getDictionary("ru").units.perDay))).toBeInTheDocument();
     expect(screen.getByText(/R²/)).toBeInTheDocument();
   });
 });
@@ -185,7 +191,7 @@ describe("Overview with an unhealthy device", () => {
     const { dict } = renderWithLocale(<Overview />);
 
     expect(screen.getByText(dict.states.offline)).toBeInTheDocument();
-    expect(screen.getByText("0.0%")).toBeInTheDocument();
+    expect(screen.getByText(plain(format.percent(0)))).toBeInTheDocument();
   });
 
   it("counts the active faults on the emulator", () => {

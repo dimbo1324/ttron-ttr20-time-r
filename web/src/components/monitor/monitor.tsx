@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, SegmentedControl } from "@/components/ui/controls";
 import { Panel, PanelBody, PanelHeader, Stat } from "@/components/ui/panel";
-import { formatClock, formatDuration } from "@/lib/format";
+import { useFormat } from "@/lib/use-format";
 import { formatHex } from "@/lib/ft12";
 import { DIRECTION_BG, DIRECTION_TEXT, DIRECTION_TONE } from "@/lib/status";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,7 @@ type Filter = "all" | EventDirection;
 
 export function ExchangeMonitor() {
   const dict = useDictionary();
+  const format = useFormat();
   const events = useBenchStore((state) => state.events);
   const checksumMode = useBenchStore((state) => state.checksumMode);
   const counters = useBenchStore((state) => state.counters);
@@ -133,8 +134,14 @@ export function ExchangeMonitor() {
                     <th scope="col" className="w-[5.5rem] px-3.5 py-1 text-[0.625rem] font-medium tracking-wide text-faint-foreground uppercase">
                       {dict.monitor.time}
                     </th>
-                    <th scope="col" className="w-11 py-1 text-[0.625rem] font-medium tracking-wide text-faint-foreground uppercase">
-                      {dict.monitor.dir}
+                    <th
+                      scope="col"
+                      title={dict.monitor.direction}
+                      className="w-11 py-1 text-[0.625rem] font-medium tracking-wide text-faint-foreground uppercase"
+                    >
+                      <abbr title={dict.monitor.direction} className="no-underline">
+                        {dict.monitor.dir}
+                      </abbr>
                     </th>
                     <th scope="col" className="w-[7.5rem] py-1 text-[0.625rem] font-medium tracking-wide text-faint-foreground uppercase">
                       {dict.monitor.commandColumn}
@@ -203,6 +210,7 @@ function EventRow({
   onSelect: () => void;
 }) {
   const dict = useDictionary();
+  const format = useFormat();
 
   return (
     <tr
@@ -214,7 +222,7 @@ function EventRow({
       )}
     >
       <td className="w-[5.5rem] py-1 pl-3.5 align-top font-mono text-[0.6875rem] text-faint-foreground tabular">
-        {formatClock(event.at)}
+        {format.clock(event.at)}
       </td>
       <td className="w-11 py-1 align-top">
         <span className={cn("font-mono text-[0.6875rem] font-semibold", DIRECTION_TEXT[event.direction])}>
@@ -245,7 +253,7 @@ function EventRow({
         ) : null}
       </td>
       <td className="w-14 py-1 pr-3.5 text-right align-top font-mono text-[0.6875rem] text-faint-foreground tabular">
-        {event.latencyMs !== undefined ? formatDuration(event.latencyMs) : ""}
+        {event.latencyMs !== undefined ? format.duration(event.latencyMs) : ""}
       </td>
     </tr>
   );
@@ -253,13 +261,14 @@ function EventRow({
 
 function SystemEventDetail({ event }: { event: BenchEvent }) {
   const dict = useDictionary();
+  const format = useFormat();
 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <Badge tone={DIRECTION_TONE[event.direction]}>{event.command}</Badge>
         <span className="font-mono text-xs text-faint-foreground tabular">
-          {formatClock(event.at)}
+          {format.clock(event.at)}
         </span>
       </div>
       <p className="text-sm text-foreground">
@@ -288,6 +297,7 @@ function SystemEventDetail({ event }: { event: BenchEvent }) {
  */
 function SequenceDiagram({ events }: { events: BenchEvent[] }) {
   const dict = useDictionary();
+  const format = useFormat();
 
   const frames = useMemo(() => events.filter((event) => event.direction !== "sys").slice(-40), [events]);
   if (frames.length === 0) {
@@ -318,7 +328,7 @@ function SequenceDiagram({ events }: { events: BenchEvent[] }) {
               key={event.id}
               className="absolute"
               style={{ left: `${left}%`, top: "1.75rem", height: "3.5rem" }}
-              title={`${event.command} · ${formatClock(event.at)}`}
+              title={`${event.command} · ${format.clock(event.at)}`}
             >
               <div
                 className={cn(
@@ -346,7 +356,7 @@ function SequenceDiagram({ events }: { events: BenchEvent[] }) {
           </span>
         ))}
         <span className="ml-auto font-mono text-[0.6875rem] text-faint-foreground tabular">
-          {formatDuration(span)}
+          {format.duration(span)}
         </span>
       </div>
     </div>

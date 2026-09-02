@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-import { formatDuration } from "@/lib/format";
+import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
 
 /**
@@ -88,6 +88,8 @@ export function SkewMeter({
   criticalMs: number;
   samples: number;
 }) {
+  const format = useFormat();
+
   // The scale runs to 1.4x critical so a device beyond the alarm still has
   // somewhere to sit rather than pinning silently at the edge.
   const limit = Math.max(criticalMs * 1.4, Math.abs(skewMs) * 1.1, 1000);
@@ -133,9 +135,9 @@ export function SkewMeter({
         ) : null}
       </div>
       <div className="flex justify-between font-mono text-[0.625rem] text-faint-foreground tabular">
-        <span>-{formatDuration(limit)}</span>
+        <span>-{format.duration(limit)}</span>
         <span>0</span>
-        <span>+{formatDuration(limit)}</span>
+        <span>+{format.duration(limit)}</span>
       </div>
     </div>
   );
@@ -246,6 +248,7 @@ export function ScheduleTimeline({
   windowMs: number;
   now: number;
 }) {
+  const format = useFormat();
   const start = now - windowMs;
   const visible = ticks.filter((tick) => tick >= start);
 
@@ -263,7 +266,7 @@ export function ScheduleTimeline({
       })}
       <div className="absolute inset-y-0 right-0 w-px bg-primary" />
       <span className="absolute bottom-1 left-2 font-mono text-[0.625rem] text-faint-foreground tabular">
-        -{formatDuration(windowMs)}
+        -{format.duration(windowMs)}
       </span>
       <span className="absolute right-2 bottom-1 font-mono text-[0.625rem] text-faint-foreground tabular">
         now

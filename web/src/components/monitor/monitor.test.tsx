@@ -10,9 +10,15 @@ import {
   RESPONSE_BIT,
 } from "@/lib/ft12";
 import { useBenchStore, type BenchEvent } from "@/stores/bench-store";
+import { getDictionary } from "@/i18n";
+import { createFormatter } from "@/lib/format";
 import { renderWithLocale, resetBenchStore } from "@/test/utils";
 
 import { ExchangeMonitor } from "./monitor";
+
+/** Readouts are locale-formatted, so expectations are derived, not hardcoded. */
+const format = createFormatter("ru", getDictionary("ru").units);
+
 
 const NOW = Date.UTC(2026, 8, 2, 12, 0, 0);
 
@@ -97,7 +103,7 @@ describe("ExchangeMonitor log", () => {
   it("shows the measured latency of a response", () => {
     renderWithLocale(<ExchangeMonitor />);
 
-    expect(screen.getByText("12 ms")).toBeInTheDocument();
+    expect(screen.getByText(format.duration(12))).toBeInTheDocument();
   });
 
   it("prompts to start polling when the log is empty", () => {

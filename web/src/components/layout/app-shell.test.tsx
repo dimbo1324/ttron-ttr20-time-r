@@ -2,9 +2,15 @@ import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { useBenchStore } from "@/stores/bench-store";
+import { getDictionary } from "@/i18n";
+import { createFormatter } from "@/lib/format";
 import { renderWithLocale, resetBenchStore } from "@/test/utils";
 
 import { AppShell } from "./app-shell";
+
+/** Readouts are locale-formatted, so expectations are derived, not hardcoded. */
+const format = createFormatter("ru", getDictionary("ru").units);
+
 
 /** The shell reads the current route to mark the active section. */
 let pathname = "/ru";
@@ -89,7 +95,7 @@ describe("AppShell status strip", () => {
 
     // The strip formats skew with the shared duration formatter, so its units
     // read the same as every other reading on the bench.
-    expect(screen.getByText("+1.50 s")).toBeInTheDocument();
+    expect(screen.getByText(format.duration(1500, { signed: true }))).toBeInTheDocument();
   });
 
   it("reports a device that has gone offline", () => {

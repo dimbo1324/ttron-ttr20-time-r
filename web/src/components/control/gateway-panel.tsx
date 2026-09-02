@@ -11,7 +11,7 @@ import { DefRow, Panel, PanelBody, PanelHeader, Stat } from "@/components/ui/pan
 import { StateBadge } from "@/components/ui/state-badge";
 import { StatusDot } from "@/components/ui/status-dot";
 import type { ScheduleMode } from "@/lib/bench/domain";
-import { formatDuration } from "@/lib/format";
+import { useFormat } from "@/lib/use-format";
 import { useNow } from "@/lib/use-now";
 import { useBenchStore, useClockReport } from "@/stores/bench-store";
 
@@ -33,6 +33,7 @@ const CRITICAL_THRESHOLDS = [5000, 10_000, 30_000, 60_000, 300_000];
 
 export function GatewayPanel() {
   const dict = useDictionary();
+  const format = useFormat();
 
   const running = useBenchStore((state) => state.running);
   const connected = useBenchStore((state) => state.connected);
@@ -98,7 +99,7 @@ export function GatewayPanel() {
                 >
                   {INTERVALS.map((value) => (
                     <option key={value} value={value}>
-                      {formatDuration(value)}
+                      {format.duration(value)}
                     </option>
                   ))}
                 </Select>
@@ -114,7 +115,7 @@ export function GatewayPanel() {
                 >
                   {OFFSETS.filter((value) => value < gateway.intervalMs).map((value) => (
                     <option key={value} value={value}>
-                      {value === 0 ? "0" : formatDuration(value)}
+                      {value === 0 ? "0" : format.duration(value)}
                     </option>
                   ))}
                 </Select>
@@ -143,7 +144,7 @@ export function GatewayPanel() {
               >
                 {TIMEOUTS.map((value) => (
                   <option key={value} value={value}>
-                    {formatDuration(value)}
+                    {format.duration(value)}
                   </option>
                 ))}
               </Select>
@@ -182,7 +183,7 @@ export function GatewayPanel() {
                 >
                   {WARN_THRESHOLDS.map((value) => (
                     <option key={value} value={value}>
-                      {formatDuration(value)}
+                      {format.duration(value)}
                     </option>
                   ))}
                 </Select>
@@ -198,7 +199,7 @@ export function GatewayPanel() {
                 >
                   {CRITICAL_THRESHOLDS.map((value) => (
                     <option key={value} value={value}>
-                      {formatDuration(value)}
+                      {format.duration(value)}
                     </option>
                   ))}
                 </Select>
@@ -225,7 +226,7 @@ export function GatewayPanel() {
             <div className="grid grid-cols-2 gap-3">
               <Stat
                 label={dict.overview.nextPoll}
-                value={now && running ? formatDuration(Math.max(0, nextPoll - now)) : dict.common.stopped}
+                value={now && running ? format.duration(Math.max(0, nextPoll - now)) : dict.common.stopped}
                 mono
                 tone={running ? "primary" : "muted"}
               />
@@ -247,7 +248,7 @@ export function GatewayPanel() {
         </Panel>
 
         <Panel>
-          <PanelHeader title={dict.gateway.healthPolicy} />
+          <PanelHeader title={dict.gateway.healthPolicy} hint={dict.gateway.healthPolicyHint} />
           <PanelBody className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
               <Field label={dict.gateway.degradeAfter}>

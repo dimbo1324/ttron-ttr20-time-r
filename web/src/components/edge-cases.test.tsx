@@ -12,6 +12,7 @@ import { Field, Input } from "@/components/ui/controls";
 import { StatusDot } from "@/components/ui/status-dot";
 import {
   defaultLocale,
+  getDictionary,
   getLocaleFromPathname,
   isLocale,
   LOCALE_COOKIE,
@@ -21,7 +22,7 @@ import {
   locales,
   withLocale,
 } from "@/i18n";
-import { formatDuration } from "@/lib/format";
+import { createFormatter } from "@/lib/format";
 import { renderWithLocale, resetBenchStore } from "@/test/utils";
 
 /**
@@ -30,6 +31,9 @@ import { renderWithLocale, resetBenchStore } from "@/test/utils";
  * untested and both are what a reader reaches for when they are already
  * confused, so they get the same treatment as the happy path.
  */
+
+/** Readouts are locale-formatted, so expectations are derived, not hardcoded. */
+const format = createFormatter("ru", getDictionary("ru").units);
 
 const NOW = Date.UTC(2026, 8, 2, 12, 0, 0);
 
@@ -111,7 +115,7 @@ describe("AppShell clock tones", () => {
     });
     renderWithLocale(<AppShell>x</AppShell>);
 
-    expect(screen.getByText(formatDuration(skewMs, { signed: true }))).toBeInTheDocument();
+    expect(screen.getByText(format.duration(skewMs, { signed: true }))).toBeInTheDocument();
   });
 
   it("renders a device stuck in a degraded state", () => {
@@ -174,8 +178,8 @@ describe("Overview without a drift line", () => {
     });
     renderWithLocale(<Overview />);
 
-    expect(screen.getByText("-4.00 s")).toBeInTheDocument();
-    expect(screen.getByText("250 ms")).toBeInTheDocument();
+    expect(screen.getByText(format.duration(-4000, { signed: true }))).toBeInTheDocument();
+    expect(screen.getByText(format.duration(250))).toBeInTheDocument();
   });
 });
 

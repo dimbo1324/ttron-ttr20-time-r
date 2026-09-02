@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, Input, SegmentedControl, SliderRow, ToggleRow } from "@/components/ui/controls";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
-import { formatDriftPerDay, formatDuration, formatPercent } from "@/lib/format";
+import { useFormat } from "@/lib/use-format";
 import { useMounted } from "@/lib/use-mounted";
 import {
   buildReadTimeResponse,
@@ -59,6 +59,7 @@ const PRESETS: { key: PresetKey; faults: Partial<DeviceFaults> }[] = [
 
 export function EmulatorPanel() {
   const dict = useDictionary();
+  const format = useFormat();
 
   const faults = useBenchStore((state) => state.faults);
   const identity = useBenchStore((state) => state.identity);
@@ -108,7 +109,7 @@ export function EmulatorPanel() {
               min={0}
               max={3000}
               step={50}
-              format={(value) => (value === 0 ? "0" : formatDuration(value))}
+              format={(value) => (value === 0 ? "0" : format.duration(value))}
               onChange={(value) => patchFaults({ responseDelayMs: value })}
             />
             <SliderRow
@@ -118,7 +119,7 @@ export function EmulatorPanel() {
               min={0}
               max={1}
               step={0.05}
-              format={(value) => formatPercent(value, 0)}
+              format={(value) => format.percent(value, 0)}
               onChange={(value) => patchFaults({ badChecksumProb: value })}
             />
             <SliderRow
@@ -128,7 +129,7 @@ export function EmulatorPanel() {
               min={0}
               max={1}
               step={0.05}
-              format={(value) => formatPercent(value, 0)}
+              format={(value) => format.percent(value, 0)}
               onChange={(value) => patchFaults({ fragmentProb: value })}
             />
             <SliderRow
@@ -137,7 +138,7 @@ export function EmulatorPanel() {
               min={0}
               max={800}
               step={20}
-              format={(value) => formatDuration(value)}
+              format={(value) => format.duration(value)}
               onChange={(value) => patchFaults({ fragmentDelayMs: value })}
               disabled={faults.fragmentProb === 0}
             />
@@ -171,7 +172,7 @@ export function EmulatorPanel() {
               min={-120_000}
               max={120_000}
               step={1000}
-              format={(value) => (value === 0 ? "0" : formatDuration(value, { signed: true }))}
+              format={(value) => (value === 0 ? "0" : format.duration(value, { signed: true }))}
               onChange={(value) => patchFaults({ clockOffsetMs: value })}
             />
             <SliderRow
@@ -180,9 +181,7 @@ export function EmulatorPanel() {
               min={-300_000}
               max={300_000}
               step={5000}
-              format={(value) =>
-                value === 0 ? "0" : `${formatDriftPerDay(value)}${dict.common.perDay}`
-              }
+              format={(value) => (value === 0 ? "0" : format.driftPerDay(value))}
               onChange={(value) => patchFaults({ clockDriftPerDayMs: value })}
             />
           </PanelBody>

@@ -11,7 +11,7 @@ import { StateBadge } from "@/components/ui/state-badge";
 import { StatusDot } from "@/components/ui/status-dot";
 import { availability, percentile } from "@/lib/bench/domain";
 import { useNow } from "@/lib/use-now";
-import { formatClock, formatDriftPerDay, formatDuration, formatPercent } from "@/lib/format";
+import { useFormat } from "@/lib/use-format";
 import { formatDeviceTime } from "@/lib/ft12";
 import { selectActiveFaultCount, useBenchStore, useClockReport } from "@/stores/bench-store";
 
@@ -25,6 +25,7 @@ import { selectActiveFaultCount, useBenchStore, useClockReport } from "@/stores/
  */
 export function Overview() {
   const dict = useDictionary();
+  const format = useFormat();
 
   const running = useBenchStore((state) => state.running);
   const connected = useBenchStore((state) => state.connected);
@@ -71,11 +72,11 @@ export function Overview() {
           <PanelBody className="space-y-3">
             <div className="flex items-baseline gap-2">
               <span className="font-mono text-3xl font-semibold text-foreground tabular">
-                {clock.samples === 0 ? "—" : formatDuration(clock.skewMs, { signed: true })}
+                {clock.samples === 0 ? "—" : format.duration(clock.skewMs, { signed: true })}
               </span>
               {clock.samples > 0 ? (
                 <span className="font-mono text-xs text-faint-foreground tabular">
-                  ~{formatDuration(clock.medianMs, { signed: true })}
+                  ~{format.duration(clock.medianMs, { signed: true })}
                 </span>
               ) : null}
             </div>
@@ -88,14 +89,14 @@ export function Overview() {
             <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
               <Stat
                 label={dict.overview.drift}
-                value={clock.driftDetermined ? `${formatDriftPerDay(clock.driftPerDayMs)}${dict.common.perDay}` : "—"}
+                value={clock.driftDetermined ? format.driftPerDay(clock.driftPerDayMs) : "—"}
                 hint={clock.driftDetermined ? `R² ${clock.fit.toFixed(2)}` : dict.overview.driftHint}
                 mono
                 tone={Math.abs(clock.driftPerDayMs) > 1000 ? "warning" : "muted"}
               />
               <Stat
                 label={dict.overview.roundTrip}
-                value={clock.samples > 0 ? formatDuration(clock.roundTripMs) : "—"}
+                value={clock.samples > 0 ? format.duration(clock.roundTripMs) : "—"}
                 mono
                 tone="muted"
               />
@@ -118,14 +119,14 @@ export function Overview() {
           <PanelBody className="space-y-3">
             <div className="flex items-baseline gap-2">
               <span className="font-mono text-3xl font-semibold text-foreground tabular">
-                {health.window.length === 0 ? "—" : formatPercent(availability(health))}
+                {health.window.length === 0 ? "—" : format.percent(availability(health))}
               </span>
               <span className="text-xs text-faint-foreground">{dict.overview.availability}</span>
             </div>
             <OutcomeStrip window={health.window} />
             <div className="grid grid-cols-3 gap-3 border-t border-border pt-3">
-              <Stat label="p50" value={latencies.length ? formatDuration(percentile(latencies, 0.5)) : "—"} mono tone="muted" />
-              <Stat label="p95" value={latencies.length ? formatDuration(percentile(latencies, 0.95)) : "—"} mono tone="muted" />
+              <Stat label="p50" value={latencies.length ? format.duration(percentile(latencies, 0.5)) : "—"} mono tone="muted" />
+              <Stat label="p95" value={latencies.length ? format.duration(percentile(latencies, 0.95)) : "—"} mono tone="muted" />
               <Stat
                 label={dict.gateway.failuresShort}
                 value={health.consecutiveFailures}
@@ -147,13 +148,13 @@ export function Overview() {
             <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
               <Stat
                 label={dict.overview.nextPoll}
-                value={now && running ? formatDuration(countdown) : dict.common.stopped}
+                value={now && running ? format.duration(countdown) : dict.common.stopped}
                 mono
                 tone={running ? "primary" : "muted"}
               />
               <Stat
                 label={dict.overview.lastCycle}
-                value={lastCycleAt > 0 ? formatClock(lastCycleAt, false) : "—"}
+                value={lastCycleAt > 0 ? format.clock(lastCycleAt, false) : "—"}
                 mono
                 tone="muted"
               />
@@ -195,19 +196,17 @@ export function Overview() {
               <DefRow label={dict.overview.checksumMode} value={checksumMode} />
               <DefRow
                 label={dict.emulator.clockOffset}
-                value={faults.clockOffsetMs === 0 ? "0" : formatDuration(faults.clockOffsetMs, { signed: true })}
+                value={faults.clockOffsetMs === 0 ? "0" : format.duration(faults.clockOffsetMs, { signed: true })}
               />
               <DefRow
                 label={dict.emulator.clockDrift}
                 value={
-                  faults.clockDriftPerDayMs === 0
-                    ? "0"
-                    : `${formatDriftPerDay(faults.clockDriftPerDayMs)}${dict.common.perDay}`
+                  faults.clockDriftPerDayMs === 0 ? "0" : format.driftPerDay(faults.clockDriftPerDayMs)
                 }
               />
               <DefRow
                 label={dict.emulator.responseDelay}
-                value={faults.responseDelayMs === 0 ? "0" : formatDuration(faults.responseDelayMs)}
+                value={faults.responseDelayMs === 0 ? "0" : format.duration(faults.responseDelayMs)}
               />
             </div>
             {identityRead ? (
@@ -240,9 +239,9 @@ export function Overview() {
                     ? dict.gateway.scheduleAligned
                     : dict.gateway.scheduleInterval
                 }
-                hint={`${formatDuration(gateway.intervalMs)}${
+                hint={`${format.duration(gateway.intervalMs)}${
                   gateway.scheduleMode === "aligned" && gateway.offsetMs > 0
-                    ? ` +${formatDuration(gateway.offsetMs)}`
+                    ? ` +${format.duration(gateway.offsetMs)}`
                     : ""
                 }`}
               />
