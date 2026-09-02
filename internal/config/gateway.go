@@ -132,19 +132,27 @@ func (c *GatewayConfig) Normalize() {
 	if c.ScheduleMode == "" {
 		c.ScheduleMode = string(schedule.ModeInterval)
 	}
-	if c.ClockWindowSize <= 0 {
+	if c.ClockWindowSize == 0 {
 		c.ClockWindowSize = clock.DefaultWindowSize
 	}
-	if c.HealthWindowSize <= 0 {
+	if c.HealthWindowSize == 0 {
 		c.HealthWindowSize = health.DefaultWindowSize
 	}
-	thresholds := c.ClockThresholds().Normalize()
-	c.ClockWarn = thresholds.Warn
-	c.ClockCritical = thresholds.Critical
-	policy := c.HealthPolicy().Normalize()
-	c.DegradeAfter = policy.DegradeAfter
-	c.OfflineAfter = policy.OfflineAfter
-	c.RecoverAfter = policy.RecoverAfter
+	if c.ClockWarn == 0 {
+		c.ClockWarn = clock.DefaultWarnThreshold
+	}
+	if c.ClockCritical == 0 {
+		c.ClockCritical = clock.DefaultCriticalThreshold
+	}
+	if c.DegradeAfter == 0 {
+		c.DegradeAfter = health.DefaultDegradeAfter
+	}
+	if c.OfflineAfter == 0 {
+		c.OfflineAfter = health.DefaultOfflineAfter
+	}
+	if c.RecoverAfter == 0 {
+		c.RecoverAfter = health.DefaultRecoverAfter
+	}
 }
 
 func (c GatewayConfig) ClockThresholds() clock.Thresholds {
@@ -217,10 +225,10 @@ func (c GatewayConfig) Validate() error {
 	if err := c.RetryPolicy().Validate(); err != nil {
 		return err
 	}
-	if err := c.ClockThresholds().Normalize().Validate(); err != nil {
+	if err := c.ClockThresholds().Validate(); err != nil {
 		return err
 	}
-	if err := c.HealthPolicy().Normalize().Validate(); err != nil {
+	if err := c.HealthPolicy().Validate(); err != nil {
 		return err
 	}
 	if err := validateRecentSize(c.ClockWindowSize); err != nil {

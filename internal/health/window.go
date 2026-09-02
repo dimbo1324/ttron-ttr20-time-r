@@ -77,7 +77,7 @@ func (w *window) latencies() Latency {
 	items := w.ordered()
 	values := make([]time.Duration, 0, len(items))
 	for _, item := range items {
-		if item.success && item.latency > 0 {
+		if item.success {
 			values = append(values, item.latency)
 		}
 	}
