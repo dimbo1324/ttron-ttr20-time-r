@@ -105,7 +105,15 @@ export const useLiveStore = create<LiveState>()((set, get) => ({
     ]);
 
     if (!status.ok) {
-      set({ ...describe(status.cause), status: null });
+      // Everything that describes "now" goes with the status. A stale gauge
+      // beside an "API unreachable" notice reads as a current value, which is
+      // the one mistake a monitoring view must not make.
+      //
+      // The frame log stays. Its rows carry their own timestamps, so they
+      // cannot be mistaken for the present, and throwing away the evidence an
+      // operator is halfway through reading because the API blinked would be
+      // gratuitous.
+      set({ ...describe(status.cause), status: null, history: null, fleet: null });
       return;
     }
 
@@ -204,8 +212,11 @@ export function liveTelemetry(state: LiveState): Telemetry {
       limits: { requestTimeoutMs: 0, connectTimeoutMs: 0, retryAttempts: 0 },
       identity: null,
       lastDeviceTime: null,
+      // No status means the link is down or has never been up, and refresh
+      // drops the fleet along with it -- a fleet table beside an empty
+      // reading would be a stale table presented as current.
+      fleet: null,
       lastCycleAt: 0,
-      fleet: fleet ? toFleet(fleet) : null,
       faults: toFaults(state.faults),
     };
   }
