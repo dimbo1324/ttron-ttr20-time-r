@@ -12,6 +12,8 @@ import (
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/config"
 	domain "github.com/dimbo1324/ttron-ttr20-time-r/internal/gateway"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/health"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // richStatus is a status with every nested section populated and no two
@@ -343,4 +345,96 @@ func newTestGatewayService(t *testing.T) *domain.Service {
 		t.Fatal(err)
 	}
 	return service
+}
+
+func liveSettings() domain.Settings {
+	return domain.Settings{
+		ScheduleMode:   "aligned",
+		PollInterval:   time.Minute,
+		PollOffset:     5 * time.Second,
+		RequestTimeout: 1500 * time.Millisecond,
+		RetryAttempts:  3,
+		RetryDelay:     200 * time.Millisecond,
+		ClockWarn:      2 * time.Second,
+		ClockCritical:  30 * time.Second,
+		DegradeAfter:   3,
+		OfflineAfter:   10,
+		RecoverAfter:   2,
+	}
+}
+
+func TestSettingsSurviveTheRoundTrip(t *testing.T) {
+	want := liveSettings()
+
+	got := settingsFromProto(mapSettings(want))
+
+	// The console reads settings off a gateway and writes them back with one
+	// field changed; a mapper that loses a field on the way out and defaults
+	// it on the way in would silently reconfigure everything else.
+	if got != want {
+		t.Fatalf("round trip = %+v, want %+v", got, want)
+	}
+}
+
+func TestSettingsFromProtoDoesNotRepairAnEmptyRequest(t *testing.T) {
+	got := settingsFromProto(nil)
+
+	// A zero here is a zero the caller asked for. Filling in a default at this
+	// seam would let an empty request quietly reconfigure a running gateway
+	// instead of being rejected.
+	if got != (domain.Settings{}) {
+		t.Fatalf("settingsFromProto(nil) = %+v, want the zero value", got)
+	}
+	if err := got.Validate(); err == nil {
+		t.Fatal("an empty settings request must not validate")
+	}
+}
+
+func TestUpdateSettingsAppliesAndReportsTheNewStatus(t *testing.T) {
+	service := newTestGatewayService(t)
+	api := New(context.Background(), service)
+
+	next := liveSettings()
+	next.ScheduleMode = "interval"
+	next.PollInterval = 2 * time.Second
+	next.PollOffset = 0
+
+	got, err := api.UpdateSettings(context.Background(), &ft12v1.UpdateGatewaySettingsRequest{
+		Settings: mapSettings(next),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got.GetSettings().GetPollIntervalMs() != 2000 {
+		t.Fatalf("settings = %+v", got.GetSettings())
+	}
+	// The status rides along so a console redraws without a second round trip.
+	if got.GetStatus().GetSchedule().GetIntervalMs() != 2000 {
+		t.Fatalf("status schedule = %+v", got.GetStatus().GetSchedule())
+	}
+	if got.GetStatus().GetRequestTimeoutMs() != 1500 {
+		t.Fatalf("status timeout = %d", got.GetStatus().GetRequestTimeoutMs())
+	}
+}
+
+func TestUpdateSettingsRejectsABadRequestAsSuch(t *testing.T) {
+	service := newTestGatewayService(t)
+	api := New(context.Background(), service)
+
+	broken := liveSettings()
+	broken.PollInterval = 0
+
+	_, err := api.UpdateSettings(context.Background(), &ft12v1.UpdateGatewaySettingsRequest{
+		Settings: mapSettings(broken),
+	})
+	if err == nil {
+		t.Fatal("UpdateSettings() accepted a broken configuration")
+	}
+	// InvalidArgument rather than a generic failure: it is the caller's
+	// request that is wrong, not the gateway, and the HTTP adapter turns that
+	// distinction into a 400 rather than a 502.
+	if got := status.Code(err); got != codes.InvalidArgument {
+		t.Fatalf("code = %v, want %v", got, codes.InvalidArgument)
+	}
 }

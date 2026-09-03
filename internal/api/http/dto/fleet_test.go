@@ -139,3 +139,37 @@ func TestHistoryOfNothingSerialisesAsEmptyLists(t *testing.T) {
 		t.Fatalf("body = %s", body)
 	}
 }
+
+func settingsFixture() SettingsDTO {
+	return SettingsDTO{
+		ScheduleMode:     "aligned",
+		PollIntervalMs:   60_000,
+		PollOffsetMs:     5000,
+		RequestTimeoutMs: 1500,
+		RetryAttempts:    3,
+		RetryDelayMs:     200,
+		ClockWarnMs:      2000,
+		ClockCriticalMs:  30_000,
+		DegradeAfter:     3,
+		OfflineAfter:     10,
+		RecoverAfter:     2,
+	}
+}
+
+func TestSettingsSurviveTheRoundTrip(t *testing.T) {
+	want := settingsFixture()
+
+	if got := Settings(SettingsProto(want)); got != want {
+		t.Fatalf("round trip = %+v, want %+v", got, want)
+	}
+}
+
+func TestSettingsOfNothingIsAllZeroes(t *testing.T) {
+	got := Settings(nil)
+
+	// Not a default: the gateway owns the rules, and a default invented here
+	// would let a field the caller forgot look like a field they chose.
+	if got != (SettingsDTO{}) {
+		t.Fatalf("Settings(nil) = %+v, want the zero value", got)
+	}
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, Lock, Repeat, Router, ShieldAlert } from "lucide-react";
+import { CalendarClock, Lock, Repeat, Router, ShieldAlert, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { ScheduleTimeline, SkewHistory } from "@/components/dashboard/charts";
@@ -12,10 +12,9 @@ import { DefRow, Panel, PanelBody, PanelHeader, Stat } from "@/components/ui/pan
 import { StateBadge } from "@/components/ui/state-badge";
 import { StatusDot } from "@/components/ui/status-dot";
 import type { ScheduleMode } from "@/lib/bench/domain";
-import { useTelemetry } from "@/lib/telemetry/use-telemetry";
+import { useSettingsControls, useTelemetry } from "@/lib/telemetry/use-telemetry";
 import { useFormat } from "@/lib/use-format";
 import { useNow } from "@/lib/use-now";
-import { useBenchStore } from "@/stores/bench-store";
 
 /**
  * Gateway control.
@@ -25,26 +24,44 @@ import { useBenchStore } from "@/stores/bench-store";
  * minute" is invisible in a form and obvious on a timeline, so the ticks sit
  * directly under the control that produces them.
  *
- * ## Editable on the bench, read-only on the live stack
+ * ## The same controls, two gateways behind them
  *
- * Interval, thresholds and the availability policy are the gateway process's
- * own configuration, and its control plane has no setter for any of them. So
- * on the live source this panel becomes a faithful description of how the
- * running gateway is configured, with every control replaced by its value
- * rather than disabled — a greyed-out `<select>` can only display a value that
- * happens to be one of its options, and a gateway set to an interval this UI
- * never offers would render blank.
+ * On the bench these settings drive the engine in this tab. On the live source
+ * they reconfigure the running Go gateway over the API, and every change lands
+ * on a process that may be mid-poll -- the gateway validates the whole
+ * configuration before applying any of it, so a rejected value leaves it
+ * exactly as it was and this panel simply keeps showing the truth.
+ *
+ * A control is replaced by its value, never disabled, when it cannot be
+ * written: a greyed-out `<select>` can only display a value that happens to be
+ * one of its options, and a gateway configured with an interval this UI never
+ * offers would render blank -- which reads as "not set" rather than "not
+ * editable".
  */
 
 const INTERVALS = [1000, 2000, 5000, 10_000, 30_000, 60_000];
 const OFFSETS = [0, 1000, 2000, 5000, 10_000, 15_000, 30_000];
 const TIMEOUTS = [250, 500, 1000, 1500, 3000];
 const RETRIES = [0, 1, 2, 3, 5];
+const RETRY_DELAYS = [50, 100, 200, 500, 1000];
 const WARN_THRESHOLDS = [500, 1000, 2000, 5000, 10_000];
 const CRITICAL_THRESHOLDS = [5000, 10_000, 30_000, 60_000, 300_000];
 const DEGRADE_AFTER = [1, 2, 3, 5, 8];
 const OFFLINE_AFTER = [3, 5, 10, 15, 20];
 const RECOVER_AFTER = [1, 2, 3, 5];
+
+/**
+ * The offered values, plus whatever the gateway is actually set to.
+ *
+ * A gateway configured outside this list is not a bug to hide: an operator
+ * needs to see the real 7-second interval and be able to leave it alone while
+ * changing something else. Without this the select would render blank and the
+ * first edit would silently snap the value to whichever option came first.
+ */
+function withCurrent(options: number[], current: number): number[] {
+  if (options.includes(current)) return options;
+  return [...options, current].sort((left, right) => left - right);
+}
 
 export function GatewayPanel() {
   const dict = useDictionary();
@@ -52,7 +69,9 @@ export function GatewayPanel() {
 
   const telemetry = useTelemetry();
   const {
+    source,
     editable,
+    deviceName,
     running,
     connected,
     counters,
@@ -65,13 +84,16 @@ export function GatewayPanel() {
     clock,
     limits,
     target,
+    settingsError,
   } = telemetry;
 
-  // Only the bench has settings to write; on the live source the setter is
-  // never reached, because every control is replaced by a readout.
-  const patchGateway = useBenchStore((state) => state.patchGateway);
-
+  const { setSettings, busy } = useSettingsControls();
   const now = useNow();
+
+  // A write in flight leaves every control frozen rather than only the one
+  // that was touched: the gateway takes the whole configuration at once, so a
+  // second edit sent mid-flight would race the first.
+  const writable = editable && !busy;
 
   const alignedHint =
     schedule.mode === "aligned"
@@ -83,12 +105,35 @@ export function GatewayPanel() {
       <div className="space-y-4">
         <SourceNotice />
 
-        {editable ? null : (
+        {source === "live" ? (
           <p className="flex items-start gap-2 rounded-md border border-border bg-surface-raised/40 px-3 py-2 text-xs leading-relaxed text-faint-foreground">
             <Lock className="mt-0.5 size-3.5 shrink-0" />
-            {dict.source.readOnlyHint}
+            <span>
+              {editable ? dict.source.liveSettingsHint : dict.source.settingsUnavailable}
+              {deviceName ? (
+                <>
+                  {" "}
+                  <span className="text-muted-foreground">
+                    {dict.source.controlledDevice}: <span className="font-mono">{deviceName}</span>
+                  </span>
+                </>
+              ) : null}
+            </span>
           </p>
-        )}
+        ) : null}
+
+        {settingsError ? (
+          <p
+            role="status"
+            className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/8 px-3 py-2 text-xs leading-relaxed"
+          >
+            <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-destructive" />
+            <span>
+              <span className="font-medium text-foreground">{dict.source.settingsRejected}</span>{" "}
+              <span className="font-mono text-muted-foreground">{settingsError}</span>
+            </span>
+          </p>
+        ) : null}
 
         <Panel>
           <PanelHeader
@@ -97,7 +142,9 @@ export function GatewayPanel() {
             hint={dict.gateway.subtitle}
             actions={
               <>
-                {editable ? null : <Badge tone="neutral">{dict.source.readOnly}</Badge>}
+                {source === "live" && !editable ? (
+                  <Badge tone="neutral">{dict.source.readOnly}</Badge>
+                ) : null}
                 <Badge tone={running ? "success" : "neutral"}>
                   <StatusDot tone={running ? "online" : "idle"} pulse={running} />
                   {running ? dict.gateway.pollingRunning : dict.gateway.pollingStopped}
@@ -107,10 +154,19 @@ export function GatewayPanel() {
           />
           <PanelBody className="space-y-3.5">
             <Field label={dict.gateway.scheduleMode} hint={alignedHint}>
-              {editable ? (
+              {writable ? (
                 <SegmentedControl<ScheduleMode>
                   value={schedule.mode}
-                  onChange={(mode) => patchGateway({ scheduleMode: mode })}
+                  onChange={(mode) =>
+                    setSettings(
+                      // Switching to interval drops the offset, which only an
+                      // aligned schedule has a use for -- and which the gateway
+                      // rejects when it is not below the interval.
+                      mode === "aligned"
+                        ? { scheduleMode: mode }
+                        : { scheduleMode: mode, offsetMs: 0 },
+                    )
+                  }
                   options={[
                     { value: "interval", label: dict.gateway.scheduleInterval },
                     { value: "aligned", label: dict.gateway.scheduleAligned },
@@ -129,23 +185,26 @@ export function GatewayPanel() {
             <div className="grid gap-3 sm:grid-cols-2">
               <Setting
                 label={dict.gateway.interval}
-                editable={editable}
+                writable={writable}
                 value={schedule.intervalMs}
-                display={format.duration(schedule.intervalMs)}
-                options={INTERVALS}
+                options={withCurrent(INTERVALS, schedule.intervalMs)}
                 render={(value) => format.duration(value)}
-                onChange={(value) => patchGateway({ intervalMs: value })}
+                // Every interval here is reachable: shortening one pulls the
+                // offset and the request timeout into range in the same patch,
+                // rather than sending a combination the gateway would refuse.
+                onChange={(value) => setSettings({ intervalMs: value })}
               />
               <Setting
                 label={dict.gateway.offset}
                 hint={schedule.mode === "interval" ? dict.gateway.scheduleIntervalHint : undefined}
-                editable={editable}
-                disabled={schedule.mode !== "aligned"}
+                writable={writable && schedule.mode === "aligned"}
                 value={schedule.offsetMs}
-                display={schedule.offsetMs === 0 ? "0" : format.duration(schedule.offsetMs)}
-                options={OFFSETS.filter((value) => value < schedule.intervalMs)}
+                options={withCurrent(
+                  OFFSETS.filter((value) => value < schedule.intervalMs),
+                  schedule.offsetMs,
+                )}
                 render={(value) => (value === 0 ? "0" : format.duration(value))}
-                onChange={(value) => patchGateway({ offsetMs: value })}
+                onChange={(value) => setSettings({ offsetMs: value })}
               />
             </div>
 
@@ -163,24 +222,37 @@ export function GatewayPanel() {
             title={dict.gateway.retryAttempts}
             hint={dict.gateway.retryHint}
           />
-          <PanelBody className="grid gap-3 sm:grid-cols-2">
+          <PanelBody className="grid gap-3 sm:grid-cols-3">
             <Setting
               label={dict.gateway.requestTimeout}
-              editable={editable}
+              writable={writable}
               value={limits.requestTimeoutMs}
-              display={format.duration(limits.requestTimeoutMs)}
-              options={TIMEOUTS}
+              options={withCurrent(
+                // A request that may outlast its own interval is not a
+                // schedule, and the gateway rejects it; the list never offers
+                // a value that would be refused.
+                TIMEOUTS.filter((value) => value < schedule.intervalMs),
+                limits.requestTimeoutMs,
+              )}
               render={(value) => format.duration(value)}
-              onChange={(value) => patchGateway({ requestTimeoutMs: value })}
+              onChange={(value) => setSettings({ requestTimeoutMs: value })}
             />
             <Setting
               label={dict.gateway.retryAttempts}
-              editable={editable}
+              writable={writable}
               value={limits.retryAttempts}
-              display={String(limits.retryAttempts)}
-              options={RETRIES}
+              options={withCurrent(RETRIES, limits.retryAttempts)}
               render={String}
-              onChange={(value) => patchGateway({ retryAttempts: value })}
+              onChange={(value) => setSettings({ retryAttempts: value })}
+            />
+            <Setting
+              label={dict.gateway.retryDelay}
+              hint={dict.gateway.retryDelayHint}
+              writable={writable}
+              value={limits.retryDelayMs}
+              options={withCurrent(RETRY_DELAYS, limits.retryDelayMs)}
+              render={(value) => format.duration(value)}
+              onChange={(value) => setSettings({ retryDelayMs: value })}
             />
           </PanelBody>
         </Panel>
@@ -195,25 +267,24 @@ export function GatewayPanel() {
             <div className="grid gap-3 sm:grid-cols-2">
               <Setting
                 label={dict.gateway.warnThreshold}
-                editable={editable}
+                writable={writable}
                 value={thresholds.warnMs}
-                display={format.duration(thresholds.warnMs)}
-                options={WARN_THRESHOLDS}
+                options={withCurrent(WARN_THRESHOLDS, thresholds.warnMs)}
                 render={(value) => format.duration(value)}
-                onChange={(value) =>
-                  patchGateway({ thresholds: { ...thresholds, warnMs: value } })
-                }
+                onChange={(value) => setSettings({ warnMs: value })}
               />
               <Setting
                 label={dict.gateway.criticalThreshold}
-                editable={editable}
+                writable={writable}
                 value={thresholds.criticalMs}
-                display={format.duration(thresholds.criticalMs)}
-                options={CRITICAL_THRESHOLDS}
+                options={withCurrent(
+                  // A critical threshold below the warning one is not an
+                  // escalation, and the gateway refuses it.
+                  CRITICAL_THRESHOLDS.filter((value) => value >= thresholds.warnMs),
+                  thresholds.criticalMs,
+                )}
                 render={(value) => format.duration(value)}
-                onChange={(value) =>
-                  patchGateway({ thresholds: { ...thresholds, criticalMs: value } })
-                }
+                onChange={(value) => setSettings({ criticalMs: value })}
               />
             </div>
             <div>
@@ -260,9 +331,9 @@ export function GatewayPanel() {
               <DefRow label={dict.overview.reconnects} value={counters.reconnects} />
               <DefRow label={dict.overview.sessions} value={counters.connections} />
             </div>
-            {editable ? null : (
+            {source === "live" ? (
               <p className="text-xs text-faint-foreground">{dict.source.noReset}</p>
-            )}
+            ) : null}
           </PanelBody>
         </Panel>
 
@@ -272,30 +343,34 @@ export function GatewayPanel() {
             <div className="grid grid-cols-3 gap-2">
               <Setting
                 label={dict.gateway.degradeAfter}
-                editable={editable}
+                writable={writable}
                 value={policy.degradeAfter}
-                display={String(policy.degradeAfter)}
-                options={DEGRADE_AFTER}
+                options={withCurrent(
+                  DEGRADE_AFTER.filter((value) => value <= policy.offlineAfter),
+                  policy.degradeAfter,
+                )}
                 render={String}
-                onChange={(value) => patchGateway({ policy: { ...policy, degradeAfter: value } })}
+                onChange={(value) => setSettings({ degradeAfter: value })}
               />
               <Setting
                 label={dict.gateway.offlineAfter}
-                editable={editable}
+                writable={writable}
                 value={policy.offlineAfter}
-                display={String(policy.offlineAfter)}
-                options={OFFLINE_AFTER}
+                options={withCurrent(
+                  // Offline before degraded is not an escalation either.
+                  OFFLINE_AFTER.filter((value) => value >= policy.degradeAfter),
+                  policy.offlineAfter,
+                )}
                 render={String}
-                onChange={(value) => patchGateway({ policy: { ...policy, offlineAfter: value } })}
+                onChange={(value) => setSettings({ offlineAfter: value })}
               />
               <Setting
                 label={dict.gateway.recoverAfter}
-                editable={editable}
+                writable={writable}
                 value={policy.recoverAfter}
-                display={String(policy.recoverAfter)}
-                options={RECOVER_AFTER}
+                options={withCurrent(RECOVER_AFTER, policy.recoverAfter)}
                 render={String}
-                onChange={(value) => patchGateway({ policy: { ...policy, recoverAfter: value } })}
+                onChange={(value) => setSettings({ recoverAfter: value })}
               />
             </div>
             <div className="border-t border-border pt-2">
@@ -316,39 +391,31 @@ export function GatewayPanel() {
 /**
  * One setting: a picker where it can be changed, its value where it cannot.
  *
- * The two forms are bound together here rather than at each of the nine call
- * sites, so a control cannot end up editable on a source that will silently
- * discard the change.
+ * The two forms are bound together here rather than at each of the ten call
+ * sites, so a control cannot end up editable on a source that would discard
+ * the change.
  */
 function Setting({
   label,
   hint,
-  editable,
-  disabled,
+  writable,
   value,
-  display,
   options,
   render,
   onChange,
 }: {
   label: ReactNode;
   hint?: ReactNode;
-  editable: boolean;
-  disabled?: boolean;
+  writable: boolean;
   value: number;
-  display: string;
   options: number[];
   render: (value: number) => string;
   onChange: (value: number) => void;
 }) {
   return (
     <Field label={label} hint={hint}>
-      {editable ? (
-        <Select
-          value={String(value)}
-          disabled={disabled}
-          onChange={(event) => onChange(Number(event.target.value))}
-        >
+      {writable ? (
+        <Select value={String(value)} onChange={(event) => onChange(Number(event.target.value))}>
           {options.map((option) => (
             <option key={option} value={option}>
               {render(option)}
@@ -356,8 +423,9 @@ function Setting({
           ))}
         </Select>
       ) : (
-        <ReadonlyValue>{display}</ReadonlyValue>
+        <ReadonlyValue>{render(value)}</ReadonlyValue>
       )}
     </Field>
   );
 }
+

@@ -1,5 +1,10 @@
 import { api, ApiError, API_BASE } from "./client";
-import { faultModeFixture, gatewayStatusFixture, historyFixture } from "@/test/utils";
+import {
+  faultModeFixture,
+  gatewayStatusFixture,
+  historyFixture,
+  settingsFixture,
+} from "@/test/utils";
 
 /**
  * The API client is the one place in this app that trusts nothing, so the
@@ -208,6 +213,45 @@ describe("parsing", () => {
 
     expect(fleet.devices).toEqual([]);
     expect(fleet.summary.devices).toBe(0);
+  });
+
+  it("sends settings as a PUT and reads back what was applied", async () => {
+    const fetchSpy = mockFetch(() =>
+      respond({ settings: settingsFixture({ pollIntervalMs: 2000 }), status: gatewayStatusFixture() }),
+    );
+
+    const got = await api.updateSettings(settingsFixture({ pollIntervalMs: 2000 }));
+
+    const init = fetchSpy.mock.calls[0]![1]!;
+    expect(fetchSpy.mock.calls[0]![0]).toBe(`${API_BASE}/gateway/settings`);
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(String(init.body))).toMatchObject({ pollIntervalMs: 2000 });
+    // Both halves: what was applied -- not always what was asked for -- and
+    // the status it produced, so a console redraws without a second call.
+    expect(got.settings.pollIntervalMs).toBe(2000);
+    expect(got.status.targetAddr).toBe("127.0.0.1:9000");
+  });
+
+  it("surfaces a rejected setting as a bad request, not an outage", async () => {
+    mockFetch(() =>
+      respond(
+        {
+          error: {
+            code: "INVALID_ARGUMENT",
+            message: "invalid gateway settings: request timeout must be below the poll interval",
+          },
+        },
+        { status: 400 },
+      ),
+    );
+
+    const error = (await api
+      .updateSettings(settingsFixture())
+      .catch((cause: unknown) => cause)) as ApiError;
+
+    expect(error.offline).toBe(false);
+    expect(error.code).toBe("INVALID_ARGUMENT");
+    expect(error.message).toContain("below the poll interval");
   });
 
   it("reads the emulator status and its fault mode", async () => {

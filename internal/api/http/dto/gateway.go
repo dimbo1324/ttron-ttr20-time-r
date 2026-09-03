@@ -142,6 +142,27 @@ type HistoryDTO struct {
 	HealthOutcomes []HealthOutcomeDTO `json:"healthOutcomes"`
 }
 
+// SettingsDTO is the part of a gateway's configuration that can be changed
+// while it is running. Every duration is milliseconds.
+//
+// Target address, checksum mode and adapter address are absent because they
+// are identity rather than settings: change one mid-flight and the frames on
+// the wire stop matching the device. The clock and health window sizes are
+// absent because resizing a ring buffer discards the history in it.
+type SettingsDTO struct {
+	ScheduleMode     string `json:"scheduleMode"`
+	PollIntervalMs   int64  `json:"pollIntervalMs"`
+	PollOffsetMs     int64  `json:"pollOffsetMs"`
+	RequestTimeoutMs int64  `json:"requestTimeoutMs"`
+	RetryAttempts    int32  `json:"retryAttempts"`
+	RetryDelayMs     int64  `json:"retryDelayMs"`
+	ClockWarnMs      int64  `json:"clockWarnMs"`
+	ClockCriticalMs  int64  `json:"clockCriticalMs"`
+	DegradeAfter     int32  `json:"degradeAfter"`
+	OfflineAfter     int32  `json:"offlineAfter"`
+	RecoverAfter     int32  `json:"recoverAfter"`
+}
+
 type LastReadTimeDTO struct {
 	Available  bool    `json:"available"`
 	DeviceTime *string `json:"deviceTime,omitempty"`
@@ -321,6 +342,41 @@ func History(history *ft12v1.GetHistoryResponse) HistoryDTO {
 		})
 	}
 	return out
+}
+
+func Settings(settings *ft12v1.GatewaySettings) SettingsDTO {
+	return SettingsDTO{
+		ScheduleMode:     settings.GetScheduleMode(),
+		PollIntervalMs:   settings.GetPollIntervalMs(),
+		PollOffsetMs:     settings.GetPollOffsetMs(),
+		RequestTimeoutMs: settings.GetRequestTimeoutMs(),
+		RetryAttempts:    settings.GetRetryAttempts(),
+		RetryDelayMs:     settings.GetRetryDelayMs(),
+		ClockWarnMs:      settings.GetClockWarnMs(),
+		ClockCriticalMs:  settings.GetClockCriticalMs(),
+		DegradeAfter:     settings.GetDegradeAfter(),
+		OfflineAfter:     settings.GetOfflineAfter(),
+		RecoverAfter:     settings.GetRecoverAfter(),
+	}
+}
+
+// SettingsProto passes the request through unrepaired. The gateway domain owns
+// the rules, and filling in a default here would let a field the caller forgot
+// look like a field they chose.
+func SettingsProto(settings SettingsDTO) *ft12v1.GatewaySettings {
+	return &ft12v1.GatewaySettings{
+		ScheduleMode:     settings.ScheduleMode,
+		PollIntervalMs:   settings.PollIntervalMs,
+		PollOffsetMs:     settings.PollOffsetMs,
+		RequestTimeoutMs: settings.RequestTimeoutMs,
+		RetryAttempts:    settings.RetryAttempts,
+		RetryDelayMs:     settings.RetryDelayMs,
+		ClockWarnMs:      settings.ClockWarnMs,
+		ClockCriticalMs:  settings.ClockCriticalMs,
+		DegradeAfter:     settings.DegradeAfter,
+		OfflineAfter:     settings.OfflineAfter,
+		RecoverAfter:     settings.RecoverAfter,
+	}
 }
 
 func LastReadTime(read *ft12v1.GetLastReadTimeResponse) LastReadTimeDTO {

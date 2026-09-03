@@ -81,6 +81,7 @@ export function benchLimits(state: BenchState): LimitsView {
     // nothing to time out; the gateway's own value is reported as zero.
     connectTimeoutMs: 0,
     retryAttempts: state.gateway.retryAttempts,
+    retryDelayMs: state.gateway.retryDelayMs,
   };
 }
 
@@ -111,6 +112,8 @@ export function benchTelemetry(state: BenchState, clock: ClockReport): Telemetry
     link: "ready",
     error: null,
     editable: true,
+    // A simulated device has no name to give; the shell says "bench" instead.
+    deviceName: null,
     running: state.running,
     connected: state.connected,
     checksumMode: state.checksumMode,
@@ -131,5 +134,8 @@ export function benchTelemetry(state: BenchState, clock: ClockReport): Telemetry
     // A simulated device is a device, not a fleet.
     fleet: null,
     faults: benchFaults(state),
+    // The bench validates by construction: every control offers only values
+    // the engine accepts, so there is nothing to refuse.
+    settingsError: null,
   };
 }

@@ -21,6 +21,7 @@ type GatewayClient interface {
 	GetRecentEvents(context.Context, uint32) ([]*ft12v1.FrameEvent, error)
 	GetFleet(context.Context) (*ft12v1.GetFleetResponse, error)
 	GetHistory(context.Context) (*ft12v1.GetHistoryResponse, error)
+	UpdateSettings(context.Context, *ft12v1.GatewaySettings) (*ft12v1.GatewaySettings, *ft12v1.GatewayStatus, error)
 }
 
 type EmulatorGRPCClient struct {
@@ -113,4 +114,12 @@ func (c *GatewayGRPCClient) GetFleet(ctx context.Context) (*ft12v1.GetFleetRespo
 
 func (c *GatewayGRPCClient) GetHistory(ctx context.Context) (*ft12v1.GetHistoryResponse, error) {
 	return c.client.GetHistory(ctx, &ft12v1.GetHistoryRequest{})
+}
+
+func (c *GatewayGRPCClient) UpdateSettings(ctx context.Context, settings *ft12v1.GatewaySettings) (*ft12v1.GatewaySettings, *ft12v1.GatewayStatus, error) {
+	resp, err := c.client.UpdateSettings(ctx, &ft12v1.UpdateGatewaySettingsRequest{Settings: settings})
+	if err != nil {
+		return nil, nil, err
+	}
+	return resp.GetSettings(), resp.GetStatus(), nil
 }

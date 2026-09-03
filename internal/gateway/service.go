@@ -24,8 +24,6 @@ type Service struct {
 	logger *log.Logger
 
 	history  *events.Ring
-	schedule schedule.Schedule
-	retry    retry.Policy
 	commands *command.Registry
 	skew     *clock.Monitor
 	health   *health.Tracker
@@ -33,8 +31,19 @@ type Service struct {
 	deviceID   string
 	deviceName string
 
-	mu     sync.RWMutex
-	status Status
+	// reschedule wakes a session parked on a long wait when the schedule
+	// changes under it. Buffered by one: a second update arriving before the
+	// session woke needs no second token.
+	reschedule chan struct{}
+
+	mu sync.RWMutex
+	// settings, schedule and retry can all change while the poll loop is
+	// running, so they live behind the same lock as status and are read
+	// through the accessors in settings.go rather than off the struct.
+	settings Settings
+	schedule schedule.Schedule
+	retry    retry.Policy
+	status   Status
 
 	runMu  sync.Mutex
 	cancel context.CancelFunc
@@ -58,17 +67,34 @@ func NewService(cfg *config.GatewayConfig, logger *log.Logger) (*Service, error)
 		return nil, err
 	}
 
+	thresholds := cfg.ClockThresholds().Normalize()
+	policy := cfg.HealthPolicy().Normalize()
+
 	s := &Service{
-		cfg:      cfg,
-		mode:     mode,
-		wire:     codec.New(mode, 0x00, byte(cfg.AdapterAddr&0xFF)),
-		logger:   logger,
-		history:  events.NewRing(cfg.RecentSize),
-		schedule: plan,
-		retry:    retryPolicy,
-		commands: command.DefaultRegistry(),
-		skew:     clock.NewMonitor(cfg.ClockThresholds(), cfg.ClockWindowSize),
-		health:   health.NewTracker(cfg.HealthPolicy()),
+		cfg:        cfg,
+		mode:       mode,
+		wire:       codec.New(mode, 0x00, byte(cfg.AdapterAddr&0xFF)),
+		logger:     logger,
+		history:    events.NewRing(cfg.RecentSize),
+		commands:   command.DefaultRegistry(),
+		skew:       clock.NewMonitor(thresholds, cfg.ClockWindowSize),
+		health:     health.NewTracker(policy),
+		reschedule: make(chan struct{}, 1),
+		schedule:   plan,
+		retry:      retryPolicy,
+		settings: Settings{
+			ScheduleMode:   string(plan.Mode()),
+			PollInterval:   cfg.PollInterval,
+			PollOffset:     cfg.PollOffset,
+			RequestTimeout: cfg.RequestTimeout,
+			RetryAttempts:  retryPolicy.Attempts,
+			RetryDelay:     retryPolicy.Delay,
+			ClockWarn:      thresholds.Warn,
+			ClockCritical:  thresholds.Critical,
+			DegradeAfter:   policy.DegradeAfter,
+			OfflineAfter:   policy.OfflineAfter,
+			RecoverAfter:   policy.RecoverAfter,
+		},
 	}
 	s.status = Status{
 		TargetAddress:   cfg.Target,
@@ -161,7 +187,7 @@ func (s *Service) Snapshot() Snapshot {
 }
 
 func (s *Service) Schedule() schedule.Schedule {
-	return s.schedule
+	return s.currentSchedule()
 }
 
 func (s *Service) Commands() *command.Registry {

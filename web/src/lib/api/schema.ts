@@ -182,6 +182,37 @@ export const emulatorStatusSchema = z.object({
   faultMode: faultModeSchema.optional(),
 });
 
+/**
+ * The part of a gateway's configuration that can change while it is running.
+ *
+ * Not parsed leniently on the way out: this is the one shape this console
+ * *sends*, and a field defaulted to zero here would reconfigure a running
+ * gateway to something nobody asked for. The gateway rejects it, which is the
+ * behaviour these defaults exist to preserve on the way in.
+ */
+export const gatewaySettingsSchema = z.object({
+  scheduleMode: z.string().default("interval"),
+  pollIntervalMs: ms,
+  pollOffsetMs: ms,
+  requestTimeoutMs: ms,
+  retryAttempts: count,
+  retryDelayMs: ms,
+  clockWarnMs: ms,
+  clockCriticalMs: ms,
+  degradeAfter: count,
+  offlineAfter: count,
+  recoverAfter: count,
+});
+
+/**
+ * `PUT /gateway/settings` answers with what was applied and the status it
+ * produced, so the console redraws without a second round trip.
+ */
+export const updateSettingsSchema = z.object({
+  settings: gatewaySettingsSchema,
+  status: gatewayStatusSchema,
+});
+
 /** `POST /gateway/start` and `/stop` both answer with the resulting status. */
 export const gatewayCommandSchema = z.object({ status: gatewayStatusSchema });
 
@@ -202,3 +233,4 @@ export type ApiHistory = z.infer<typeof historySchema>;
 export type ApiEvent = z.infer<typeof eventSchema>;
 export type ApiFaultMode = z.infer<typeof faultModeSchema>;
 export type ApiEmulatorStatus = z.infer<typeof emulatorStatusSchema>;
+export type ApiGatewaySettings = z.infer<typeof gatewaySettingsSchema>;

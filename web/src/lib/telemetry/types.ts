@@ -127,6 +127,30 @@ export interface LimitsView {
   requestTimeoutMs: number;
   connectTimeoutMs: number;
   retryAttempts: number;
+  /** Delay before the first retry; doubles on each further attempt. */
+  retryDelayMs: number;
+}
+
+/**
+ * The settings a source will accept back.
+ *
+ * A patch rather than a whole configuration, because a panel changes one knob
+ * at a time. The hook that applies it fills in the rest from what the source
+ * currently reports, so the caller never has to assemble a full request out of
+ * four different corners of the telemetry.
+ */
+export interface SettingsPatch {
+  scheduleMode?: ScheduleMode;
+  intervalMs?: number;
+  offsetMs?: number;
+  requestTimeoutMs?: number;
+  retryAttempts?: number;
+  retryDelayMs?: number;
+  warnMs?: number;
+  criticalMs?: number;
+  degradeAfter?: number;
+  offlineAfter?: number;
+  recoverAfter?: number;
 }
 
 export interface IdentityView {
@@ -201,12 +225,19 @@ export interface Telemetry {
   /**
    * Whether the settings panels may write.
    *
-   * False on the live source: interval, thresholds and the health policy are
-   * the gateway process's own configuration, and the control plane has no
-   * setter for them. Showing an editable control that silently does nothing
-   * would be worse than showing the real value and saying it is read-only.
+   * Always true on the bench. On the live source it follows the link: a
+   * control that cannot reach the gateway is shown as a value rather than as
+   * a knob, because a knob that silently does nothing is worse than a readout.
    */
   editable: boolean;
+  /**
+   * The device the settings on screen belong to, when the source names one.
+   *
+   * In inventory mode the control plane is bound to the primary device, so a
+   * change here reconfigures that device and not the fleet beside it. Saying
+   * which one is the difference between a setting and a surprise.
+   */
+  deviceName: string | null;
   running: boolean;
   connected: boolean;
   checksumMode: ChecksumMode;
@@ -232,4 +263,11 @@ export interface Telemetry {
   fleet: FleetView | null;
   /** Faults in effect; null when the source has no device to inject them into. */
   faults: FaultView | null;
+  /**
+   * Why the last attempt to change the settings was refused.
+   *
+   * Separate from `error`, which describes the link. This one describes the
+   * operator's own last action and has to outlive the poll that follows it.
+   */
+  settingsError: string | null;
 }

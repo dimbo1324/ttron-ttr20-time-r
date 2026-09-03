@@ -9,11 +9,13 @@ import {
   gatewayStatusFixture,
   resetBenchStore,
   resetLiveStore,
+  settingsFixture,
   useSource,
 } from "@/test/utils";
 
 import {
   useFaultControls,
+  useSettingsControls,
   useSource as useSourceValue,
   useTelemetry,
   useTelemetryControls,
@@ -42,6 +44,7 @@ jest.mock("@/lib/api/client", () => {
       faultMode: jest.fn(),
       setFaultMode: jest.fn(),
       emulatorStatus: jest.fn(),
+      updateSettings: jest.fn(),
     },
   };
 });
@@ -234,6 +237,155 @@ describe("useTelemetryControls", () => {
     // Clearing counters would mean asking a running gateway to forget what it
     // has measured, which is not something a toolbar should be able to do.
     expect(result.current.reset).toBeNull();
+  });
+});
+
+describe("useSettingsControls", () => {
+  it("writes bench settings straight through", () => {
+    const { result } = renderHook(() => useSettingsControls());
+
+    act(() => result.current.setSettings({ intervalMs: 30_000 }));
+
+    expect(result.current.writable).toBe(true);
+    expect(useBenchStore.getState().gateway.intervalMs).toBe(30_000);
+  });
+
+  it("merges a bench threshold rather than replacing the pair", () => {
+    const { result } = renderHook(() => useSettingsControls());
+
+    act(() => result.current.setSettings({ warnMs: 1000 }));
+
+    const thresholds = useBenchStore.getState().gateway.thresholds;
+    expect(thresholds.warnMs).toBe(1000);
+    expect(thresholds.criticalMs).toBe(30_000);
+  });
+
+  it("merges a bench health policy the same way", () => {
+    const { result } = renderHook(() => useSettingsControls());
+
+    act(() => result.current.setSettings({ offlineAfter: 15 }));
+
+    const policy = useBenchStore.getState().gateway.policy;
+    expect(policy.offlineAfter).toBe(15);
+    expect(policy.degradeAfter).toBe(3);
+    expect(policy.recoverAfter).toBe(2);
+  });
+
+  it("sends a whole configuration to the live gateway", async () => {
+    useSource("live");
+    await act(async () => {
+      await useLiveStore.getState().refresh();
+    });
+    mocked.updateSettings.mockResolvedValue({
+      settings: settingsFixture(),
+      status: gatewayStatusFixture(),
+    } as never);
+
+    const { result } = renderHook(() => useSettingsControls());
+    act(() => result.current.setSettings({ warnMs: 5000 }));
+
+    // A patch in, a whole configuration out -- filled in from what the gateway
+    // reports now rather than from a snapshot taken when the page loaded.
+    await waitFor(() =>
+      expect(mocked.updateSettings).toHaveBeenCalledWith({
+        scheduleMode: "aligned",
+        pollIntervalMs: 60_000,
+        pollOffsetMs: 5000,
+        requestTimeoutMs: 1500,
+        retryAttempts: 2,
+        retryDelayMs: 200,
+        clockWarnMs: 5000,
+        clockCriticalMs: 30_000,
+        degradeAfter: 3,
+        offlineAfter: 10,
+        recoverAfter: 2,
+      }),
+    );
+  });
+
+  it("pulls the offset into range when the interval shrinks under it", async () => {
+    useSource("live");
+    await act(async () => {
+      await useLiveStore.getState().refresh();
+    });
+    mocked.updateSettings.mockResolvedValue({
+      settings: settingsFixture(),
+      status: gatewayStatusFixture(),
+    } as never);
+
+    // The fixture polls every minute at +5s. Asking for a one-second interval
+    // leaves an offset that is no longer inside it, and the gateway refuses
+    // the whole update -- correct of it, useless to someone who only wanted a
+    // faster poll.
+    const { result } = renderHook(() => useSettingsControls());
+    act(() => result.current.setSettings({ intervalMs: 1000 }));
+
+    await waitFor(() =>
+      expect(mocked.updateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ pollIntervalMs: 1000, pollOffsetMs: 0, requestTimeoutMs: 500 }),
+      ),
+    );
+  });
+
+  it("leaves an offset alone when it still fits", async () => {
+    useSource("live");
+    await act(async () => {
+      await useLiveStore.getState().refresh();
+    });
+    mocked.updateSettings.mockResolvedValue({
+      settings: settingsFixture(),
+      status: gatewayStatusFixture(),
+    } as never);
+
+    const { result } = renderHook(() => useSettingsControls());
+    act(() => result.current.setSettings({ intervalMs: 30_000 }));
+
+    await waitFor(() =>
+      expect(mocked.updateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ pollIntervalMs: 30_000, pollOffsetMs: 5000, requestTimeoutMs: 1500 }),
+      ),
+    );
+  });
+
+  it("clamps the bench the same way", () => {
+    const { result } = renderHook(() => useSettingsControls());
+
+    // The bench engine has the same rule and the same reason for it; a source
+    // that behaved differently would make the bench a worse rehearsal.
+    act(() => result.current.setSettings({ intervalMs: 1000 }));
+
+    const gateway = useBenchStore.getState().gateway;
+    expect(gateway.intervalMs).toBe(1000);
+    expect(gateway.offsetMs).toBe(0);
+    expect(gateway.requestTimeoutMs).toBe(500);
+  });
+
+  it("touches nothing else when the interval is not what changed", async () => {
+    useSource("live");
+    await act(async () => {
+      await useLiveStore.getState().refresh();
+    });
+    mocked.updateSettings.mockResolvedValue({
+      settings: settingsFixture(),
+      status: gatewayStatusFixture(),
+    } as never);
+
+    const { result } = renderHook(() => useSettingsControls());
+    act(() => result.current.setSettings({ retryAttempts: 5 }));
+
+    await waitFor(() =>
+      expect(mocked.updateSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ retryAttempts: 5, pollOffsetMs: 5000, requestTimeoutMs: 1500 }),
+      ),
+    );
+  });
+
+  it("is not writable while the live link is down", () => {
+    useSource("live");
+
+    const { result } = renderHook(() => useSettingsControls());
+
+    expect(result.current.writable).toBe(false);
   });
 });
 

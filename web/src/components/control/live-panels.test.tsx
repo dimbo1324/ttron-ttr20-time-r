@@ -1,13 +1,14 @@
-import { act, screen, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { EmulatorPanel } from "@/components/control/emulator-panel";
 import { GatewayPanel } from "@/components/control/gateway-panel";
 import { Overview } from "@/components/dashboard/overview";
 import { ExchangeMonitor } from "@/components/monitor/monitor";
-import { api } from "@/lib/api/client";
+import { api, ApiError } from "@/lib/api/client";
 import { createFormatter } from "@/lib/format";
 import { getDictionary } from "@/i18n";
+import { useBenchStore } from "@/stores/bench-store";
 import { useLiveStore } from "@/stores/live-store";
 import { useSourceStore } from "@/stores/source-store";
 import {
@@ -17,6 +18,7 @@ import {
   gatewayStatusFixture,
   historyFixture,
   plain,
+  settingsFixture,
   renderWithLocale,
   resetBenchStore,
   resetLiveStore,
@@ -45,6 +47,7 @@ jest.mock("@/lib/api/client", () => {
       faultMode: jest.fn(),
       setFaultMode: jest.fn(),
       emulatorStatus: jest.fn(),
+      updateSettings: jest.fn(),
     },
   };
 });
@@ -144,44 +147,170 @@ describe("Overview on the live source", () => {
 });
 
 describe("GatewayPanel on the live source", () => {
-  it("says the settings belong to the gateway process", async () => {
+  it("says the changes reach the running gateway, and which device", async () => {
     await goLive();
     const { dict } = renderWithLocale(<GatewayPanel />);
 
-    expect(screen.getByText(dict.source.readOnlyHint)).toBeInTheDocument();
-    expect(screen.getByText(dict.source.readOnly)).toBeInTheDocument();
-  });
-
-  it("offers no control that would be discarded", async () => {
-    await goLive();
-    renderWithLocale(<GatewayPanel />);
-
-    // Not a disabled <select>: one can only display a value that happens to
-    // be among its options, and a gateway set to an interval this UI never
-    // offers would render blank.
-    expect(screen.queryAllByRole("combobox")).toHaveLength(0);
+    expect(screen.getByText(dict.source.liveSettingsHint)).toBeInTheDocument();
+    // In inventory mode the control plane is bound to the primary device, so a
+    // change here reconfigures that one and not the fleet beside it.
+    expect(screen.getByText(dict.source.controlledDevice, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("TTR20 alpha")).toBeInTheDocument();
   });
 
   it("shows the gateway's actual configuration", async () => {
     await goLive();
     const { dict } = renderWithLocale(<GatewayPanel />);
 
-    const value = (label: string) => screen.getByLabelText(label).textContent ?? "";
-    expect(plain(value(dict.gateway.interval))).toBe(plain(format.duration(60_000)));
-    expect(plain(value(dict.gateway.offset))).toBe(plain(format.duration(5000)));
-    expect(plain(value(dict.gateway.requestTimeout))).toBe(plain(format.duration(1500)));
+    const value = (label: string) =>
+      (screen.getByLabelText(label) as HTMLSelectElement).value;
+    expect(value(dict.gateway.interval)).toBe("60000");
+    expect(value(dict.gateway.offset)).toBe("5000");
+    expect(value(dict.gateway.requestTimeout)).toBe("1500");
     expect(value(dict.gateway.retryAttempts)).toBe("2");
-    expect(plain(value(dict.gateway.warnThreshold))).toBe(plain(format.duration(2000)));
+    expect(value(dict.gateway.retryDelay)).toBe("200");
+    expect(value(dict.gateway.warnThreshold)).toBe("2000");
     expect(value(dict.gateway.degradeAfter)).toBe("3");
   });
 
-  it("keeps the schedule mode readable without a control", async () => {
+  it("sends a changed interval to the gateway, with the rest unchanged", async () => {
+    await goLive();
+    mocked.updateSettings.mockResolvedValue({
+      settings: settingsFixture({ pollIntervalMs: 10_000 }),
+      status: gatewayStatusFixture(),
+    } as never);
+    const { dict } = renderWithLocale(<GatewayPanel />);
+
+    await userEvent.selectOptions(screen.getByLabelText(dict.gateway.interval), "10000");
+
+    // The whole configuration goes over, filled in from what the gateway is
+    // running now rather than from a snapshot taken when the page loaded.
+    expect(mocked.updateSettings).toHaveBeenCalledWith({
+      scheduleMode: "aligned",
+      pollIntervalMs: 10_000,
+      pollOffsetMs: 5000,
+      requestTimeoutMs: 1500,
+      retryAttempts: 2,
+      retryDelayMs: 200,
+      clockWarnMs: 2000,
+      clockCriticalMs: 30_000,
+      degradeAfter: 3,
+      offlineAfter: 10,
+      recoverAfter: 2,
+    });
+  });
+
+  it("drops the offset when the schedule stops being aligned", async () => {
+    await goLive();
+    mocked.updateSettings.mockResolvedValue({
+      settings: settingsFixture({ scheduleMode: "interval", pollOffsetMs: 0 }),
+      status: gatewayStatusFixture(),
+    } as never);
+    const { dict } = renderWithLocale(<GatewayPanel />);
+
+    await userEvent.click(screen.getByRole("radio", { name: dict.gateway.scheduleInterval }));
+
+    // An offset only means something to an aligned schedule, and the gateway
+    // rejects one that is not below the interval.
+    expect(mocked.updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ scheduleMode: "interval", pollOffsetMs: 0 }),
+    );
+  });
+
+  it("keeps the offset locked while the schedule is by interval", async () => {
+    await goLive({ schedule: { ...gatewayStatusFixture().schedule, mode: "interval", offsetMs: 0 } });
+    const { dict } = renderWithLocale(<GatewayPanel />);
+
+    expect(screen.getByLabelText(dict.gateway.offset).tagName).toBe("OUTPUT");
+  });
+
+  it("offers the gateway's own value even when this UI never suggests it", async () => {
+    await goLive({
+      schedule: { ...gatewayStatusFixture().schedule, intervalMs: 7000 },
+      requestTimeoutMs: 900,
+    });
+    const { dict } = renderWithLocale(<GatewayPanel />);
+
+    // Without this the select renders blank, which reads as "not set", and the
+    // first edit silently snaps the value to whichever option came first.
+    const interval = screen.getByLabelText(dict.gateway.interval) as HTMLSelectElement;
+    expect(interval.value).toBe("7000");
+    expect(within(interval).getByRole("option", { name: /7/ })).toBeInTheDocument();
+  });
+
+  it("never offers a value the gateway would refuse", async () => {
+    await goLive({ schedule: { ...gatewayStatusFixture().schedule, intervalMs: 1000 } });
+    const { dict } = renderWithLocale(<GatewayPanel />);
+
+    // A request that may outlast its own interval is not a schedule.
+    const timeout = screen.getByLabelText(dict.gateway.requestTimeout);
+    const offered = within(timeout)
+      .getAllByRole("option")
+      .map((option) => Number((option as HTMLOptionElement).value));
+    expect(offered.filter((value) => value >= 1000 && value !== 1500)).toHaveLength(0);
+  });
+
+  it("freezes every control while a write is in flight", async () => {
+    await goLive();
+    act(() => {
+      useLiveStore.setState({ busy: true });
+    });
+    const { dict } = renderWithLocale(<GatewayPanel />);
+
+    // The gateway takes the whole configuration at once, so a second edit sent
+    // mid-flight would race the first.
+    expect(screen.getByLabelText(dict.gateway.interval).tagName).toBe("OUTPUT");
+    expect(screen.getByLabelText(dict.gateway.warnThreshold).tagName).toBe("OUTPUT");
+  });
+
+  it("shows values rather than knobs while the link is down", async () => {
+    await goLive();
+    act(() => {
+      useLiveStore.setState({ link: "unreachable", status: null });
+    });
+    const { dict } = renderWithLocale(<GatewayPanel />);
+
+    expect(screen.getByText(dict.source.settingsUnavailable)).toBeInTheDocument();
+    expect(screen.getByText(dict.source.readOnly)).toBeInTheDocument();
+    expect(screen.queryAllByRole("combobox")).toHaveLength(0);
+  });
+
+  it("keeps a refusal on screen instead of letting the next poll wipe it", async () => {
+    await goLive();
+    mocked.updateSettings.mockRejectedValue(
+      new ApiError(
+        "invalid gateway settings: request timeout must be below the poll interval",
+        400,
+        "INVALID_ARGUMENT",
+      ),
+    );
+    const { dict } = renderWithLocale(<GatewayPanel />);
+
+    await userEvent.selectOptions(
+      screen.getByLabelText(dict.gateway.warnThreshold),
+      "1000",
+    );
+
+    // The link-level error is rewritten by every refresh a second apart; a
+    // rejection put there would flash and vanish before it could be read.
+    await waitFor(() =>
+      expect(screen.getByText(dict.source.settingsRejected)).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/below the poll interval/)).toBeInTheDocument();
+
+    act(() => {
+      void useLiveStore.getState().refresh();
+    });
+    await waitFor(() =>
+      expect(screen.getByText(dict.source.settingsRejected)).toBeInTheDocument(),
+    );
+  });
+
+  it("says nothing about a refusal when there has not been one", async () => {
     await goLive();
     const { dict } = renderWithLocale(<GatewayPanel />);
 
-    expect(screen.getByLabelText(dict.gateway.scheduleMode)).toHaveTextContent(
-      dict.gateway.scheduleAligned,
-    );
+    expect(screen.queryByText(dict.source.settingsRejected)).not.toBeInTheDocument();
   });
 
   it("explains that the counters are the gateway's", async () => {
@@ -191,11 +320,55 @@ describe("GatewayPanel on the live source", () => {
     expect(screen.getByText(dict.source.noReset)).toBeInTheDocument();
   });
 
-  it("is fully editable on the bench", () => {
+  it("is editable on the bench, and says nothing about a device", () => {
     const { dict } = renderWithLocale(<GatewayPanel />);
 
-    expect(screen.queryByText(dict.source.readOnly)).not.toBeInTheDocument();
     expect(screen.getAllByRole("combobox").length).toBeGreaterThan(0);
+    expect(screen.queryByText(dict.source.liveSettingsHint)).not.toBeInTheDocument();
+    expect(screen.queryByText(dict.source.controlledDevice, { exact: false })).not.toBeInTheDocument();
+  });
+
+  it("writes to the bench engine rather than to the API", async () => {
+    const { dict } = renderWithLocale(<GatewayPanel />);
+
+    await userEvent.selectOptions(screen.getByLabelText(dict.gateway.interval), "10000");
+
+    expect(useBenchStore.getState().gateway.intervalMs).toBe(10_000);
+    expect(mocked.updateSettings).not.toHaveBeenCalled();
+  });
+
+  it("changes the retry delay the engine actually backs off by", async () => {
+    const { dict } = renderWithLocale(<GatewayPanel />);
+
+    await userEvent.selectOptions(screen.getByLabelText(dict.gateway.retryDelay), "500");
+
+    // The engine doubles from this on each further attempt, the same shape the
+    // Go retry policy uses -- a bench backing off on a schedule of its own
+    // would make a retry storm look different here than on the wire.
+    expect(useBenchStore.getState().gateway.retryDelayMs).toBe(500);
+  });
+
+  it("merges a threshold change into the bench engine's nested settings", async () => {
+    const { dict } = renderWithLocale(<GatewayPanel />);
+
+    await userEvent.selectOptions(screen.getByLabelText(dict.gateway.warnThreshold), "1000");
+
+    const thresholds = useBenchStore.getState().gateway.thresholds;
+    // The engine keeps these nested, so a partial update has to be merged
+    // against what is there rather than assigned over it.
+    expect(thresholds.warnMs).toBe(1000);
+    expect(thresholds.criticalMs).toBe(30_000);
+  });
+
+  it("merges a policy change the same way", async () => {
+    const { dict } = renderWithLocale(<GatewayPanel />);
+
+    await userEvent.selectOptions(screen.getByLabelText(dict.gateway.recoverAfter), "3");
+
+    const policy = useBenchStore.getState().gateway.policy;
+    expect(policy.recoverAfter).toBe(3);
+    expect(policy.degradeAfter).toBe(3);
+    expect(policy.offlineAfter).toBe(10);
   });
 });
 

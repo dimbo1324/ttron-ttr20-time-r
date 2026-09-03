@@ -56,15 +56,27 @@ know where the API lives.
 
 ### What the live source can and cannot change
 
-It can start and stop polling, and it can set the emulator's fault mode — delay,
-corrupt checksum, fragmentation, silence, and dropping the connection. Those
-drive the real emulator, which is what makes this a bench rather than a viewer.
+It can start and stop polling; set the emulator's fault mode — delay, corrupt
+checksum, fragmentation, silence, and dropping the connection; and reconfigure
+the gateway itself: schedule mode, interval, offset, request timeout, retry
+budget, clock thresholds and availability policy. All of it lands on the
+running processes, which is what makes this a bench rather than a viewer.
 
-It cannot change the gateway's interval, offset, timeouts, clock thresholds or
-availability policy: those are the gateway process's own configuration and its
-control plane has no setter for them. The console shows the running values and
-says they are read-only rather than offering a control that would discard the
-change.
+A settings change applies immediately, without waiting for a reconnect: a
+gateway parked on a one-minute wait re-plans as soon as it is told to poll
+every second. The gateway validates the whole configuration before applying any
+of it, so a value it refuses leaves everything exactly as it was, and the
+console says why beside the controls.
+
+In inventory mode the control plane is bound to the primary device — the first
+by id — so starting, stopping and reconfiguring act on that one device and not
+on the fleet. The settings panel names the device it is controlling.
+
+Two things stay out of reach on purpose. The target address, checksum mode and
+adapter address are identity rather than settings: change one mid-flight and
+the frames on the wire stop matching the device. And the clock and health
+window sizes are absent because resizing a ring buffer discards the history an
+operator was reading.
 
 The device clock offset and drift are bench-only. The Go emulator answers with
 its host's real clock and has no offset to inject, so those two sliders are

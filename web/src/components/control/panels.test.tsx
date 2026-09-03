@@ -196,12 +196,16 @@ describe("GatewayPanel schedule", () => {
     expect(options.every((option) => Number(option.value) < 5000)).toBe(true);
   });
 
-  it("disables the offset in interval mode", async () => {
+  it("stops offering an offset in interval mode", async () => {
     const { dict } = renderWithLocale(<GatewayPanel />);
 
     await userEvent.click(screen.getByRole("radio", { name: dict.gateway.scheduleInterval }));
 
-    expect(screen.getByLabelText(dict.gateway.offset)).toBeDisabled();
+    // An offset only means something to an aligned schedule. Shown as its
+    // value rather than as a disabled dropdown, which invites a click that
+    // will not do anything.
+    expect(screen.getByLabelText(dict.gateway.offset).tagName).toBe("OUTPUT");
+    expect(screen.queryByRole("combobox", { name: dict.gateway.offset })).not.toBeInTheDocument();
   });
 
   it("sets the aligned offset", async () => {

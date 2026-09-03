@@ -2,13 +2,18 @@
 
 import { useEffect, useMemo } from "react";
 
-import { useBenchStore, useClockReport, type DeviceFaults } from "@/stores/bench-store";
+import {
+  useBenchStore,
+  useClockReport,
+  type DeviceFaults,
+  type GatewaySettings,
+} from "@/stores/bench-store";
 import { liveTelemetry, useLiveStore } from "@/stores/live-store";
 import { useSourceStore } from "@/stores/source-store";
-import type { ApiFaultMode } from "@/lib/api/schema";
+import type { ApiFaultMode, ApiGatewaySettings } from "@/lib/api/schema";
 
 import { benchTelemetry } from "./from-bench";
-import type { FaultView, Telemetry, TelemetrySource } from "./types";
+import type { FaultView, SettingsPatch, Telemetry, TelemetrySource } from "./types";
 
 /**
  * The one place a component asks what is happening.
@@ -113,6 +118,125 @@ export function useTelemetryControls(): {
     return { start: () => void liveStart(), stop: () => void liveStop(), reset: null, busy };
   }
   return { start: benchStart, stop: benchStop, reset: benchReset, busy: false };
+}
+
+/**
+ * Gateway settings, routed to whichever source is selected.
+ *
+ * The caller sends a patch -- one knob -- and this fills in the rest from what
+ * the source currently reports. That is what keeps the two sources symmetric:
+ * the bench takes partial updates natively, the gateway takes only a whole
+ * configuration, and neither fact reaches the panel.
+ *
+ * `writable` is false when the live link is down. A gateway that cannot be
+ * reached must not be offered a knob that quietly does nothing.
+ */
+export function useSettingsControls(): {
+  setSettings: (patch: SettingsPatch) => void;
+  writable: boolean;
+  busy: boolean;
+} {
+  const source = useSourceStore((state) => state.source);
+  const telemetry = useTelemetry();
+
+  const patchBench = useBenchStore((state) => state.patchGateway);
+  const setLive = useLiveStore((state) => state.setSettings);
+  const busy = useLiveStore((state) => state.busy);
+
+  if (source === "live") {
+    return {
+      writable: telemetry.editable,
+      busy,
+      setSettings: (patch) => void setLive(toApiSettings(telemetry, clamp(telemetry, patch))),
+    };
+  }
+  return {
+    writable: true,
+    busy: false,
+    setSettings: (patch) => patchBench(toBenchGateway(clamp(telemetry, patch))),
+  };
+}
+
+/**
+ * Keeps a change from making its neighbours illegal.
+ *
+ * The offset and the request timeout are both defined relative to the poll
+ * interval, so shortening the interval can invalidate two settings the
+ * operator did not touch. Sending that gets the whole update refused -- which
+ * is correct of the gateway and useless to the person who only wanted a faster
+ * poll. Pulling them into range in the same patch is the one edit they meant.
+ */
+function clamp(telemetry: Telemetry, patch: SettingsPatch): SettingsPatch {
+  if (patch.intervalMs === undefined) return patch;
+
+  const interval = patch.intervalMs;
+  const offset = patch.offsetMs ?? telemetry.schedule.offsetMs;
+  const timeout = patch.requestTimeoutMs ?? telemetry.limits.requestTimeoutMs;
+
+  return {
+    ...patch,
+    // An offset is a position inside the interval; at or past it, it is not.
+    offsetMs: offset < interval ? offset : 0,
+    // A request that may outlast its own interval is a queue, not a schedule.
+    requestTimeoutMs: timeout < interval ? timeout : Math.floor(interval / 2),
+  };
+}
+
+/**
+ * A patch over what the gateway is running now.
+ *
+ * Read from telemetry rather than kept in a form: between two edits the
+ * gateway may have been reconfigured by something else, and sending back a
+ * snapshot from before that would undo it.
+ */
+function toApiSettings(telemetry: Telemetry, patch: SettingsPatch): ApiGatewaySettings {
+  const { schedule, limits, thresholds, policy } = telemetry;
+  return {
+    scheduleMode: patch.scheduleMode ?? schedule.mode,
+    pollIntervalMs: patch.intervalMs ?? schedule.intervalMs,
+    pollOffsetMs: patch.offsetMs ?? schedule.offsetMs,
+    requestTimeoutMs: patch.requestTimeoutMs ?? limits.requestTimeoutMs,
+    retryAttempts: patch.retryAttempts ?? limits.retryAttempts,
+    retryDelayMs: patch.retryDelayMs ?? limits.retryDelayMs,
+    clockWarnMs: patch.warnMs ?? thresholds.warnMs,
+    clockCriticalMs: patch.criticalMs ?? thresholds.criticalMs,
+    degradeAfter: patch.degradeAfter ?? policy.degradeAfter,
+    offlineAfter: patch.offlineAfter ?? policy.offlineAfter,
+    recoverAfter: patch.recoverAfter ?? policy.recoverAfter,
+  };
+}
+
+/** The same patch in the bench engine's own shape. */
+function toBenchGateway(patch: SettingsPatch): Partial<GatewaySettings> {
+  const out: Partial<GatewaySettings> = {};
+  if (patch.scheduleMode !== undefined) out.scheduleMode = patch.scheduleMode;
+  if (patch.intervalMs !== undefined) out.intervalMs = patch.intervalMs;
+  if (patch.offsetMs !== undefined) out.offsetMs = patch.offsetMs;
+  if (patch.requestTimeoutMs !== undefined) out.requestTimeoutMs = patch.requestTimeoutMs;
+  if (patch.retryAttempts !== undefined) out.retryAttempts = patch.retryAttempts;
+  if (patch.retryDelayMs !== undefined) out.retryDelayMs = patch.retryDelayMs;
+  // The engine keeps these as nested objects, so a partial update has to be
+  // merged against what is there rather than assigned over it.
+  if (patch.warnMs !== undefined || patch.criticalMs !== undefined) {
+    const current = useBenchStore.getState().gateway.thresholds;
+    out.thresholds = {
+      warnMs: patch.warnMs ?? current.warnMs,
+      criticalMs: patch.criticalMs ?? current.criticalMs,
+    };
+  }
+  if (
+    patch.degradeAfter !== undefined ||
+    patch.offlineAfter !== undefined ||
+    patch.recoverAfter !== undefined
+  ) {
+    const current = useBenchStore.getState().gateway.policy;
+    out.policy = {
+      degradeAfter: patch.degradeAfter ?? current.degradeAfter,
+      offlineAfter: patch.offlineAfter ?? current.offlineAfter,
+      recoverAfter: patch.recoverAfter ?? current.recoverAfter,
+    };
+  }
+  return out;
 }
 
 /**

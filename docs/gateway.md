@@ -51,4 +51,10 @@ Beyond the connection counters, the status it reports carries the measured
 clock (skew, median, drift and the fit of that drift), device health with its
 hysteresis thresholds and latency percentiles, the poll schedule and the retry
 budget. `GetHistory` returns the two rolling windows those aggregates are
-computed from. See [HTTP API](http-api.md) for the JSON shapes.
+computed from, and `UpdateSettings` changes the schedule, retry budget, clock
+thresholds and availability policy of a gateway that is already polling. See
+[HTTP API](http-api.md) for the JSON shapes.
+
+In inventory mode the control plane is bound to the primary device -- the first
+by id -- so starting, stopping and reconfiguring act on that one device rather
+than on the fleet.

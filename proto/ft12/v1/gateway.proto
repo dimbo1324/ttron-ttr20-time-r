@@ -184,6 +184,42 @@ message GetHistoryResponse {
   repeated HealthOutcome health_outcomes = 2;
 }
 
+// The part of a gateway's configuration that can change while it is running.
+//
+// Absent on purpose: the target address, checksum mode and adapter address,
+// which are identity rather than settings -- change one mid-flight and the
+// frames on the wire stop matching the device. Absent too are the clock and
+// health window sizes, because resizing a ring buffer discards the history an
+// operator was reading.
+message GatewaySettings {
+  string schedule_mode = 1;
+  int64 poll_interval_ms = 2;
+  int64 poll_offset_ms = 3;
+  int64 request_timeout_ms = 4;
+  int32 retry_attempts = 5;
+  int64 retry_delay_ms = 6;
+  int64 clock_warn_ms = 7;
+  int64 clock_critical_ms = 8;
+  int32 degrade_after = 9;
+  int32 offline_after = 10;
+  int32 recover_after = 11;
+}
+
+// The whole configuration is sent, not a patch: a partial update needs a
+// field mask to say "unset" apart from "zero", and on a control plane with one
+// operator the cost of that is not repaid.
+message UpdateGatewaySettingsRequest {
+  GatewaySettings settings = 1;
+}
+
+// Carries what was actually applied, which is not always what was asked for --
+// a retry policy fills in its own maximum backoff, for one. The status comes
+// back in the same reply so a caller needs no second round trip to redraw.
+message UpdateGatewaySettingsResponse {
+  GatewaySettings settings = 1;
+  GatewayStatus status = 2;
+}
+
 message GetFleetRequest {}
 
 message GetFleetResponse {
@@ -199,4 +235,5 @@ service GatewayService {
   rpc GetLastReadTime(GetLastReadTimeRequest) returns (GetLastReadTimeResponse);
   rpc GetFleet(GetFleetRequest) returns (GetFleetResponse);
   rpc GetHistory(GetHistoryRequest) returns (GetHistoryResponse);
+  rpc UpdateSettings(UpdateGatewaySettingsRequest) returns (UpdateGatewaySettingsResponse);
 }

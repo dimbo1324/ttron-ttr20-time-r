@@ -3,7 +3,13 @@
 import { create } from "zustand";
 
 import { api, ApiError } from "@/lib/api/client";
-import type { ApiFaultMode, ApiFleet, ApiGatewayStatus, ApiHistory } from "@/lib/api/schema";
+import type {
+  ApiFaultMode,
+  ApiFleet,
+  ApiGatewaySettings,
+  ApiGatewayStatus,
+  ApiHistory,
+} from "@/lib/api/schema";
 import type { ClockReport } from "@/lib/bench/domain";
 import {
   toChecksumMode,
@@ -58,6 +64,14 @@ interface LiveState {
   events: LogEvent[];
   /** Emulator faults as last read back from the API; null until first read. */
   faults: ApiFaultMode | null;
+  /**
+   * Why the last settings write was refused, kept apart from `error`.
+   *
+   * `error` is rewritten by every refresh, a second apart, so a rejection put
+   * there would flash and vanish before it could be read. This one survives
+   * until the next write, which is how long the reason stays relevant.
+   */
+  settingsError: string | null;
   /** True while a command (start, stop, fault change) is in flight. */
   busy: boolean;
 
@@ -66,10 +80,14 @@ interface LiveState {
   stop: () => Promise<void>;
   loadFaults: () => Promise<void>;
   setFaults: (patch: Partial<ApiFaultMode>) => Promise<void>;
+  setSettings: (settings: ApiGatewaySettings) => Promise<void>;
   reset: () => void;
 }
 
-const EMPTY: Pick<LiveState, "link" | "error" | "status" | "history" | "fleet" | "events" | "faults" | "busy"> = {
+const EMPTY: Pick<
+  LiveState,
+  "link" | "error" | "status" | "history" | "fleet" | "events" | "faults" | "settingsError" | "busy"
+> = {
   link: "connecting",
   error: null,
   status: null,
@@ -77,6 +95,7 @@ const EMPTY: Pick<LiveState, "link" | "error" | "status" | "history" | "fleet" |
   fleet: null,
   events: [],
   faults: null,
+  settingsError: null,
   busy: false,
 };
 
@@ -175,6 +194,36 @@ export const useLiveStore = create<LiveState>()((set, get) => ({
     }
   },
 
+  /**
+   * Reconfigures the running gateway.
+   *
+   * Deliberately not optimistic, unlike the fault sliders. A fault takes
+   * effect on the next frame and is trivially reversible; a schedule the
+   * gateway rejected must never appear on screen as though it had been
+   * accepted, because the next reading under it would look like a fault.
+   */
+  setSettings: async (settings) => {
+    set({ busy: true, settingsError: null });
+    try {
+      const applied = await api.updateSettings(settings);
+      set({ status: applied.status, link: "ready", error: null });
+    } catch (cause) {
+      const described = describe(cause);
+      // A refusal and an outage are different failures and get different
+      // places to say so. The gateway refusing a value leaves the link fine,
+      // so it goes to the settings banner and not to `error`, which describes
+      // the link. An unreachable API sets `error`, and the notice that takes
+      // over the page explains it better than a second banner would.
+      set(
+        described.link === "ready"
+          ? { settingsError: described.error }
+          : { ...described, settingsError: null },
+      );
+    } finally {
+      set({ busy: false });
+    }
+  },
+
   reset: () => set({ ...EMPTY }),
 }));
 
@@ -196,6 +245,7 @@ export function liveTelemetry(state: LiveState): Telemetry {
       link: state.link,
       error: state.error,
       editable: false,
+      deviceName: null,
       running: false,
       connected: false,
       checksumMode: "sum",
@@ -209,7 +259,7 @@ export function liveTelemetry(state: LiveState): Telemetry {
       policy: { degradeAfter: 0, offlineAfter: 0, recoverAfter: 0 },
       counters: EMPTY_COUNTERS,
       schedule: { mode: "interval", intervalMs: 0, offsetMs: 0, nextPollAt: 0 },
-      limits: { requestTimeoutMs: 0, connectTimeoutMs: 0, retryAttempts: 0 },
+      limits: { requestTimeoutMs: 0, connectTimeoutMs: 0, retryAttempts: 0, retryDelayMs: 0 },
       identity: null,
       lastDeviceTime: null,
       // No status means the link is down or has never been up, and refresh
@@ -218,6 +268,7 @@ export function liveTelemetry(state: LiveState): Telemetry {
       fleet: null,
       lastCycleAt: 0,
       faults: toFaults(state.faults),
+      settingsError: state.settingsError,
     };
   }
 
@@ -229,9 +280,10 @@ export function liveTelemetry(state: LiveState): Telemetry {
     source: "live",
     link: state.link,
     error: state.error,
-    // Interval, thresholds and the health policy are the gateway process's own
-    // configuration and the control plane has no setter for them.
-    editable: false,
+    // Settings can be written, but only while the link is up: a control that
+    // cannot reach the gateway is shown as a value rather than as a knob.
+    editable: state.link === "ready",
+    deviceName: status.deviceName || status.deviceId || null,
     running: status.state === "running" || status.state === "degraded",
     connected: status.connected,
     checksumMode: toChecksumMode(status.checksumMode),
@@ -256,12 +308,14 @@ export function liveTelemetry(state: LiveState): Telemetry {
       requestTimeoutMs: status.requestTimeoutMs,
       connectTimeoutMs: status.connectTimeoutMs,
       retryAttempts: status.retry.attempts,
+      retryDelayMs: status.retry.delayMs,
     },
     identity: toIdentity(status),
     lastDeviceTime: status.lastDeviceTime ? Date.parse(status.lastDeviceTime) : null,
     lastCycleAt: status.lastSuccessfulReadTime ? Date.parse(status.lastSuccessfulReadTime) : 0,
     fleet: fleet ? toFleet(fleet) : null,
     faults: toFaults(state.faults),
+    settingsError: state.settingsError,
   };
 }
 

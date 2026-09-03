@@ -6,6 +6,7 @@ import {
   gatewayStatusFixture,
   historyFixture,
   resetLiveStore,
+  settingsFixture,
 } from "@/test/utils";
 
 import { liveTelemetry, useLiveStore } from "./live-store";
@@ -31,6 +32,7 @@ jest.mock("@/lib/api/client", () => {
       faultMode: jest.fn(),
       setFaultMode: jest.fn(),
       emulatorStatus: jest.fn(),
+      updateSettings: jest.fn(),
     },
   };
 });
@@ -250,6 +252,84 @@ describe("fault mode", () => {
   });
 });
 
+describe("settings", () => {
+  it("adopts the status the gateway answered with", async () => {
+    allAnswer();
+    await useLiveStore.getState().refresh();
+    mocked.updateSettings.mockResolvedValue({
+      settings: settingsFixture({ pollIntervalMs: 2000 }),
+      status: gatewayStatusFixture({
+        schedule: { ...gatewayStatusFixture().schedule, mode: "interval", intervalMs: 2000 },
+      }),
+    } as never);
+
+    await useLiveStore.getState().setSettings(settingsFixture({ pollIntervalMs: 2000 }));
+
+    expect(liveTelemetry(useLiveStore.getState()).schedule.intervalMs).toBe(2000);
+    expect(useLiveStore.getState().busy).toBe(false);
+  });
+
+  it("shows nothing until the gateway has accepted it", async () => {
+    allAnswer();
+    await useLiveStore.getState().refresh();
+    const before = liveTelemetry(useLiveStore.getState()).schedule.intervalMs;
+
+    mocked.updateSettings.mockRejectedValue(
+      new ApiError("invalid gateway settings: request timeout must be below the poll interval", 400, "INVALID_ARGUMENT"),
+    );
+    await useLiveStore.getState().setSettings(settingsFixture({ pollIntervalMs: 100 }));
+
+    // Not optimistic, unlike the fault sliders. A schedule the gateway
+    // rejected must never appear as though it had been accepted, because the
+    // next reading under it would look like a fault.
+    expect(liveTelemetry(useLiveStore.getState()).schedule.intervalMs).toBe(before);
+    // A refusal and an outage get different places to say so: this one goes to
+    // the settings banner beside the controls, not to the link-level error,
+    // which the next refresh would overwrite a second later anyway.
+    expect(useLiveStore.getState().settingsError).toContain("below the poll interval");
+    expect(useLiveStore.getState().error).toBeNull();
+    // A rejected value is not an outage: the gateway is right there, refusing.
+    expect(useLiveStore.getState().link).toBe("ready");
+  });
+
+  it("reports a gateway that could not be reached at all", async () => {
+    mocked.updateSettings.mockRejectedValue(new ApiError("Failed to fetch", 0, "NO_ANSWER"));
+
+    await useLiveStore.getState().setSettings(settingsFixture());
+
+    expect(useLiveStore.getState().link).toBe("unreachable");
+    expect(useLiveStore.getState().busy).toBe(false);
+    // No refusal banner: the notice that takes over the page explains an
+    // unreachable API better than a second message beside the controls, and
+    // the panel is read-only by then anyway.
+    expect(useLiveStore.getState().settingsError).toBeNull();
+  });
+
+  it("clears a stale refusal on the next attempt", async () => {
+    allAnswer();
+    await useLiveStore.getState().refresh();
+    mocked.updateSettings.mockRejectedValue(new ApiError("refused", 400, "INVALID_ARGUMENT"));
+    await useLiveStore.getState().setSettings(settingsFixture());
+    expect(useLiveStore.getState().settingsError).toBe("refused");
+
+    mocked.updateSettings.mockResolvedValue({
+      settings: settingsFixture(),
+      status: gatewayStatusFixture(),
+    } as never);
+    await useLiveStore.getState().setSettings(settingsFixture());
+
+    expect(useLiveStore.getState().settingsError).toBeNull();
+  });
+
+  it("clears busy even when the write throws something unexpected", async () => {
+    mocked.updateSettings.mockRejectedValue("not an Error at all");
+
+    await useLiveStore.getState().setSettings(settingsFixture());
+
+    expect(useLiveStore.getState().busy).toBe(false);
+  });
+});
+
 describe("telemetry projection", () => {
   it("renders a full, empty reading before the first refresh", () => {
     const telemetry = liveTelemetry(useLiveStore.getState());
@@ -298,18 +378,50 @@ describe("telemetry projection", () => {
       requestTimeoutMs: 1500,
       connectTimeoutMs: 2000,
       retryAttempts: 2,
+      retryDelayMs: 200,
     });
     expect(telemetry.identity).toEqual({ model: "TTR20", serial: "SN-42", firmware: "1.2.3" });
     expect(telemetry.lastDeviceTime).toBe(Date.UTC(2026, 8, 2, 11, 59, 58));
   });
 
-  it("never lets the live source be edited", async () => {
+  it("is editable while the link is up", async () => {
     allAnswer();
     await useLiveStore.getState().refresh();
 
-    // Interval, thresholds and the health policy are the gateway process's
-    // configuration; the control plane has no setter for any of them.
+    expect(liveTelemetry(useLiveStore.getState()).editable).toBe(true);
+    // Which device the settings belong to, because in inventory mode the
+    // control plane is bound to one and the fleet table shows the rest.
+    expect(liveTelemetry(useLiveStore.getState()).deviceName).toBe("TTR20 alpha");
+  });
+
+  it("is not editable while the link is down", async () => {
+    allAnswer();
+    mocked.gatewayStatus.mockRejectedValue(new ApiError("Failed to fetch", 0, "NO_ANSWER"));
+    await useLiveStore.getState().refresh();
+
+    // A knob that cannot reach the gateway is worse than a readout: it looks
+    // like it worked.
     expect(liveTelemetry(useLiveStore.getState()).editable).toBe(false);
+  });
+
+  it("falls back to the device id when it has no name", async () => {
+    allAnswer();
+    mocked.gatewayStatus.mockResolvedValue(
+      gatewayStatusFixture({ deviceName: "" }) as never,
+    );
+    await useLiveStore.getState().refresh();
+
+    expect(liveTelemetry(useLiveStore.getState()).deviceName).toBe("alpha");
+  });
+
+  it("names no device on a gateway without an inventory", async () => {
+    allAnswer();
+    mocked.gatewayStatus.mockResolvedValue(
+      gatewayStatusFixture({ deviceId: "", deviceName: "" }) as never,
+    );
+    await useLiveStore.getState().refresh();
+
+    expect(liveTelemetry(useLiveStore.getState()).deviceName).toBeNull();
   });
 
   it("reports a stopped gateway as not running", async () => {

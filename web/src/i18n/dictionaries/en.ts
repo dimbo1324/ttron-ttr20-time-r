@@ -57,8 +57,12 @@ export const en: Dictionary = {
       "Start the three processes — each in its own terminal — then come back to this page:",
     upstreamError: "The gateway returned an error",
     readOnly: "Read-only",
-    readOnlyHint:
-      "Interval, thresholds and the availability policy come from the gateway process's own configuration. What you see here are its actual values — the console does not change them.",
+    liveSettingsHint:
+      "Changes go to the running gateway and take effect immediately, without waiting for a reconnect. The gateway validates the whole configuration: if any one value is not allowed, nothing is applied.",
+    settingsUnavailable:
+      "Settings are shown read-only until the link to the API is back.",
+    controlledDevice: "Controlled device",
+    settingsRejected: "The gateway refused the settings:",
     target: "Polled device",
     benchOnly: "Bench only",
     benchOnlyHint:
@@ -325,6 +329,8 @@ export const en: Dictionary = {
     offset: "Offset inside the interval",
     requestTimeout: "Request timeout",
     retryAttempts: "Retries on a frame error",
+    retryDelay: "Delay before retry",
+    retryDelayHint: "Before the first retry; doubles on each further attempt.",
     retryHint:
       "A frame error is retried on the same connection. The link is dropped only on a transport failure.",
     clockThresholds: "Clock skew thresholds",

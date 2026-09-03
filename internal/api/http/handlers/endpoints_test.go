@@ -5,12 +5,28 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func doRequest(t *testing.T, handler *Handler, method, target string) *httptest.ResponseRecorder {
 	t.Helper()
 	req := httptest.NewRequest(method, target, nil)
+	rec := httptest.NewRecorder()
+	handler.Routes().ServeHTTP(rec, req)
+	return rec
+}
+
+// doRequestWithBody is the same, for the endpoints that take one. The body is
+// written as the JSON the API actually receives rather than marshalled from a
+// DTO, so a renamed field fails here rather than passing against itself.
+func doRequestWithBody(t *testing.T, handler *Handler, method, target, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(method, target, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	handler.Routes().ServeHTTP(rec, req)
 	return rec
@@ -210,6 +226,74 @@ func TestGatewayFleetEndpointReportsUpstreamFailure(t *testing.T) {
 	rec := doRequest(t, handler, http.MethodGet, "/api/v1/gateway/fleet")
 	if rec.Code == http.StatusOK {
 		t.Fatalf("status = %d, want a failure", rec.Code)
+	}
+}
+
+func TestGatewaySettingsEndpoint(t *testing.T) {
+	handler, _, gateway := testHandler()
+
+	rec := doRequestWithBody(t, handler, http.MethodPut, "/api/v1/gateway/settings",
+		`{"scheduleMode":"interval","pollIntervalMs":2000,"requestTimeoutMs":500,"retryAttempts":4,"retryDelayMs":100,"clockWarnMs":800,"clockCriticalMs":9000,"degradeAfter":2,"offlineAfter":6,"recoverAfter":1}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	if gateway.settings.GetPollIntervalMs() != 2000 || gateway.settings.GetRetryAttempts() != 4 {
+		t.Fatalf("gateway received %+v", gateway.settings)
+	}
+	body := decodeBody(t, rec)
+	// Both halves: what was applied, and the status it produced, so a console
+	// redraws without a second round trip.
+	if _, ok := body["settings"].(map[string]any); !ok {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+	if _, ok := body["status"].(map[string]any); !ok {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+}
+
+func TestGatewaySettingsRejectsMalformedJSON(t *testing.T) {
+	handler, _, _ := testHandler()
+
+	rec := doRequestWithBody(t, handler, http.MethodPut, "/api/v1/gateway/settings", "{not json")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+}
+
+func TestGatewaySettingsReportsARejectedSettingAsABadRequest(t *testing.T) {
+	handler, _, gateway := testHandler()
+	gateway.settingsErr = status.Error(codes.InvalidArgument, "invalid gateway settings: request timeout must be below the poll interval")
+
+	rec := doRequestWithBody(t, handler, http.MethodPut, "/api/v1/gateway/settings", `{"pollIntervalMs":100}`)
+
+	// 400, not 502: the caller asked for something impossible, and reporting
+	// it as an upstream failure would send the reader after a broken process.
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "below the poll interval") {
+		t.Fatalf("body = %s, want the reason to survive", rec.Body.String())
+	}
+}
+
+func TestGatewaySettingsReportsAnUnreachableGateway(t *testing.T) {
+	handler, _, gateway := testHandler()
+	gateway.settingsErr = status.Error(codes.Unavailable, "gateway is not running")
+
+	rec := doRequestWithBody(t, handler, http.MethodPut, "/api/v1/gateway/settings", `{"pollIntervalMs":2000}`)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
+	}
+}
+
+func TestGatewaySettingsRejectsReads(t *testing.T) {
+	handler, _, _ := testHandler()
+
+	rec := doRequest(t, handler, http.MethodGet, "/api/v1/gateway/settings")
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
 	}
 }
 

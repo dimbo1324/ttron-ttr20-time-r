@@ -1509,6 +1509,239 @@ func (x *GetHistoryResponse) GetHealthOutcomes() []*HealthOutcome {
 	return nil
 }
 
+// The part of a gateway's configuration that can change while it is running.
+//
+// Absent on purpose: the target address, checksum mode and adapter address,
+// which are identity rather than settings -- change one mid-flight and the
+// frames on the wire stop matching the device. Absent too are the clock and
+// health window sizes, because resizing a ring buffer discards the history an
+// operator was reading.
+type GatewaySettings struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ScheduleMode     string                 `protobuf:"bytes,1,opt,name=schedule_mode,json=scheduleMode,proto3" json:"schedule_mode,omitempty"`
+	PollIntervalMs   int64                  `protobuf:"varint,2,opt,name=poll_interval_ms,json=pollIntervalMs,proto3" json:"poll_interval_ms,omitempty"`
+	PollOffsetMs     int64                  `protobuf:"varint,3,opt,name=poll_offset_ms,json=pollOffsetMs,proto3" json:"poll_offset_ms,omitempty"`
+	RequestTimeoutMs int64                  `protobuf:"varint,4,opt,name=request_timeout_ms,json=requestTimeoutMs,proto3" json:"request_timeout_ms,omitempty"`
+	RetryAttempts    int32                  `protobuf:"varint,5,opt,name=retry_attempts,json=retryAttempts,proto3" json:"retry_attempts,omitempty"`
+	RetryDelayMs     int64                  `protobuf:"varint,6,opt,name=retry_delay_ms,json=retryDelayMs,proto3" json:"retry_delay_ms,omitempty"`
+	ClockWarnMs      int64                  `protobuf:"varint,7,opt,name=clock_warn_ms,json=clockWarnMs,proto3" json:"clock_warn_ms,omitempty"`
+	ClockCriticalMs  int64                  `protobuf:"varint,8,opt,name=clock_critical_ms,json=clockCriticalMs,proto3" json:"clock_critical_ms,omitempty"`
+	DegradeAfter     int32                  `protobuf:"varint,9,opt,name=degrade_after,json=degradeAfter,proto3" json:"degrade_after,omitempty"`
+	OfflineAfter     int32                  `protobuf:"varint,10,opt,name=offline_after,json=offlineAfter,proto3" json:"offline_after,omitempty"`
+	RecoverAfter     int32                  `protobuf:"varint,11,opt,name=recover_after,json=recoverAfter,proto3" json:"recover_after,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *GatewaySettings) Reset() {
+	*x = GatewaySettings{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GatewaySettings) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GatewaySettings) ProtoMessage() {}
+
+func (x *GatewaySettings) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GatewaySettings.ProtoReflect.Descriptor instead.
+func (*GatewaySettings) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GatewaySettings) GetScheduleMode() string {
+	if x != nil {
+		return x.ScheduleMode
+	}
+	return ""
+}
+
+func (x *GatewaySettings) GetPollIntervalMs() int64 {
+	if x != nil {
+		return x.PollIntervalMs
+	}
+	return 0
+}
+
+func (x *GatewaySettings) GetPollOffsetMs() int64 {
+	if x != nil {
+		return x.PollOffsetMs
+	}
+	return 0
+}
+
+func (x *GatewaySettings) GetRequestTimeoutMs() int64 {
+	if x != nil {
+		return x.RequestTimeoutMs
+	}
+	return 0
+}
+
+func (x *GatewaySettings) GetRetryAttempts() int32 {
+	if x != nil {
+		return x.RetryAttempts
+	}
+	return 0
+}
+
+func (x *GatewaySettings) GetRetryDelayMs() int64 {
+	if x != nil {
+		return x.RetryDelayMs
+	}
+	return 0
+}
+
+func (x *GatewaySettings) GetClockWarnMs() int64 {
+	if x != nil {
+		return x.ClockWarnMs
+	}
+	return 0
+}
+
+func (x *GatewaySettings) GetClockCriticalMs() int64 {
+	if x != nil {
+		return x.ClockCriticalMs
+	}
+	return 0
+}
+
+func (x *GatewaySettings) GetDegradeAfter() int32 {
+	if x != nil {
+		return x.DegradeAfter
+	}
+	return 0
+}
+
+func (x *GatewaySettings) GetOfflineAfter() int32 {
+	if x != nil {
+		return x.OfflineAfter
+	}
+	return 0
+}
+
+func (x *GatewaySettings) GetRecoverAfter() int32 {
+	if x != nil {
+		return x.RecoverAfter
+	}
+	return 0
+}
+
+// The whole configuration is sent, not a patch: a partial update needs a
+// field mask to say "unset" apart from "zero", and on a control plane with one
+// operator the cost of that is not repaid.
+type UpdateGatewaySettingsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Settings      *GatewaySettings       `protobuf:"bytes,1,opt,name=settings,proto3" json:"settings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateGatewaySettingsRequest) Reset() {
+	*x = UpdateGatewaySettingsRequest{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateGatewaySettingsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateGatewaySettingsRequest) ProtoMessage() {}
+
+func (x *UpdateGatewaySettingsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateGatewaySettingsRequest.ProtoReflect.Descriptor instead.
+func (*UpdateGatewaySettingsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *UpdateGatewaySettingsRequest) GetSettings() *GatewaySettings {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
+// Carries what was actually applied, which is not always what was asked for --
+// a retry policy fills in its own maximum backoff, for one. The status comes
+// back in the same reply so a caller needs no second round trip to redraw.
+type UpdateGatewaySettingsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Settings      *GatewaySettings       `protobuf:"bytes,1,opt,name=settings,proto3" json:"settings,omitempty"`
+	Status        *GatewayStatus         `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateGatewaySettingsResponse) Reset() {
+	*x = UpdateGatewaySettingsResponse{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateGatewaySettingsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateGatewaySettingsResponse) ProtoMessage() {}
+
+func (x *UpdateGatewaySettingsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateGatewaySettingsResponse.ProtoReflect.Descriptor instead.
+func (*UpdateGatewaySettingsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *UpdateGatewaySettingsResponse) GetSettings() *GatewaySettings {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
+func (x *UpdateGatewaySettingsResponse) GetStatus() *GatewayStatus {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
 type GetFleetRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1517,7 +1750,7 @@ type GetFleetRequest struct {
 
 func (x *GetFleetRequest) Reset() {
 	*x = GetFleetRequest{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[19]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1529,7 +1762,7 @@ func (x *GetFleetRequest) String() string {
 func (*GetFleetRequest) ProtoMessage() {}
 
 func (x *GetFleetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[19]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1542,7 +1775,7 @@ func (x *GetFleetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFleetRequest.ProtoReflect.Descriptor instead.
 func (*GetFleetRequest) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{19}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{22}
 }
 
 type GetFleetResponse struct {
@@ -1555,7 +1788,7 @@ type GetFleetResponse struct {
 
 func (x *GetFleetResponse) Reset() {
 	*x = GetFleetResponse{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[20]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1567,7 +1800,7 @@ func (x *GetFleetResponse) String() string {
 func (*GetFleetResponse) ProtoMessage() {}
 
 func (x *GetFleetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[20]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1580,7 +1813,7 @@ func (x *GetFleetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFleetResponse.ProtoReflect.Descriptor instead.
 func (*GetFleetResponse) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{20}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *GetFleetResponse) GetSummary() *FleetSummary {
@@ -1735,11 +1968,29 @@ const file_proto_ft12_v1_gateway_proto_rawDesc = "" +
 	"\x11GetHistoryRequest\"\x90\x01\n" +
 	"\x12GetHistoryResponse\x129\n" +
 	"\rclock_samples\x18\x01 \x03(\v2\x14.ft12.v1.ClockSampleR\fclockSamples\x12?\n" +
-	"\x0fhealth_outcomes\x18\x02 \x03(\v2\x16.ft12.v1.HealthOutcomeR\x0ehealthOutcomes\"\x11\n" +
+	"\x0fhealth_outcomes\x18\x02 \x03(\v2\x16.ft12.v1.HealthOutcomeR\x0ehealthOutcomes\"\xc0\x03\n" +
+	"\x0fGatewaySettings\x12#\n" +
+	"\rschedule_mode\x18\x01 \x01(\tR\fscheduleMode\x12(\n" +
+	"\x10poll_interval_ms\x18\x02 \x01(\x03R\x0epollIntervalMs\x12$\n" +
+	"\x0epoll_offset_ms\x18\x03 \x01(\x03R\fpollOffsetMs\x12,\n" +
+	"\x12request_timeout_ms\x18\x04 \x01(\x03R\x10requestTimeoutMs\x12%\n" +
+	"\x0eretry_attempts\x18\x05 \x01(\x05R\rretryAttempts\x12$\n" +
+	"\x0eretry_delay_ms\x18\x06 \x01(\x03R\fretryDelayMs\x12\"\n" +
+	"\rclock_warn_ms\x18\a \x01(\x03R\vclockWarnMs\x12*\n" +
+	"\x11clock_critical_ms\x18\b \x01(\x03R\x0fclockCriticalMs\x12#\n" +
+	"\rdegrade_after\x18\t \x01(\x05R\fdegradeAfter\x12#\n" +
+	"\roffline_after\x18\n" +
+	" \x01(\x05R\fofflineAfter\x12#\n" +
+	"\rrecover_after\x18\v \x01(\x05R\frecoverAfter\"T\n" +
+	"\x1cUpdateGatewaySettingsRequest\x124\n" +
+	"\bsettings\x18\x01 \x01(\v2\x18.ft12.v1.GatewaySettingsR\bsettings\"\x85\x01\n" +
+	"\x1dUpdateGatewaySettingsResponse\x124\n" +
+	"\bsettings\x18\x01 \x01(\v2\x18.ft12.v1.GatewaySettingsR\bsettings\x12.\n" +
+	"\x06status\x18\x02 \x01(\v2\x16.ft12.v1.GatewayStatusR\x06status\"\x11\n" +
 	"\x0fGetFleetRequest\"u\n" +
 	"\x10GetFleetResponse\x12/\n" +
 	"\asummary\x18\x01 \x01(\v2\x15.ft12.v1.FleetSummaryR\asummary\x120\n" +
-	"\adevices\x18\x02 \x03(\v2\x16.ft12.v1.GatewayStatusR\adevices2\xad\x04\n" +
+	"\adevices\x18\x02 \x03(\v2\x16.ft12.v1.GatewayStatusR\adevices2\x8e\x05\n" +
 	"\x0eGatewayService\x12P\n" +
 	"\tGetStatus\x12 .ft12.v1.GetGatewayStatusRequest\x1a!.ft12.v1.GetGatewayStatusResponse\x12K\n" +
 	"\fStartPolling\x12\x1c.ft12.v1.StartPollingRequest\x1a\x1d.ft12.v1.StartPollingResponse\x12H\n" +
@@ -1748,7 +1999,8 @@ const file_proto_ft12_v1_gateway_proto_rawDesc = "" +
 	"\x0fGetLastReadTime\x12\x1f.ft12.v1.GetLastReadTimeRequest\x1a .ft12.v1.GetLastReadTimeResponse\x12?\n" +
 	"\bGetFleet\x12\x18.ft12.v1.GetFleetRequest\x1a\x19.ft12.v1.GetFleetResponse\x12E\n" +
 	"\n" +
-	"GetHistory\x12\x1a.ft12.v1.GetHistoryRequest\x1a\x1b.ft12.v1.GetHistoryResponseBJZHgithub.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1;ft12v1b\x06proto3"
+	"GetHistory\x12\x1a.ft12.v1.GetHistoryRequest\x1a\x1b.ft12.v1.GetHistoryResponse\x12_\n" +
+	"\x0eUpdateSettings\x12%.ft12.v1.UpdateGatewaySettingsRequest\x1a&.ft12.v1.UpdateGatewaySettingsResponseBJZHgithub.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1;ft12v1b\x06proto3"
 
 var (
 	file_proto_ft12_v1_gateway_proto_rawDescOnce sync.Once
@@ -1762,46 +2014,49 @@ func file_proto_ft12_v1_gateway_proto_rawDescGZIP() []byte {
 	return file_proto_ft12_v1_gateway_proto_rawDescData
 }
 
-var file_proto_ft12_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_proto_ft12_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_proto_ft12_v1_gateway_proto_goTypes = []any{
-	(*ScheduleStatus)(nil),           // 0: ft12.v1.ScheduleStatus
-	(*RetryStatus)(nil),              // 1: ft12.v1.RetryStatus
-	(*ClockStatus)(nil),              // 2: ft12.v1.ClockStatus
-	(*DeviceHealth)(nil),             // 3: ft12.v1.DeviceHealth
-	(*DeviceIdentity)(nil),           // 4: ft12.v1.DeviceIdentity
-	(*GatewayStatus)(nil),            // 5: ft12.v1.GatewayStatus
-	(*FleetSummary)(nil),             // 6: ft12.v1.FleetSummary
-	(*GetGatewayStatusRequest)(nil),  // 7: ft12.v1.GetGatewayStatusRequest
-	(*GetGatewayStatusResponse)(nil), // 8: ft12.v1.GetGatewayStatusResponse
-	(*StartPollingRequest)(nil),      // 9: ft12.v1.StartPollingRequest
-	(*StartPollingResponse)(nil),     // 10: ft12.v1.StartPollingResponse
-	(*StopPollingRequest)(nil),       // 11: ft12.v1.StopPollingRequest
-	(*StopPollingResponse)(nil),      // 12: ft12.v1.StopPollingResponse
-	(*GetLastReadTimeRequest)(nil),   // 13: ft12.v1.GetLastReadTimeRequest
-	(*GetLastReadTimeResponse)(nil),  // 14: ft12.v1.GetLastReadTimeResponse
-	(*ClockSample)(nil),              // 15: ft12.v1.ClockSample
-	(*HealthOutcome)(nil),            // 16: ft12.v1.HealthOutcome
-	(*GetHistoryRequest)(nil),        // 17: ft12.v1.GetHistoryRequest
-	(*GetHistoryResponse)(nil),       // 18: ft12.v1.GetHistoryResponse
-	(*GetFleetRequest)(nil),          // 19: ft12.v1.GetFleetRequest
-	(*GetFleetResponse)(nil),         // 20: ft12.v1.GetFleetResponse
-	(*timestamppb.Timestamp)(nil),    // 21: google.protobuf.Timestamp
-	(ServiceState)(0),                // 22: ft12.v1.ServiceState
-	(ChecksumMode)(0),                // 23: ft12.v1.ChecksumMode
-	(*GetRecentEventsRequest)(nil),   // 24: ft12.v1.GetRecentEventsRequest
-	(*GetRecentEventsResponse)(nil),  // 25: ft12.v1.GetRecentEventsResponse
+	(*ScheduleStatus)(nil),                // 0: ft12.v1.ScheduleStatus
+	(*RetryStatus)(nil),                   // 1: ft12.v1.RetryStatus
+	(*ClockStatus)(nil),                   // 2: ft12.v1.ClockStatus
+	(*DeviceHealth)(nil),                  // 3: ft12.v1.DeviceHealth
+	(*DeviceIdentity)(nil),                // 4: ft12.v1.DeviceIdentity
+	(*GatewayStatus)(nil),                 // 5: ft12.v1.GatewayStatus
+	(*FleetSummary)(nil),                  // 6: ft12.v1.FleetSummary
+	(*GetGatewayStatusRequest)(nil),       // 7: ft12.v1.GetGatewayStatusRequest
+	(*GetGatewayStatusResponse)(nil),      // 8: ft12.v1.GetGatewayStatusResponse
+	(*StartPollingRequest)(nil),           // 9: ft12.v1.StartPollingRequest
+	(*StartPollingResponse)(nil),          // 10: ft12.v1.StartPollingResponse
+	(*StopPollingRequest)(nil),            // 11: ft12.v1.StopPollingRequest
+	(*StopPollingResponse)(nil),           // 12: ft12.v1.StopPollingResponse
+	(*GetLastReadTimeRequest)(nil),        // 13: ft12.v1.GetLastReadTimeRequest
+	(*GetLastReadTimeResponse)(nil),       // 14: ft12.v1.GetLastReadTimeResponse
+	(*ClockSample)(nil),                   // 15: ft12.v1.ClockSample
+	(*HealthOutcome)(nil),                 // 16: ft12.v1.HealthOutcome
+	(*GetHistoryRequest)(nil),             // 17: ft12.v1.GetHistoryRequest
+	(*GetHistoryResponse)(nil),            // 18: ft12.v1.GetHistoryResponse
+	(*GatewaySettings)(nil),               // 19: ft12.v1.GatewaySettings
+	(*UpdateGatewaySettingsRequest)(nil),  // 20: ft12.v1.UpdateGatewaySettingsRequest
+	(*UpdateGatewaySettingsResponse)(nil), // 21: ft12.v1.UpdateGatewaySettingsResponse
+	(*GetFleetRequest)(nil),               // 22: ft12.v1.GetFleetRequest
+	(*GetFleetResponse)(nil),              // 23: ft12.v1.GetFleetResponse
+	(*timestamppb.Timestamp)(nil),         // 24: google.protobuf.Timestamp
+	(ServiceState)(0),                     // 25: ft12.v1.ServiceState
+	(ChecksumMode)(0),                     // 26: ft12.v1.ChecksumMode
+	(*GetRecentEventsRequest)(nil),        // 27: ft12.v1.GetRecentEventsRequest
+	(*GetRecentEventsResponse)(nil),       // 28: ft12.v1.GetRecentEventsResponse
 }
 var file_proto_ft12_v1_gateway_proto_depIdxs = []int32{
-	21, // 0: ft12.v1.ScheduleStatus.next_poll_at:type_name -> google.protobuf.Timestamp
-	21, // 1: ft12.v1.ClockStatus.updated_at:type_name -> google.protobuf.Timestamp
-	21, // 2: ft12.v1.DeviceHealth.since:type_name -> google.protobuf.Timestamp
-	21, // 3: ft12.v1.DeviceIdentity.read_at:type_name -> google.protobuf.Timestamp
-	22, // 4: ft12.v1.GatewayStatus.state:type_name -> ft12.v1.ServiceState
-	23, // 5: ft12.v1.GatewayStatus.checksum_mode:type_name -> ft12.v1.ChecksumMode
-	21, // 6: ft12.v1.GatewayStatus.last_successful_read_time:type_name -> google.protobuf.Timestamp
-	21, // 7: ft12.v1.GatewayStatus.last_device_time:type_name -> google.protobuf.Timestamp
-	21, // 8: ft12.v1.GatewayStatus.last_tx_time:type_name -> google.protobuf.Timestamp
-	21, // 9: ft12.v1.GatewayStatus.last_rx_time:type_name -> google.protobuf.Timestamp
+	24, // 0: ft12.v1.ScheduleStatus.next_poll_at:type_name -> google.protobuf.Timestamp
+	24, // 1: ft12.v1.ClockStatus.updated_at:type_name -> google.protobuf.Timestamp
+	24, // 2: ft12.v1.DeviceHealth.since:type_name -> google.protobuf.Timestamp
+	24, // 3: ft12.v1.DeviceIdentity.read_at:type_name -> google.protobuf.Timestamp
+	25, // 4: ft12.v1.GatewayStatus.state:type_name -> ft12.v1.ServiceState
+	26, // 5: ft12.v1.GatewayStatus.checksum_mode:type_name -> ft12.v1.ChecksumMode
+	24, // 6: ft12.v1.GatewayStatus.last_successful_read_time:type_name -> google.protobuf.Timestamp
+	24, // 7: ft12.v1.GatewayStatus.last_device_time:type_name -> google.protobuf.Timestamp
+	24, // 8: ft12.v1.GatewayStatus.last_tx_time:type_name -> google.protobuf.Timestamp
+	24, // 9: ft12.v1.GatewayStatus.last_rx_time:type_name -> google.protobuf.Timestamp
 	0,  // 10: ft12.v1.GatewayStatus.schedule:type_name -> ft12.v1.ScheduleStatus
 	1,  // 11: ft12.v1.GatewayStatus.retry:type_name -> ft12.v1.RetryStatus
 	2,  // 12: ft12.v1.GatewayStatus.clock:type_name -> ft12.v1.ClockStatus
@@ -1810,33 +2065,38 @@ var file_proto_ft12_v1_gateway_proto_depIdxs = []int32{
 	5,  // 15: ft12.v1.GetGatewayStatusResponse.status:type_name -> ft12.v1.GatewayStatus
 	5,  // 16: ft12.v1.StartPollingResponse.status:type_name -> ft12.v1.GatewayStatus
 	5,  // 17: ft12.v1.StopPollingResponse.status:type_name -> ft12.v1.GatewayStatus
-	21, // 18: ft12.v1.GetLastReadTimeResponse.device_time:type_name -> google.protobuf.Timestamp
-	21, // 19: ft12.v1.GetLastReadTimeResponse.read_time:type_name -> google.protobuf.Timestamp
-	21, // 20: ft12.v1.ClockSample.at:type_name -> google.protobuf.Timestamp
-	21, // 21: ft12.v1.HealthOutcome.at:type_name -> google.protobuf.Timestamp
+	24, // 18: ft12.v1.GetLastReadTimeResponse.device_time:type_name -> google.protobuf.Timestamp
+	24, // 19: ft12.v1.GetLastReadTimeResponse.read_time:type_name -> google.protobuf.Timestamp
+	24, // 20: ft12.v1.ClockSample.at:type_name -> google.protobuf.Timestamp
+	24, // 21: ft12.v1.HealthOutcome.at:type_name -> google.protobuf.Timestamp
 	15, // 22: ft12.v1.GetHistoryResponse.clock_samples:type_name -> ft12.v1.ClockSample
 	16, // 23: ft12.v1.GetHistoryResponse.health_outcomes:type_name -> ft12.v1.HealthOutcome
-	6,  // 24: ft12.v1.GetFleetResponse.summary:type_name -> ft12.v1.FleetSummary
-	5,  // 25: ft12.v1.GetFleetResponse.devices:type_name -> ft12.v1.GatewayStatus
-	7,  // 26: ft12.v1.GatewayService.GetStatus:input_type -> ft12.v1.GetGatewayStatusRequest
-	9,  // 27: ft12.v1.GatewayService.StartPolling:input_type -> ft12.v1.StartPollingRequest
-	11, // 28: ft12.v1.GatewayService.StopPolling:input_type -> ft12.v1.StopPollingRequest
-	24, // 29: ft12.v1.GatewayService.GetRecentEvents:input_type -> ft12.v1.GetRecentEventsRequest
-	13, // 30: ft12.v1.GatewayService.GetLastReadTime:input_type -> ft12.v1.GetLastReadTimeRequest
-	19, // 31: ft12.v1.GatewayService.GetFleet:input_type -> ft12.v1.GetFleetRequest
-	17, // 32: ft12.v1.GatewayService.GetHistory:input_type -> ft12.v1.GetHistoryRequest
-	8,  // 33: ft12.v1.GatewayService.GetStatus:output_type -> ft12.v1.GetGatewayStatusResponse
-	10, // 34: ft12.v1.GatewayService.StartPolling:output_type -> ft12.v1.StartPollingResponse
-	12, // 35: ft12.v1.GatewayService.StopPolling:output_type -> ft12.v1.StopPollingResponse
-	25, // 36: ft12.v1.GatewayService.GetRecentEvents:output_type -> ft12.v1.GetRecentEventsResponse
-	14, // 37: ft12.v1.GatewayService.GetLastReadTime:output_type -> ft12.v1.GetLastReadTimeResponse
-	20, // 38: ft12.v1.GatewayService.GetFleet:output_type -> ft12.v1.GetFleetResponse
-	18, // 39: ft12.v1.GatewayService.GetHistory:output_type -> ft12.v1.GetHistoryResponse
-	33, // [33:40] is the sub-list for method output_type
-	26, // [26:33] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	19, // 24: ft12.v1.UpdateGatewaySettingsRequest.settings:type_name -> ft12.v1.GatewaySettings
+	19, // 25: ft12.v1.UpdateGatewaySettingsResponse.settings:type_name -> ft12.v1.GatewaySettings
+	5,  // 26: ft12.v1.UpdateGatewaySettingsResponse.status:type_name -> ft12.v1.GatewayStatus
+	6,  // 27: ft12.v1.GetFleetResponse.summary:type_name -> ft12.v1.FleetSummary
+	5,  // 28: ft12.v1.GetFleetResponse.devices:type_name -> ft12.v1.GatewayStatus
+	7,  // 29: ft12.v1.GatewayService.GetStatus:input_type -> ft12.v1.GetGatewayStatusRequest
+	9,  // 30: ft12.v1.GatewayService.StartPolling:input_type -> ft12.v1.StartPollingRequest
+	11, // 31: ft12.v1.GatewayService.StopPolling:input_type -> ft12.v1.StopPollingRequest
+	27, // 32: ft12.v1.GatewayService.GetRecentEvents:input_type -> ft12.v1.GetRecentEventsRequest
+	13, // 33: ft12.v1.GatewayService.GetLastReadTime:input_type -> ft12.v1.GetLastReadTimeRequest
+	22, // 34: ft12.v1.GatewayService.GetFleet:input_type -> ft12.v1.GetFleetRequest
+	17, // 35: ft12.v1.GatewayService.GetHistory:input_type -> ft12.v1.GetHistoryRequest
+	20, // 36: ft12.v1.GatewayService.UpdateSettings:input_type -> ft12.v1.UpdateGatewaySettingsRequest
+	8,  // 37: ft12.v1.GatewayService.GetStatus:output_type -> ft12.v1.GetGatewayStatusResponse
+	10, // 38: ft12.v1.GatewayService.StartPolling:output_type -> ft12.v1.StartPollingResponse
+	12, // 39: ft12.v1.GatewayService.StopPolling:output_type -> ft12.v1.StopPollingResponse
+	28, // 40: ft12.v1.GatewayService.GetRecentEvents:output_type -> ft12.v1.GetRecentEventsResponse
+	14, // 41: ft12.v1.GatewayService.GetLastReadTime:output_type -> ft12.v1.GetLastReadTimeResponse
+	23, // 42: ft12.v1.GatewayService.GetFleet:output_type -> ft12.v1.GetFleetResponse
+	18, // 43: ft12.v1.GatewayService.GetHistory:output_type -> ft12.v1.GetHistoryResponse
+	21, // 44: ft12.v1.GatewayService.UpdateSettings:output_type -> ft12.v1.UpdateGatewaySettingsResponse
+	37, // [37:45] is the sub-list for method output_type
+	29, // [29:37] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_proto_ft12_v1_gateway_proto_init() }
@@ -1851,7 +2111,7 @@ func file_proto_ft12_v1_gateway_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_ft12_v1_gateway_proto_rawDesc), len(file_proto_ft12_v1_gateway_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   21,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

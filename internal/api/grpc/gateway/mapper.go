@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"time"
+
 	ft12v1 "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/mapping"
 	domain "github.com/dimbo1324/ttron-ttr20-time-r/internal/gateway"
@@ -154,4 +156,40 @@ func mapHistory(history domain.History) *ft12v1.GetHistoryResponse {
 
 func mapEvents(records []events.FrameRecord, limit uint32) []*ft12v1.FrameEvent {
 	return mapping.Events(records, limit)
+}
+
+func mapSettings(settings domain.Settings) *ft12v1.GatewaySettings {
+	return &ft12v1.GatewaySettings{
+		ScheduleMode:     settings.ScheduleMode,
+		PollIntervalMs:   mapping.Millis(settings.PollInterval),
+		PollOffsetMs:     mapping.Millis(settings.PollOffset),
+		RequestTimeoutMs: mapping.Millis(settings.RequestTimeout),
+		RetryAttempts:    int32(settings.RetryAttempts),
+		RetryDelayMs:     mapping.Millis(settings.RetryDelay),
+		ClockWarnMs:      mapping.Millis(settings.ClockWarn),
+		ClockCriticalMs:  mapping.Millis(settings.ClockCritical),
+		DegradeAfter:     int32(settings.DegradeAfter),
+		OfflineAfter:     int32(settings.OfflineAfter),
+		RecoverAfter:     int32(settings.RecoverAfter),
+	}
+}
+
+// settingsFromProto reads a request without repairing it. A zero arriving here
+// is a zero the caller asked for, and Settings.Validate is what decides
+// whether it is allowed -- filling in a default at this seam would let an
+// empty request quietly reconfigure a running gateway.
+func settingsFromProto(in *ft12v1.GatewaySettings) domain.Settings {
+	return domain.Settings{
+		ScheduleMode:   in.GetScheduleMode(),
+		PollInterval:   time.Duration(in.GetPollIntervalMs()) * time.Millisecond,
+		PollOffset:     time.Duration(in.GetPollOffsetMs()) * time.Millisecond,
+		RequestTimeout: time.Duration(in.GetRequestTimeoutMs()) * time.Millisecond,
+		RetryAttempts:  int(in.GetRetryAttempts()),
+		RetryDelay:     time.Duration(in.GetRetryDelayMs()) * time.Millisecond,
+		ClockWarn:      time.Duration(in.GetClockWarnMs()) * time.Millisecond,
+		ClockCritical:  time.Duration(in.GetClockCriticalMs()) * time.Millisecond,
+		DegradeAfter:   int(in.GetDegradeAfter()),
+		OfflineAfter:   int(in.GetOfflineAfter()),
+		RecoverAfter:   int(in.GetRecoverAfter()),
+	}
 }

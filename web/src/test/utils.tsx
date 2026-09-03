@@ -253,3 +253,21 @@ export function eventFixture(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+/** The settings the API returns and accepts, matching gatewayStatusFixture. */
+export function settingsFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    scheduleMode: "aligned",
+    pollIntervalMs: 60_000,
+    pollOffsetMs: 5000,
+    requestTimeoutMs: 1500,
+    retryAttempts: 2,
+    retryDelayMs: 200,
+    clockWarnMs: 2000,
+    clockCriticalMs: 30_000,
+    degradeAfter: 3,
+    offlineAfter: 10,
+    recoverAfter: 2,
+    ...overrides,
+  };
+}

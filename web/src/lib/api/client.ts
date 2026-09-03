@@ -9,10 +9,12 @@ import {
   gatewayStatusSchema,
   historySchema,
   setFaultModeSchema,
+  updateSettingsSchema,
   type ApiEmulatorStatus,
   type ApiEvent,
   type ApiFaultMode,
   type ApiFleet,
+  type ApiGatewaySettings,
   type ApiGatewayStatus,
   type ApiHistory,
 } from "./schema";
@@ -153,4 +155,10 @@ export const api = {
     request("/emulator/fault-mode", setFaultModeSchema, { ...json(fault), signal }).then(
       (body) => body.faultMode,
     ),
+
+  updateSettings: (
+    settings: ApiGatewaySettings,
+    signal?: AbortSignal,
+  ): Promise<{ settings: ApiGatewaySettings; status: ApiGatewayStatus }> =>
+    request("/gateway/settings", updateSettingsSchema, { ...json(settings), signal }),
 };

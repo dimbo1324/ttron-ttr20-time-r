@@ -200,3 +200,31 @@ func (t *Tracker) Outcomes() []Outcome {
 	}
 	return out
 }
+
+// SetPolicy changes the hysteresis thresholds of a running tracker and returns
+// what was actually applied.
+//
+// The window size is not part of this. Resizing the ring would discard the
+// outcomes in it, so a tracker keeps the window it was built with and only the
+// thresholds move -- which is what an operator tuning a flapping line is
+// reaching for anyway.
+//
+// The state is left where it is. Tightening the degrade threshold below the
+// current failure count does not retroactively declare an outage: the new rule
+// applies from the next poll, which is the only outcome it was written about.
+func (t *Tracker) SetPolicy(policy Policy) Policy {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	next := policy.Normalize()
+	next.WindowSize = t.policy.WindowSize
+	t.policy = next
+	return next
+}
+
+// Policy reports the thresholds in force.
+func (t *Tracker) Policy() Policy {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.policy
+}

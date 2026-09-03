@@ -18,7 +18,7 @@ func (s *Service) Run(ctx context.Context) error {
 			return nil
 		}
 		s.incrementConnectionAttempts()
-		s.logger.Printf("gateway connecting target=%s mode=%s schedule=%s", s.cfg.Target, s.mode, s.schedule.String())
+		s.logger.Printf("gateway connecting target=%s mode=%s schedule=%s", s.cfg.Target, s.mode, s.currentSchedule().String())
 		conn, err := transporttcp.Dial(ctx, transporttcp.ClientConfig{
 			Address:        s.cfg.Target,
 			ConnectTimeout: s.cfg.ConnectTimeout,

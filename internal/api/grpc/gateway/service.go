@@ -2,10 +2,13 @@ package gateway
 
 import (
 	"context"
+	"errors"
 
 	ft12v1 "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/mapping"
 	domain "github.com/dimbo1324/ttron-ttr20-time-r/internal/gateway"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // FleetSource is anything that can report on more than one device -- in
@@ -77,4 +80,23 @@ func (s *Service) GetFleet(context.Context, *ft12v1.GetFleetRequest) (*ft12v1.Ge
 // GetStatus, so a console can draw the run rather than only its summary.
 func (s *Service) GetHistory(context.Context, *ft12v1.GetHistoryRequest) (*ft12v1.GetHistoryResponse, error) {
 	return mapHistory(s.gateway.History()), nil
+}
+
+// UpdateSettings reconfigures a gateway that may be mid-poll.
+//
+// A rejected setting comes back as InvalidArgument rather than as a generic
+// failure: it is the caller's request that is wrong, not the gateway, and the
+// HTTP adapter turns that distinction into a 400 rather than a 502.
+func (s *Service) UpdateSettings(_ context.Context, req *ft12v1.UpdateGatewaySettingsRequest) (*ft12v1.UpdateGatewaySettingsResponse, error) {
+	applied, err := s.gateway.UpdateSettings(settingsFromProto(req.GetSettings()))
+	if err != nil {
+		if errors.Is(err, domain.ErrInvalidSettings) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, err
+	}
+	return &ft12v1.UpdateGatewaySettingsResponse{
+		Settings: mapSettings(applied),
+		Status:   mapStatus(s.gateway.Status()),
+	}, nil
 }

@@ -85,6 +85,8 @@ export interface GatewaySettings {
   offsetMs: number;
   requestTimeoutMs: number;
   retryAttempts: number;
+  /** Delay before the first retry; doubles on each further attempt. */
+  retryDelayMs: number;
   thresholds: ClockThresholds;
   policy: HealthPolicy;
   identityProbe: boolean;
@@ -159,6 +161,7 @@ export const DEFAULT_GATEWAY: GatewaySettings = {
   offsetMs: 0,
   requestTimeoutMs: 1500,
   retryAttempts: 2,
+  retryDelayMs: 200,
   thresholds: { warnMs: 2000, criticalMs: 30000 },
   policy: { degradeAfter: 3, offlineAfter: 10, recoverAfter: 2 },
   identityProbe: true,
@@ -398,7 +401,10 @@ function runCycle(state: BenchState, now: number): Partial<BenchState> {
   for (let attempt = 0; attempt <= gateway.retryAttempts; attempt += 1) {
     if (attempt > 0) {
       counters.retries += 1;
-      cursor += 200 * 2 ** (attempt - 1);
+      // Exponential from the configured delay, the same shape the Go retry
+      // policy uses -- a bench that backed off on a schedule of its own would
+      // make a retry storm look different here than on the wire.
+      cursor += gateway.retryDelayMs * 2 ** (attempt - 1);
     }
 
     const request = encodeFrame(0x00, adapterAddress, buildReadTimeRequest(), checksumMode);

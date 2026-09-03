@@ -47,14 +47,16 @@ func (f *fakeEmulator) GetRecentEvents(context.Context, uint32) ([]*ft12v1.Frame
 }
 
 type fakeGateway struct {
-	status     *ft12v1.GatewayStatus
-	statusErr  error
-	started    bool
-	stopped    bool
-	events     []*ft12v1.FrameEvent
-	fleet      *ft12v1.GetFleetResponse
-	fleetErr   error
-	historyErr error
+	status      *ft12v1.GatewayStatus
+	statusErr   error
+	started     bool
+	stopped     bool
+	events      []*ft12v1.FrameEvent
+	fleet       *ft12v1.GetFleetResponse
+	fleetErr    error
+	historyErr  error
+	settings    *ft12v1.GatewaySettings
+	settingsErr error
 }
 
 func (f *fakeGateway) GetStatus(context.Context) (*ft12v1.GatewayStatus, error) {
@@ -81,6 +83,14 @@ func (f *fakeGateway) GetLastReadTime(context.Context) (*ft12v1.GetLastReadTimeR
 
 func (f *fakeGateway) GetRecentEvents(context.Context, uint32) ([]*ft12v1.FrameEvent, error) {
 	return f.events, nil
+}
+
+func (f *fakeGateway) UpdateSettings(_ context.Context, settings *ft12v1.GatewaySettings) (*ft12v1.GatewaySettings, *ft12v1.GatewayStatus, error) {
+	if f.settingsErr != nil {
+		return nil, nil, f.settingsErr
+	}
+	f.settings = settings
+	return settings, f.status, nil
 }
 
 func (f *fakeGateway) GetHistory(context.Context) (*ft12v1.GetHistoryResponse, error) {

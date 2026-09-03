@@ -26,6 +26,7 @@ const (
 	GatewayService_GetLastReadTime_FullMethodName = "/ft12.v1.GatewayService/GetLastReadTime"
 	GatewayService_GetFleet_FullMethodName        = "/ft12.v1.GatewayService/GetFleet"
 	GatewayService_GetHistory_FullMethodName      = "/ft12.v1.GatewayService/GetHistory"
+	GatewayService_UpdateSettings_FullMethodName  = "/ft12.v1.GatewayService/UpdateSettings"
 )
 
 // GatewayServiceClient is the client API for GatewayService service.
@@ -39,6 +40,7 @@ type GatewayServiceClient interface {
 	GetLastReadTime(ctx context.Context, in *GetLastReadTimeRequest, opts ...grpc.CallOption) (*GetLastReadTimeResponse, error)
 	GetFleet(ctx context.Context, in *GetFleetRequest, opts ...grpc.CallOption) (*GetFleetResponse, error)
 	GetHistory(ctx context.Context, in *GetHistoryRequest, opts ...grpc.CallOption) (*GetHistoryResponse, error)
+	UpdateSettings(ctx context.Context, in *UpdateGatewaySettingsRequest, opts ...grpc.CallOption) (*UpdateGatewaySettingsResponse, error)
 }
 
 type gatewayServiceClient struct {
@@ -119,6 +121,16 @@ func (c *gatewayServiceClient) GetHistory(ctx context.Context, in *GetHistoryReq
 	return out, nil
 }
 
+func (c *gatewayServiceClient) UpdateSettings(ctx context.Context, in *UpdateGatewaySettingsRequest, opts ...grpc.CallOption) (*UpdateGatewaySettingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateGatewaySettingsResponse)
+	err := c.cc.Invoke(ctx, GatewayService_UpdateSettings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GatewayServiceServer is the server API for GatewayService service.
 // All implementations must embed UnimplementedGatewayServiceServer
 // for forward compatibility.
@@ -130,6 +142,7 @@ type GatewayServiceServer interface {
 	GetLastReadTime(context.Context, *GetLastReadTimeRequest) (*GetLastReadTimeResponse, error)
 	GetFleet(context.Context, *GetFleetRequest) (*GetFleetResponse, error)
 	GetHistory(context.Context, *GetHistoryRequest) (*GetHistoryResponse, error)
+	UpdateSettings(context.Context, *UpdateGatewaySettingsRequest) (*UpdateGatewaySettingsResponse, error)
 	mustEmbedUnimplementedGatewayServiceServer()
 }
 
@@ -160,6 +173,9 @@ func (UnimplementedGatewayServiceServer) GetFleet(context.Context, *GetFleetRequ
 }
 func (UnimplementedGatewayServiceServer) GetHistory(context.Context, *GetHistoryRequest) (*GetHistoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetHistory not implemented")
+}
+func (UnimplementedGatewayServiceServer) UpdateSettings(context.Context, *UpdateGatewaySettingsRequest) (*UpdateGatewaySettingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateSettings not implemented")
 }
 func (UnimplementedGatewayServiceServer) mustEmbedUnimplementedGatewayServiceServer() {}
 func (UnimplementedGatewayServiceServer) testEmbeddedByValue()                        {}
@@ -308,6 +324,24 @@ func _GatewayService_GetHistory_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GatewayService_UpdateSettings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateGatewaySettingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayServiceServer).UpdateSettings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GatewayService_UpdateSettings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayServiceServer).UpdateSettings(ctx, req.(*UpdateGatewaySettingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GatewayService_ServiceDesc is the grpc.ServiceDesc for GatewayService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -342,6 +376,10 @@ var GatewayService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetHistory",
 			Handler:    _GatewayService_GetHistory_Handler,
+		},
+		{
+			MethodName: "UpdateSettings",
+			Handler:    _GatewayService_UpdateSettings_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
