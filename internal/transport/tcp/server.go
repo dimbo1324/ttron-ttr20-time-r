@@ -70,6 +70,8 @@ func (s *Server) Run(ctx context.Context) error {
 			}
 			s.mu.Unlock()
 			if ctx.Err() != nil || errors.Is(err, net.ErrClosed) {
+				//nolint:nilerr // A listener closed on purpose is not a
+				// failure to accept; it is the shutdown path.
 				return nil
 			}
 			return err
@@ -80,7 +82,7 @@ func (s *Server) Run(ctx context.Context) error {
 		wg.Add(1)
 		go func(c net.Conn) {
 			defer wg.Done()
-			defer c.Close()
+			defer func() { _ = c.Close() }()
 			s.handler.HandleConnection(ctx, c)
 		}(conn)
 	}

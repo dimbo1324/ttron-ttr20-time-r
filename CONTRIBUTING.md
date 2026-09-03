@@ -1,92 +1,102 @@
 # Contributing
 
-Thanks for taking a look at this project. This repository is structured as a
-small industrial protocol simulation platform, so changes should preserve the
-separation between protocol core, service runtime, API adapters, and
-deployment tooling.
+Thanks for looking at this project. It is structured as a small industrial
+protocol simulation platform, and the thing most worth preserving in a change
+is the separation between the protocol core, the service runtime, the API
+adapters and the deployment tooling.
 
 ## Prerequisites
 
-- Go version declared in `go.mod`.
-- Docker Desktop or compatible Docker daemon for Compose checks.
-- PowerShell on Windows, or `sh`/`make` on Unix-like systems.
+- Go, the version declared in `go.mod`.
+- Node 22 for the console (`web/package.json` sets the floor) and pnpm 9, the
+  version CI installs.
+- Docker, for the Compose checks. Everything else works without it.
+
+`make` is convenient and never required: the repository's checks are one Go
+program.
 
 ## Setup
 
-```powershell
+```sh
 git clone https://github.com/dimbo1324/ttron-ttr20-time-r.git
 cd ttron-ttr20-time-r
 go test ./...
+pnpm --dir web install
 ```
 
-## Backend Checks
+## Before opening a pull request
 
-```powershell
-go fmt ./...
-.\scripts\check-go-format.ps1
-go test ./...
-go build ./...
-.\scripts\check-architecture.ps1
+```sh
+go run ./tools/checks release
 ```
 
-## Docker Checks
+Formatting, dependency boundaries, documentation links, `go vet`, the tests,
+the build, Compose configuration and a cleanup dry-run. Then the things it
+does not cover:
 
-```powershell
-docker compose config
-docker compose build
-docker compose up -d
-docker compose down -v
+```sh
+make lint
+go test -race ./...
+pnpm --dir web lint
+pnpm --dir web typecheck
+pnpm --dir web test
 ```
 
-## Architecture Rules
+CI runs the same commands. If one of them fails here it will fail there.
 
-- Keep `internal/protocol` independent of TCP, gRPC, HTTP, config, logging,
-  Docker, emulator, and gateway packages.
-- Do not duplicate protocol business logic in API adapters.
-- Do not modify generated gRPC files by hand.
-- Do not change wire protocol or gRPC contracts without a dedicated design
-  change and tests.
+## Architecture rules
 
-## Generated Artifacts
+These are enforced by `go run ./tools/checks architecture`, not merely
+requested:
 
-Do not commit:
+- `internal/protocol` depends on the standard library and nothing else — not
+  TCP, gRPC, HTTP, config, logging, Docker, or the service packages.
+- `internal/emulator` and `internal/gateway` do not import each other.
+- `internal/api/http` does not import the service packages; it talks to them
+  through the gRPC clients.
+- Nothing active imports `legacy/`.
 
-- `bin/`
-- `dist/`
-- `tmp/`
-- `runtime/`
-- logs
-- local `.exe` files
-
-Use cleanup dry-run before committing when local build output has accumulated:
-
-```powershell
-.\scripts\clean-runtime.ps1 -DryRun
-```
-
-Active Go code lives in `cmd/` and `internal/`. `legacy/` is reference-only and
-is excluded from active formatting/build/test checks.
+Beyond that: do not duplicate protocol logic in an adapter, do not edit
+generated gRPC files by hand, and do not change the wire format or the gRPC
+contracts without a deliberate design change and tests to go with it.
 
 ## Protobuf
 
-Regenerate protobuf code only when proto sources intentionally change:
+Regenerate only when a proto source has intentionally changed:
 
-```powershell
+```sh
 make proto
 ```
 
-If `make` is unavailable, use the `protoc` command documented in the Makefile.
+If `make` is unavailable, the `protoc` invocation is written out in the
+`Makefile`.
 
-## Branch And Commit Style
+## Documentation
 
-Use focused branches and concise imperative commit messages, for example:
+Documentation lives in `docs/` and is checked: `go run ./tools/checks
+doc-links` fails on a local Markdown link that does not resolve, and CI runs
+it.
 
-- `fix: handle gateway readiness timeout`
-- `docs: update docker troubleshooting`
-- `test: cover crc16 parser noise`
+The screenshots in [docs/tour.md](docs/tour.md) are produced by a script
+against a running stack rather than taken by hand. If a change alters the
+console's interface, re-run it — see
+[tools/docmedia](tools/docmedia/README.md).
 
-Run local CI equivalents before opening a PR:
+## Generated artefacts
 
-```powershell
-.\scripts\release-check.ps1
+Do not commit `bin/`, `dist/`, `tmp/`, `runtime/`, logs or local `.exe` files.
+Everything a run produces belongs under `runtime/`, which is gitignored.
+
+```sh
+go run ./tools/checks clean-runtime --dry-run
+go run ./tools/checks clean-runtime
 ```
+
+## Branches and commits
+
+Focused branches, and commit subjects in the imperative that say what changed
+and why it mattered:
+
+- `fix: answer an upstream timeout with 504 rather than 502`
+- `docs: bring the CI job table in line with the workflow`
+- `test: cover crc16 parser resynchronisation after noise`

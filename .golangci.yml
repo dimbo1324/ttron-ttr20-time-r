@@ -1,0 +1,46 @@
+# golangci-lint configuration.
+#
+# The set is deliberately small. A linter that fires on style opinions trains
+# people to skim its output, and an ignored linter is worse than an absent one:
+# it costs CI time and buys a habit of scrolling past warnings.
+#
+# Everything enabled below answers a question the compiler cannot: is a return
+# value being dropped, is an error being compared the wrong way, is this code
+# reachable at all.
+version: "2"
+
+run:
+  timeout: 5m
+  # legacy/ carries its own go.mod, so ./... never reaches it. Nothing to
+  # exclude here; the preserved implementations are a record, not a target.
+
+linters:
+  # errcheck, govet, ineffassign, staticcheck, unused.
+  default: standard
+  enable:
+    # An HTTP response body that is never closed leaks a connection, and the
+    # console's client makes one per poll.
+    - bodyclose
+    # Comparing errors with == breaks the moment somebody wraps one, which
+    # this codebase does throughout with %w.
+    - errorlint
+    # A conversion that changes nothing is usually a leftover from a type that
+    # has since changed.
+    - unconvert
+    # Returning nil after checking an error is almost always a mistake, and an
+    # invisible one.
+    - nilerr
+    - misspell
+
+  exclusions:
+    rules:
+      # A deferred Close in a test teardown has nothing useful to do with its
+      # error: the test has already passed or failed on its own terms, and
+      # `_ =` on every line would be noise standing in for diligence.
+      - path: _test\.go
+        linters:
+          - errcheck
+
+formatters:
+  enable:
+    - gofmt

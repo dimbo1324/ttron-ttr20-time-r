@@ -56,6 +56,6 @@ func (w fileWriter) Write(p []byte) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("open log file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return f.Write(p)
 }

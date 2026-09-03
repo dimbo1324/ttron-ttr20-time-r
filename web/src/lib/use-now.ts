@@ -19,6 +19,10 @@ export function useNow(intervalMs = 250): number {
   const [now, setNow] = useState(0);
 
   useEffect(() => {
+    // Deliberate: the first render has to match what the server sent, and
+    // waiting a whole interval for the first real value would leave a visible
+    // gap where the time should be.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNow(Date.now());
     const id = window.setInterval(() => setNow(Date.now()), intervalMs);
     return () => window.clearInterval(id);

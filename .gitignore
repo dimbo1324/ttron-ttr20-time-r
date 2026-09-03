@@ -37,8 +37,12 @@ __pycache__/
 .venv/
 venv/
 
-# Node future
+# Node
 node_modules/
+
+# Intermediate frames for the documentation's animations. The GIFs they are
+# folded into are committed; the several hundred PNGs behind each one are not.
+docs/media/.frames/
 
 # Docker future
 *.tar

@@ -9,6 +9,11 @@ import "@testing-library/jest-dom";
  * same four lines of boilerplate.
  */
 beforeAll(() => {
+  // Route handlers run in the node environment, where none of this exists and
+  // none of it is wanted: stubbing a browser into a server test would let a
+  // handler reach for something the server does not have and still pass.
+  if (typeof window === "undefined") return;
+
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: (query: string) => ({

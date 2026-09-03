@@ -110,7 +110,7 @@ func (d Device) Validate() error {
 		return fmt.Errorf("%w: target must not be empty", ErrInvalidTarget)
 	}
 	if _, _, err := splitHostPort(d.Target); err != nil {
-		return fmt.Errorf("%w: %v", ErrInvalidTarget, err)
+		return fmt.Errorf("%w: %w", ErrInvalidTarget, err)
 	}
 	if _, err := checksum.ParseMode(d.ChecksumMode); err != nil {
 		return err

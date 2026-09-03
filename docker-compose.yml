@@ -6,6 +6,8 @@ services:
       args:
         SERVICE: ft12-emulator
     command:
+      - -log
+      - ""
       - -listen
       - :9000
       - -grpc-listen
@@ -32,6 +34,8 @@ services:
       args:
         SERVICE: ft12-gateway
     command:
+      - -log
+      - ""
       - -target
       - ft12-emulator:9000
       - -grpc-listen
@@ -64,6 +68,8 @@ services:
       args:
         SERVICE: ft12-api
     command:
+      - -log
+      - ""
       - -http-listen
       - :8080
       - -emulator-grpc
@@ -85,6 +91,32 @@ services:
       timeout: 3s
       retries: 8
       start_period: 5s
+    restart: unless-stopped
+
+  ft12-console:
+    build:
+      context: .
+      dockerfile: deploy/docker/console.Dockerfile
+    environment:
+      # Read per request by the proxy route handler, not baked into the image:
+      # see web/src/app/upstream.
+      FT12_API_URL: http://ft12-api:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      ft12-api:
+        condition: service_healthy
+    healthcheck:
+      # The same binary the Go services use. The runtime image is distroless
+      # and has neither a shell nor curl, and one answer to "is this up" across
+      # the stack beats three.
+      test: ["CMD", "/app/ft12-healthcheck", "-url", "http://127.0.0.1:3000/ru", "-timeout", "3s"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      # Next takes a moment to come up, and a container killed during that is a
+      # restart loop that never resolves.
+      start_period: 15s
     restart: unless-stopped
 
   prometheus:

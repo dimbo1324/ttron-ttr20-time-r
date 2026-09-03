@@ -32,6 +32,11 @@ const config = {
     "^lucide-react$": "<rootDir>/node_modules/lucide-react/dist/cjs/lucide-react.js",
   },
   testMatch: ["<rootDir>/src/**/*.test.ts", "<rootDir>/src/**/*.test.tsx"],
+  // One place for everything a run produces -- see runtime/ at the
+  // repository root. A second location with its own gitignore entry is how
+  // "where are the reports" becomes a question with two answers.
+  coverageDirectory: "../runtime/reports/web-coverage",
+  coverageReporters: ["text-summary", "html", "lcov", "json-summary"],
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",
     "!src/**/*.test.{ts,tsx}",

@@ -1,8 +1,8 @@
 # HTTP API
 
-Step 6 adds a thin HTTP/JSON adapter for browser and local tooling access.
-Business logic remains in emulator and gateway services behind the existing
-gRPC control plane.
+A thin HTTP/JSON adapter for the console and for local tooling. The business
+logic stays in the emulator and gateway services behind the gRPC control
+plane; this layer maps DTOs and nothing else.
 
 ## Run
 

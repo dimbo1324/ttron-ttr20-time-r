@@ -1,7 +1,8 @@
 # Observability
 
-Step 7 adds a small observability baseline that is stable enough for local
-Docker and CI smoke tests.
+A small baseline: enough to tell whether the stack is up and what it is doing,
+and stable enough for the Docker and CI smoke tests to depend on. It is not a
+metrics stack.
 
 ## Health
 

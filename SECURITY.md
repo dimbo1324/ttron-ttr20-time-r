@@ -29,3 +29,13 @@ include:
 
 Do not expose the API, gRPC ports, or emulator TCP port to untrusted
 networks without additional hardening.
+
+## What Is Scanned
+
+Every push, and once a week on a schedule, the repository runs `govulncheck`
+over the Go module, `pnpm audit` over the console's production dependencies,
+and CodeQL over both languages. Released images carry an SBOM and a provenance
+attestation and are scanned with Trivy. Dependabot opens dependency updates
+for Go, npm, GitHub Actions and Docker base images.
+
+See [docs/ci.md](docs/ci.md) and [docs/security-notes.md](docs/security-notes.md).

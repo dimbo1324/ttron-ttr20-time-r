@@ -10,7 +10,7 @@ import {
   resetBenchStore,
   resetLiveStore,
   settingsFixture,
-  useSource,
+  selectSource,
 } from "@/test/utils";
 
 import {
@@ -82,7 +82,7 @@ describe("useTelemetry", () => {
   });
 
   it("returns the live source once selected", async () => {
-    useSource("live");
+    selectSource("live");
     await act(async () => {
       await useLiveStore.getState().refresh();
     });
@@ -105,7 +105,7 @@ describe("useTelemetry", () => {
   });
 
   it("reports the active source on its own", () => {
-    useSource("live");
+    selectSource("live");
 
     const { result } = renderHook(() => useSourceValue());
 
@@ -159,7 +159,7 @@ describe("useTelemetryEngine", () => {
   it("leaves the bench alone while the live source is selected", () => {
     jest.useFakeTimers();
     try {
-      useSource("live");
+      selectSource("live");
       useBenchStore.setState({ running: true });
       const tick = jest.spyOn(useBenchStore.getState(), "tick");
 
@@ -179,7 +179,7 @@ describe("useTelemetryEngine", () => {
     render(<Engine />);
     expect(mocked.gatewayStatus).not.toHaveBeenCalled();
 
-    act(() => useSource("live"));
+    act(() => selectSource("live"));
 
     await waitFor(() => expect(mocked.gatewayStatus).toHaveBeenCalled());
     // Reads the emulator's faults once on entry, so the sliders start where
@@ -190,7 +190,7 @@ describe("useTelemetryEngine", () => {
   it("stops polling when unmounted", async () => {
     jest.useFakeTimers();
     try {
-      useSource("live");
+      selectSource("live");
       const { unmount } = render(<Engine />);
       unmount();
       mocked.gatewayStatus.mockClear();
@@ -217,7 +217,7 @@ describe("useTelemetryControls", () => {
   });
 
   it("commands the gateway on the live source", async () => {
-    useSource("live");
+    selectSource("live");
     mocked.startPolling.mockResolvedValue(gatewayStatusFixture() as never);
     mocked.stopPolling.mockResolvedValue(gatewayStatusFixture() as never);
 
@@ -230,7 +230,7 @@ describe("useTelemetryControls", () => {
   });
 
   it("offers no reset on the live source", () => {
-    useSource("live");
+    selectSource("live");
 
     const { result } = renderHook(() => useTelemetryControls());
 
@@ -272,7 +272,7 @@ describe("useSettingsControls", () => {
   });
 
   it("sends a whole configuration to the live gateway", async () => {
-    useSource("live");
+    selectSource("live");
     await act(async () => {
       await useLiveStore.getState().refresh();
     });
@@ -304,7 +304,7 @@ describe("useSettingsControls", () => {
   });
 
   it("pulls the offset into range when the interval shrinks under it", async () => {
-    useSource("live");
+    selectSource("live");
     await act(async () => {
       await useLiveStore.getState().refresh();
     });
@@ -328,7 +328,7 @@ describe("useSettingsControls", () => {
   });
 
   it("leaves an offset alone when it still fits", async () => {
-    useSource("live");
+    selectSource("live");
     await act(async () => {
       await useLiveStore.getState().refresh();
     });
@@ -361,7 +361,7 @@ describe("useSettingsControls", () => {
   });
 
   it("touches nothing else when the interval is not what changed", async () => {
-    useSource("live");
+    selectSource("live");
     await act(async () => {
       await useLiveStore.getState().refresh();
     });
@@ -381,7 +381,7 @@ describe("useSettingsControls", () => {
   });
 
   it("is not writable while the live link is down", () => {
-    useSource("live");
+    selectSource("live");
 
     const { result } = renderHook(() => useSettingsControls());
 
@@ -411,7 +411,7 @@ describe("useFaultControls", () => {
   });
 
   it("translates a probability into the emulator's flag and probability", async () => {
-    useSource("live");
+    selectSource("live");
     await act(async () => {
       await useLiveStore.getState().loadFaults();
     });
@@ -428,7 +428,7 @@ describe("useFaultControls", () => {
   });
 
   it("raises the emulator's flag for a fault on every frame", async () => {
-    useSource("live");
+    selectSource("live");
     await act(async () => {
       await useLiveStore.getState().loadFaults();
     });
@@ -445,7 +445,7 @@ describe("useFaultControls", () => {
   });
 
   it("sends only what changed", async () => {
-    useSource("live");
+    selectSource("live");
     await act(async () => {
       await useLiveStore.getState().loadFaults();
     });
@@ -462,7 +462,7 @@ describe("useFaultControls", () => {
   });
 
   it("translates a whole preset in one write", async () => {
-    useSource("live");
+    selectSource("live");
     await act(async () => {
       await useLiveStore.getState().loadFaults();
     });
@@ -497,7 +497,7 @@ describe("useFaultControls", () => {
   });
 
   it("is not writable until the emulator has answered", () => {
-    useSource("live");
+    selectSource("live");
 
     const { result } = renderHook(() => useFaultControls());
 

@@ -40,6 +40,116 @@ jobs:
       - name: Build
         run: go build ./...
 
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          # The version the app declares it needs, rather than one pinned here
+          # that would drift away from it.
+          node-version-file: web/package.json
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Install
+        # Frozen: CI installs what the lockfile says and fails if package.json
+        # has moved on without it, rather than quietly resolving something the
+        # author never ran.
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/package.json
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: web
+
+      - name: Measure
+        run: make reports
+
+      - name: Enforce the floor
+        # A floor rather than a ratchet. A number that must never fall turns
+        # every refactor into a negotiation with the metric; a floor says only
+        # that the suite has not quietly stopped covering the code.
+        run: go run ./tools/checks coverage --min 70
+
+      - name: Publish the reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          # Both stacks, both formats: the HTML for a person, the profile and
+          # lcov for whatever reads them next.
+          path: |
+            runtime/reports/go-coverage.html
+            runtime/reports/go-coverage.out
+            runtime/reports/go-coverage.authored.out
+            runtime/reports/web-coverage/
+          retention-days: 14
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo '## Coverage'
+            echo
+            echo '```'
+            go run ./tools/checks coverage || true
+            echo '```'
+            echo
+            if [ -f runtime/reports/web-coverage/coverage-summary.json ]; then
+              echo '```'
+              node -e '
+                const t = require("./runtime/reports/web-coverage/coverage-summary.json").total;
+                for (const [k, v] of Object.entries(t)) console.log(`web ${k.padEnd(12)} ${v.pct}%`);
+              '
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  lint:
+    name: Lint (Go)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          # Pinned rather than "latest": a linter that upgrades itself turns a
+          # green branch red on a morning nobody touched the code.
+          version: v2.13.2
+
   architecture:
     name: Architecture
     runs-on: ubuntu-latest
@@ -108,6 +218,19 @@ jobs:
           curl -fsS http://127.0.0.1:8080/api/v1/export/events.csv
           curl -fsS http://127.0.0.1:8080/api/v1/export/overview.json
           curl -fsS http://127.0.0.1:8080/metrics
+      - name: Smoke the console
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/ru >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl -fsS -o /dev/null http://127.0.0.1:3000/ru
+          curl -fsS -o /dev/null http://127.0.0.1:3000/en
+          # Through the console's own proxy, which is the path a browser
+          # takes and the one a rewrite could not have served from an image.
+          curl -fsS http://127.0.0.1:3000/upstream/api/v1/health
       - name: Compose logs
         if: always()
         run: docker compose logs

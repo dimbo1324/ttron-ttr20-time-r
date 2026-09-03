@@ -1,138 +1,135 @@
 # TTRON TTR20 Time / FT1.2 Protocol Platform
 
 [![CI](https://github.com/dimbo1324/ttron-ttr20-time-r/actions/workflows/ci.yml/badge.svg)](https://github.com/dimbo1324/ttron-ttr20-time-r/actions/workflows/ci.yml)
+[![Security](https://github.com/dimbo1324/ttron-ttr20-time-r/actions/workflows/security.yml/badge.svg)](https://github.com/dimbo1324/ttron-ttr20-time-r/actions/workflows/security.yml)
 
-Local industrial protocol simulation platform for an FT1.2-like/TTR20
-time-reading workflow. It lets you run a TCP device emulator, watch a gateway
-poll the device, inspect raw protocol frames, switch fault modes, export
-diagnostics, and drive everything through an HTTP/JSON API.
+A bench for an industrial time-reading protocol. It runs a TCP device
+emulator, a gateway that polls it over an FT1.2-like wire format, a gRPC
+control plane, an HTTP/JSON API, and a web console that shows the whole
+exchange frame by frame.
 
-The project combines a Go protocol core, TCP emulator, gateway polling service,
-gRPC control plane, HTTP/JSON API, Docker Compose runtime, CI
-quality gates, a small observability baseline, local analysis exports, compact
-protocol documentation.
+![The console reading a running Go stack](docs/media/live-overview.png)
 
-## What You Can Do Through The API
+## The brief
 
-| Area | What it helps with |
-| --- | --- |
-| Overview | Read emulator/gateway health, device time, and event distribution. |
-| Emulator | Toggle fault modes such as delayed responses, fragmented frames, checksum corruption, no-response, and close-after-request. |
-| Gateway | Start/stop polling, inspect connection state, backoff/reconnect counters, and the latest read-time cycle. |
-| Events | Filter RX/TX/ERR/SYSTEM frames, read raw hex, and export JSON/CSV. |
-| Diagnostics | Check health/readiness, service counters, metrics summary, and export operational snapshots. |
+> Write a program in Go that, on the fifth second of every minute, reads the
+> device's date and time over FT1.2 through a TTR20 teleport, and logs it.
 
-## Architecture
-
-```mermaid
-flowchart LR
-  Client["HTTP client"] --> API["HTTP API"]
-  API --> EG["gRPC EmulatorService"]
-  API --> GG["gRPC GatewayService"]
-  Gateway["Gateway Poller"] --> TCP["FT1.2-like TCP"]
-  TCP --> Emulator["TCP Emulator"]
-  EG --> Emulator
-  GG --> Gateway
+```sh
+go run ./cmd/ft12-gateway
 ```
 
-The FT1.2-like TCP path stays separate from the HTTP control surface. The
-HTTP API talks to emulator and gateway through the existing gRPC clients.
+With no flags, that is exactly what it does: the shipped default is an aligned
+schedule of one minute at an offset of five seconds. Everything else in this
+repository is scope taken on deliberately, to make the answer a bench someone
+can learn the protocol on rather than a script — see
+[the roadmap](docs/roadmap.md) for the line between the two.
 
-## Features
+## Quick start
 
-- FT1.2-like variable-length frame encoder/decoder.
-- Additive checksum (`sum`) and CRC-16/Modbus modes.
-- Streaming parser for fragmented TCP frames.
-- Read-time command model and high-level codec helpers.
-- TCP emulator with fault modes, sessions, status counters, and recent events.
-- Gateway poller with reconnect/backoff and start/stop controls.
-- gRPC control APIs for emulator and gateway.
-- HTTP/JSON API with health, readiness, events, controls, metrics, and JSON/CSV exports.
-- Events export as JSON/CSV plus overview and service status JSON exports.
-- Docker Compose stack for emulator, gateway, and API services.
-- Non-root container runtimes and service healthchecks.
-- Optional Prometheus scrape profile.
-- GitHub Actions CI across Go, Docker, architecture, and race tests.
-- Architecture boundary scripts and local release checks.
-- Runtime logs under ignored `runtime/logs/` and cleanup scripts for local build
-  output.
-
-## Quick Start
-
-Run the full local stack:
-
-```powershell
+```sh
 docker compose up --build
 ```
 
-Open:
+| | |
+| --- | --- |
+| Console | `http://localhost:3000/en` (or `/ru`) |
+| API health | `http://localhost:8080/health` |
+| API readiness | `http://localhost:8080/api/v1/ready` |
+| Metrics | `http://localhost:8080/metrics` |
 
-- API health: `http://localhost:8080/health`
-- API readiness: `http://localhost:8080/api/v1/ready`
-- API metrics: `http://localhost:8080/metrics`
-- Events CSV export: `http://localhost:8080/api/v1/export/events.csv`
-- Overview JSON export: `http://localhost:8080/api/v1/export/overview.json`
+Stop it:
 
-Start with `/api/v1/overview` while the gateway polls the emulator. Use the
-emulator control endpoints to introduce faults, then read `/api/v1/events` to
-see how the system reacts.
-
-Optional Prometheus:
-
-```powershell
-docker compose --profile observability up --build
-```
-
-Open `http://localhost:9090`.
-
-Stop the stack:
-
-```powershell
+```sh
 docker compose down -v
 ```
 
-## Local Development
+The console opens on the **bench** — a working model of the device, the line
+and the gateway running in the browser, which needs no backend at all. Flip
+the switch in the header to **Live stack** and the same page reads the Go
+services that Compose just started. [Take the tour](docs/tour.md).
 
-Backend checks:
+## What is in here
 
-```powershell
-go fmt ./...
-.\scripts\check-go-format.ps1
-go test ./...
-go build ./...
-.\scripts\check-architecture.ps1
+```mermaid
+flowchart LR
+  Browser["Browser"] --> Console["ft12-console<br/>Next.js"]
+  Console -- "/upstream/*" --> API["ft12-api<br/>HTTP/JSON"]
+  API -- gRPC --> EmulatorCtl["EmulatorService"]
+  API -- gRPC --> GatewayCtl["GatewayService"]
+  EmulatorCtl --- Emulator["ft12-emulator"]
+  GatewayCtl --- Gateway["ft12-gateway"]
+  Gateway -- "FT1.2 over TCP" --> Emulator
 ```
 
-Run services manually:
+The device data path and the control surface are separate: FT1.2 frames only
+ever travel between the gateway and the device, and everything a human touches
+goes the other way round through gRPC and HTTP.
 
-```powershell
-go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode sum -grpc-listen 127.0.0.1:9100
-go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -schedule interval -interval 1s -grpc-listen 127.0.0.1:9200
-go run ./cmd/ft12-api -http-listen 127.0.0.1:8080 -emulator-grpc 127.0.0.1:9100 -gateway-grpc 127.0.0.1:9200
-```
+**Protocol core** (`internal/protocol`) — the FT1.2-like variable-length
+frame, additive and CRC-16/Modbus checksums, a streaming parser for fragmented
+TCP, and a command registry carrying read-time and read-identity. It depends
+on nothing but the standard library.
 
-Release-style local check:
+**Emulator** (`cmd/ft12-emulator`) — a TCP device with fault modes: a late
+answer, a broken checksum on a share of answers, an answer arriving in pieces,
+silence, and a connection dropped after the request.
 
-```powershell
-.\scripts\release-check.ps1
-```
+**Gateway** (`cmd/ft12-gateway`) — the polling service, and the part that
+reasons rather than only performs:
 
-Local service logs default to:
+- wall-clock **aligned scheduling**, so poll instants survive restarts and
+  reconnects instead of drifting by however long each reply took;
+- **in-session retries** kept separate from reconnects — a frame error is
+  retried on the same connection, the link is dropped only on a transport
+  failure;
+- **clock skew** classified on a median rather than the last sample, with a
+  least-squares drift rate and the R² of that fit;
+- **device health** with hysteresis and latency percentiles, so one slow poll
+  is not an outage;
+- a **device inventory**, so one gateway polls a fleet, each device with its
+  own schedule and thresholds.
 
-- `runtime/logs/ft12-emulator.log`
-- `runtime/logs/ft12-gateway.log`
-- `runtime/logs/ft12-api.log`
+**Control plane** (`cmd/ft12-api`, `internal/api`) — gRPC between services,
+HTTP/JSON outward. Status, the rolling history windows, the fleet, event
+export as JSON and CSV, and settings that reconfigure a gateway that is
+already polling.
 
-Use `-log=` to keep a service on stdout, or pass another `-log` path for local
-diagnostics. `runtime/`, `tmp/`, logs, and similar generated output
-are ignored by Git. Cleanup helpers:
+**Console** (`web/`) — Next.js, TypeScript, Russian and English. A frame
+analyzer, an exchange monitor, a dashboard, fault controls, gateway settings,
+and a protocol reference written from first principles.
+
+**The repository's own checks** (`tools/checks`) — dependency boundaries read
+from the real import graph, formatting, documentation links, artefact cleanup
+and a release gate, as one Go command.
+
+## Local development
 
 ```sh
-go run ./tools/checks clean-runtime --dry-run
-go run ./tools/checks clean-runtime
+go run ./tools/checks release   # format, boundaries, doc links, vet, test, build
+go test ./...
+make verify
 ```
 
-## Service Ports
+Run the services by hand, each in its own terminal:
+
+```sh
+go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -grpc-listen 127.0.0.1:9100
+go run ./cmd/ft12-gateway  -target 127.0.0.1:9000 -grpc-listen 127.0.0.1:9200
+go run ./cmd/ft12-api      -http-listen 127.0.0.1:8080 -emulator-grpc 127.0.0.1:9100 -gateway-grpc 127.0.0.1:9200
+```
+
+The console:
+
+```sh
+pnpm --dir web install
+pnpm --dir web dev
+```
+
+See [Development](docs/development.md) for the full set, including coverage
+and the frontend checks.
+
+## Service ports
 
 | Service | Purpose | Host port |
 | --- | --- | --- |
@@ -140,59 +137,67 @@ go run ./tools/checks clean-runtime
 | `ft12-emulator` | gRPC control | `9100` |
 | `ft12-gateway` | gRPC control | `9200` |
 | `ft12-api` | HTTP/JSON API, health, readiness, metrics | `8080` |
+| `ft12-console` | web console | `3000` |
 | `prometheus` | optional metrics scrape profile | `9090` |
 
-## Project Structure
+## Project structure
 
 ```text
 cmd/        command entrypoints
-internal/   Go packages for protocol, services, API, config, platform helpers
+internal/   protocol core, services, API adapters, config, platform helpers
 proto/      protobuf/gRPC contract sources
-deploy/     Docker and observability assets
-docs/       architecture, protocol, operations, release, examples
-tools/      the repository's own checks: boundaries, formatting, links
+web/        the Next.js console
+deploy/     Dockerfiles and observability assets
+docs/       architecture, protocol, operations, release, the visual tour
+tools/      the repository's own checks, and the documentation's screenshots
+examples/   frames, HTTP calls, device inventories
 legacy/     retained reference implementations
-task/       original assignment documents
+task/       the original assignment documents
 ```
 
 ## Documentation
 
-- [Documentation index](docs/index.md)
-- [Architecture](docs/architecture.md)
-- [Protocol](docs/protocol.md)
-- [Emulator](docs/emulator.md)
-- [Gateway](docs/gateway.md)
-- [gRPC API](docs/grpc-api.md)
-- [HTTP API](docs/http-api.md)
-- [Docker](docs/docker.md)
-- [Observability](docs/observability.md)
-- [CI](docs/ci.md)
-- [Development](docs/development.md)
-- [Testing](docs/testing.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Examples](docs/examples.md)
-- [Release](docs/release.md)
-- [Security notes](docs/security-notes.md)
-- [Repository checklist](docs/repository-checklist.md)
-- [Roadmap](docs/roadmap.md)
-- [Legacy](docs/legacy.md)
+Start with the [documentation index](docs/index.md), or:
 
-## Safety And Production Notes
+| | |
+| --- | --- |
+| [Tour](docs/tour.md) | what the console looks like and does |
+| [Architecture](docs/architecture.md) | services, boundaries, and what depends on what |
+| [Protocol](docs/protocol.md) | the frame format, checksums, commands, the time-zone trap |
+| [Gateway](docs/gateway.md) | schedules, retries, inventories |
+| [Emulator](docs/emulator.md) | the device and its fault modes |
+| [HTTP API](docs/http-api.md) | endpoints, status shapes, exports |
+| [gRPC API](docs/grpc-api.md) | the internal control plane |
+| [Console](docs/console.md) | the two sources, and what live mode can change |
+| [Docker](docs/docker.md) | the Compose stack, the proxy, the images |
+| [CI](docs/ci.md) | what runs on every push |
+| [Development](docs/development.md) | commands, checks, coverage |
+| [Testing](docs/testing.md) | what is covered, and how to run it |
+| [Observability](docs/observability.md) | health, readiness, metrics |
+| [Troubleshooting](docs/troubleshooting.md) | the failures that actually happen |
+| [Release](docs/release.md) | cutting a version |
+| [Security notes](docs/security-notes.md) | what is and is not hardened |
+| [Roadmap](docs/roadmap.md) | delivered, and deliberately not built |
 
-This is a simulation, learning, and portfolio platform. It is not certified for
-direct control of real industrial equipment. There is no authentication, TLS,
-persistence, production secrets management, or hardened public deployment
-profile yet. Do not expose the API or gRPC ports to untrusted networks
-without additional review and hardening. Exported JSON/CSV files may contain
-protocol diagnostic data, raw frame hex, endpoint addresses, and service
-counters; treat them as local troubleshooting artifacts.
+## Safety and production notes
 
-## Contributing And Security
+This is a simulation, learning and portfolio platform. It is not certified for
+control of real industrial equipment. There is no authentication, TLS,
+persistence, secrets management or hardened deployment profile. Do not expose
+the API, the gRPC ports or the emulator's TCP port to untrusted networks
+without additional review and hardening.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup and quality gates. See
-[SECURITY.md](SECURITY.md) for reporting guidance and current security scope.
+Exported JSON and CSV may contain protocol diagnostic data, raw frame hex,
+endpoint addresses and service counters. Treat them as local troubleshooting
+artefacts.
+
+## Contributing and security
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and the quality gates, and
+[SECURITY.md](SECURITY.md) for reporting guidance and the current security
+scope.
 
 ## License
 
 MIT. See [LICENSE](LICENSE). Third-party dependencies are managed through
-`go.mod` and `go.sum`.
+`go.mod`, `go.sum` and `web/pnpm-lock.yaml`.

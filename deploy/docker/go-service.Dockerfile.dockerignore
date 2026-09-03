@@ -1,0 +1,39 @@
+# Build context for the Go services.
+#
+# BuildKit prefers `<dockerfile>.dockerignore` over the repository-wide file,
+# which is how two images with different needs stop sharing one exclusion list.
+# A Go service copies cmd/, internal/ and proto/ and nothing else, so every
+# other directory here is bytes sent to the daemon for no reason -- web/ alone
+# is the larger half of this repository.
+.git
+.github
+.claude
+web/
+docs/
+task/
+legacy/
+tools/
+deploy/observability/
+examples/
+
+bin/
+dist/
+tmp/
+temp/
+logs/
+runtime/
+*.log
+*.out
+*.test
+*.prof
+coverage.out
+coverage.*
+*.coverprofile
+profile.cov
+*.exe
+*.dll
+*.so
+*.dylib
+.env
+go.work
+go.work.sum

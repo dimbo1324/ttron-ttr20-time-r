@@ -45,7 +45,7 @@ func ParseReadTimeResponseIn(data []byte, location *time.Location) (ReadTimeResp
 	raw := string(data[1:])
 	parsed, err := time.ParseInLocation(ReadTimeLayout, raw, location)
 	if err != nil {
-		return ReadTimeResponse{}, fmt.Errorf("%w: %v", ErrInvalidTime, err)
+		return ReadTimeResponse{}, fmt.Errorf("%w: %w", ErrInvalidTime, err)
 	}
 	return ReadTimeResponse{Time: parsed, Raw: raw}, nil
 }

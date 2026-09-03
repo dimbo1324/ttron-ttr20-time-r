@@ -1,0 +1,96 @@
+name: Security
+
+# Two schedules of work, deliberately separated.
+#
+# On a push, the questions that are about this change: does the code it adds
+# match a known vulnerability pattern, does it pull in a module with a known
+# advisory. Weekly, the same questions again -- because an advisory published
+# on Tuesday makes yesterday's green branch wrong without anyone touching it,
+# and nothing else in this repository would ever notice.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Monday morning, before the Dependabot pull requests land.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  govulncheck:
+    name: Go vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: govulncheck
+        # Not a generic advisory scan: it reads the call graph and reports a
+        # vulnerability only when the affected function is actually reachable
+        # from this code. That is the difference between a finding worth a
+        # morning and a list of modules that happen to be in go.sum.
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+  npm-audit:
+    name: npm advisories
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/package.json
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Audit
+        # High and above only. A console with no authentication and no user
+        # data does not need to stop the line for a low-severity advisory in a
+        # build-time dependency, and a check that cries wolf gets muted.
+        run: pnpm audit --audit-level high --prod
+
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - go
+          - javascript-typescript
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        if: matrix.language == 'go'
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}

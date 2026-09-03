@@ -1,6 +1,8 @@
 node_modules/
 .next/
 out/
+# Coverage lands in runtime/reports now. Kept as a guard: a stray jest run
+# with different flags writes here, and stale output is not worth committing.
 coverage/
 next-env.d.ts
 *.tsbuildinfo

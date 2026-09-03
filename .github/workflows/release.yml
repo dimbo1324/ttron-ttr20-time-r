@@ -1,0 +1,272 @@
+name: Release
+
+# Everything a tag should produce, produced by the tag.
+#
+# `docs/release.md` used to describe this as a sequence of commands a person
+# runs. That works exactly as long as the person remembers all of it in the
+# right order, and the first time they do not, a release goes out built from a
+# working tree nobody can reconstruct.
+on:
+  push:
+    tags:
+      - "v*"
+  # A dry run against any commit, so the pipeline can be proven without
+  # spending a version number to find out it is broken.
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Push images and create the release
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # Nothing ships that has not passed the same gate as a pull request. A tag is
+  # a promise, and CI running afterwards is a promise made before it was checked.
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go run ./tools/checks format
+      - run: go run ./tools/checks architecture
+      - run: go run ./tools/checks doc-links
+      - run: go vet ./...
+      - run: go test ./...
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/package.json
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: web
+      - run: pnpm lint
+        working-directory: web
+      - run: pnpm typecheck
+        working-directory: web
+      - run: pnpm test
+        working-directory: web
+
+  binaries:
+    name: Binaries (${{ matrix.goos }}/${{ matrix.goarch }})
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: linux, goarch: amd64 }
+          - { goos: linux, goarch: arm64 }
+          - { goos: windows, goarch: amd64 }
+          - { goos: darwin, goarch: arm64 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          version="${GITHUB_REF_NAME}"
+          commit="${GITHUB_SHA}"
+          date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          module=github.com/dimbo1324/ttron-ttr20-time-r/internal/version
+          out="dist/ft12-${{ matrix.goos }}-${{ matrix.goarch }}"
+          mkdir -p "$out"
+          for service in ft12-emulator ft12-gateway ft12-api ft12-cli ft12-client ft12-healthcheck; do
+            binary="$out/$service"
+            if [ "${{ matrix.goos }}" = "windows" ]; then binary="$binary.exe"; fi
+            # -trimpath so the binary does not carry a runner's directory
+            # layout, which is both noise and a small information leak.
+            go build -trimpath \
+              -ldflags="-s -w -X ${module}.Version=${version} -X ${module}.Commit=${commit} -X ${module}.BuildDate=${date}" \
+              -o "$binary" "./cmd/$service"
+          done
+
+      - name: Archive
+        run: |
+          cd dist
+          name="ft12-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip -r "${name}.zip" "$name"
+          else
+            tar -czf "${name}.tar.gz" "$name"
+          fi
+          # Checksums travel with the archives so a download can be verified
+          # without trusting the transport it arrived over.
+          sha256sum "${name}".* > "${name}.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          retention-days: 14
+
+  images:
+    name: Image (${{ matrix.service }})
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      # Trivy uploads its findings to the security tab rather than only to a
+      # log that scrolls away.
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { service: ft12-emulator, dockerfile: deploy/docker/go-service.Dockerfile }
+          - { service: ft12-gateway, dockerfile: deploy/docker/go-service.Dockerfile }
+          - { service: ft12-api, dockerfile: deploy/docker/go-service.Dockerfile }
+          - { service: ft12-console, dockerfile: deploy/docker/console.Dockerfile }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the registry
+        if: github.event_name == 'push' || inputs.publish
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=long
+          labels: |
+            org.opencontainers.image.title=${{ matrix.service }}
+            org.opencontainers.image.licenses=MIT
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          # arm64 as well as amd64: the Go services are static and the console
+          # is a Node runtime, so both cross-build without emulation tricks.
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            SERVICE=${{ matrix.service }}
+            VERSION=${{ github.ref_name }}
+            COMMIT=${{ github.sha }}
+          push: ${{ github.event_name == 'push' || inputs.publish }}
+          load: ${{ !(github.event_name == 'push' || inputs.publish) }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # An SBOM and a provenance attestation say what is inside the image
+          # and how it was built. Without them, answering "does this image
+          # contain the library in this week's advisory" means unpacking it.
+          sbom: true
+          provenance: mode=max
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Scan the image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}:${{ github.ref_name }}
+          format: sarif
+          output: trivy-${{ matrix.service }}.sarif
+          # Reported, not blocking. A base image advisory published after the
+          # tag was cut should be visible without making an already-published
+          # release retroactively fail.
+          exit-code: "0"
+          severity: CRITICAL,HIGH
+        continue-on-error: true
+
+      - name: Upload the scan
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-${{ matrix.service }}.sarif
+          category: trivy-${{ matrix.service }}
+        continue-on-error: true
+
+  release:
+    name: GitHub Release
+    needs:
+      - binaries
+      - images
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The whole history, so the notes can say what changed since the
+          # previous tag rather than since a shallow clone's horizon.
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: binaries-*
+          merge-multiple: true
+          path: dist
+
+      - name: Extract the notes for this version
+        id: notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # The section for this version out of CHANGELOG.md, so the release
+          # says what the changelog says and the two cannot drift.
+          #
+          # Substring matching rather than a regex: a version is mostly dots,
+          # and escaping them through YAML into awk is a good way to silently
+          # match nothing. Accepts `## 1.2.3`, `## v1.2.3`, and either bracketed.
+          awk -v v="$version" '
+            BEGIN { n = split("## " v "|## v" v "|## [" v "]|## [v" v "]", forms, "|") }
+            {
+              if (!found) {
+                for (i = 1; i <= n; i++) {
+                  if (index($0, forms[i]) == 1) { found = 1; next }
+                }
+              } else if (/^## /) {
+                exit
+              } else {
+                print
+              }
+            }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "No CHANGELOG.md section for ${version}." > notes.md
+            echo "::warning::CHANGELOG.md has no section for ${version}"
+          fi
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: notes.md
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          generate_release_notes: true
+          fail_on_unmatched_files: true

@@ -1,63 +1,85 @@
 # Architecture
 
-## Target Platform
+Four processes and a browser. Two directions of traffic that never mix: FT1.2
+frames travel between the gateway and the device, and everything a human
+touches travels the other way round, through gRPC between services and
+HTTP/JSON outward.
 
-The long-term direction is an industrial FT1.2-like/TTR20 protocol gateway and
-emulator platform:
+```mermaid
+flowchart LR
+  Browser["Browser"] --> Console["ft12-console<br/>Next.js"]
+  Console -- "/upstream/*" --> API["ft12-api<br/>HTTP/JSON"]
+  API -- gRPC --> EmulatorCtl["EmulatorService"]
+  API -- gRPC --> GatewayCtl["GatewayService"]
+  EmulatorCtl --- Emulator["ft12-emulator"]
+  GatewayCtl --- Gateway["ft12-gateway"]
+  Gateway -- "FT1.2 over TCP" --> Emulator
+```
 
-- Go backend services;
-- clean protocol core;
-- TCP device emulator;
-- polling gateway;
-- gRPC service-to-service contracts;
-- Docker, CI, tests, and operational documentation.
+Keeping them apart is what lets the protocol core stay a library: nothing in
+`internal/protocol` knows that an HTTP API exists, and nothing in the HTTP API
+re-implements a checksum.
 
-## Implemented Services
+## The processes
 
-`cmd/ft12-emulator` runs a TCP emulator service. It accepts client/gateway
-connections, parses FT1.2-like frames with the protocol core, handles read-time
-requests, applies configured fault modes, and records in-memory status/history.
+`cmd/ft12-emulator` is the device. It accepts TCP connections, parses frames
+with the protocol core, answers read-time and read-identity, applies whatever
+fault mode it has been told to, and keeps in-memory counters and a recent
+event ring.
 
-`cmd/ft12-gateway` runs a polling gateway service. It connects to an
-emulator/device over TCP, periodically sends read-time requests, parses
-responses, maintains status/history, and reconnects with backoff after errors.
+`cmd/ft12-gateway` is the poller. It connects to a device, reads its clock on
+a schedule, parses the answer, and reconnects with backoff. What it does
+around that is described in [Gateway](gateway.md): aligned scheduling,
+in-session retries, skew and drift, availability with hysteresis, and a device
+inventory.
 
-Both emulator and gateway can also expose gRPC control APIs. The gRPC plane is
-for service-to-service status/control and API layers; FT1.2-like TCP
-remains the device data path.
+`cmd/ft12-api` is a thin HTTP/JSON adapter over the gRPC control plane. It
+holds no protocol logic and no polling logic; it maps DTOs.
 
-`cmd/ft12-client` remains a simple direct polling/demo client.
+`cmd/ft12-console` does not exist, because the console is not a Go process —
+it is the Next.js app under `web/`, built into a standalone server image. See
+[Docker](docker.md).
 
-`cmd/ft12-cli` is still a placeholder for future local inspection tools.
+`cmd/ft12-client` is a direct polling demo, `cmd/ft12-cli` a placeholder for
+local inspection tools, and `cmd/ft12-healthcheck` the one health probe every
+container image carries — the runtime images are distroless and have neither a
+shell nor curl.
 
-`cmd/ft12-api` runs a thin HTTP/JSON adapter. It talks to emulator and gateway
-through the existing gRPC clients and exposes client-friendly JSON DTOs. It does
-not call emulator or gateway service packages directly.
+## The domain packages
 
-HTTP clients talk to `/api/v1` with HTTP/JSON. gRPC remains an internal service
-API.
+The gateway's reasoning lives in packages of its own rather than inside the
+polling loop, so each can be tested against a table of inputs instead of
+against a running device:
 
-Docker Compose runs emulator, gateway, and API services on a private Compose
-network. The API exposes liveness, readiness, and metrics endpoints for local
-operations and CI smoke tests.
+| Package | Answers |
+| --- | --- |
+| `internal/schedule` | when the next poll should happen |
+| `internal/retry` | how many attempts a frame error is worth, and how far apart |
+| `internal/clock` | how far off the device's clock is, and which way it is going |
+| `internal/health` | whether the device is up, given that one bad poll is not an outage |
+| `internal/devices` | which devices this gateway is responsible for |
 
-## Step 5.5 Hardening
+`internal/protocol` holds the wire format itself — `checksum`, `frame`,
+`command`, `codec` — and depends only on the standard library.
 
-Command entrypoints are intentionally thin. Process bootstrap lives in:
+## The adapter layers
 
-- `internal/app/clientapp`;
-- `internal/app/emulatorapp`;
-- `internal/app/gatewayapp`;
-- `internal/app/cliapp`.
+Generated protobuf lives under `internal/api/grpc/ft12/v1`. Handwritten gRPC
+servers (`internal/api/grpc/{emulator,gateway}`) map service snapshots into
+those messages through one shared mapper, `internal/api/grpc/mapping`, so
+checksum, direction, timestamp and service-state translation exists once.
 
-Runtime orchestration for concurrent service runners uses
-`internal/platform/lifecycle`. Logging remains compatible with `log.Logger`,
-with `internal/platform/logging` as the structured logging migration point.
+The HTTP layer under `internal/api/http` depends on small interfaces satisfied
+by the gRPC clients. It does not import the emulator or gateway service
+packages, which is checked rather than merely intended.
 
-Recent frame/event history uses typed directions and service names, and the
-event ring assigns stable monotonic IDs. This is important for HTTP adapters that need stable event identity instead of slice-position IDs.
+Process bootstrap is separate from both: `internal/app/{emulatorapp,
+gatewayapp, apiapp, clientapp, cliapp}` own flags, wiring and lifecycle, so
+the `cmd/` entrypoints stay a `main` that calls one function.
+`internal/platform/lifecycle` runs the concurrent runners and propagates the
+first error.
 
-## Dependency Rules
+## Dependency rules
 
 ```text
 cmd/ft12-emulator -> internal/app/emulatorapp -> internal/emulator -> internal/transport/tcp -> internal/protocol
@@ -65,20 +87,50 @@ cmd/ft12-gateway  -> internal/app/gatewayapp  -> internal/gateway  -> internal/t
 cmd/ft12-client   -> internal/client   -> internal/protocol
 app/* gRPC wiring -> internal/api/grpc  -> internal/{emulator,gateway}
 cmd/ft12-api      -> internal/app/apiapp -> internal/api/http -> internal/api/grpc/client
-docker-compose    -> cmd services via flags; no protocol or business logic changes
 ```
 
-`internal/protocol` depends only on the Go standard library. It does not depend
-on TCP, emulator, gateway, logging, config, gRPC, HTTP, or Docker.
+The rules the compiler cannot express are enforced by the repository's own
+check:
 
-`internal/observability/events` provides a small in-memory recent event ring for
-service status and API layers. It is not a metrics stack.
+```sh
+go run ./tools/checks architecture
+```
 
-See also:
+It reads the real import graph from `go list`, so a forbidden package reached
+through two intermediate hops fails as clearly as a direct import, and the
+failure names the chain and the line the first hop is written on. Production
+code is checked transitively; test files are checked for direct imports only.
 
-- [Dependency rules](architecture/dependency-rules.md)
-- [ADR 0005: Architecture hardening before Web UI](architecture/decisions/0005-architecture-hardening-before-web-ui.md)
-- [HTTP API](http-api.md)
-- [Docker](docker.md)
-- [Observability](observability.md)
-- [CI](ci.md)
+What it enforces:
+
+- `internal/protocol` imports nothing but the standard library — not
+  transports, config, logging, the service packages, the gRPC adapters or any
+  future adapter layer;
+- `internal/emulator` and `internal/gateway` do not import each other;
+- `internal/api/http` does not import the service packages;
+- nothing under `cmd/`, `internal/` or `proto/` imports `legacy/`.
+
+See [Dependency rules](architecture/dependency-rules.md) for the reasoning and
+[ADR 0005](architecture/decisions/0005-architecture-hardening-before-web-ui.md)
+for why the boundaries were drawn before the console was written rather than
+after.
+
+## The console
+
+`web/` is a Next.js app, and its two data sources are a real architectural
+seam rather than a demo toggle. Both implement the same `Telemetry` interface:
+one from a browser-side model of the protocol, one from the HTTP API. The
+pages consume the interface and cannot tell which is behind it.
+
+The browser talks only to the console's own origin. `/upstream/*` is forwarded
+to the API by a route handler — deliberately not a `rewrites()` entry, for a
+reason [Docker](docker.md) explains — which keeps the API off the public
+network and removes CORS from the picture.
+
+## Not a metrics stack
+
+`internal/observability/events` is a small in-memory ring of recent events
+with stable monotonic IDs. The IDs are stable because an HTTP adapter needs an
+event to keep its identity between two reads, which slice positions do not
+give. It is not storage and it is not a metrics system; see
+[Observability](observability.md) for what is actually exposed.

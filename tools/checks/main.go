@@ -35,6 +35,7 @@ var checks = []check{
 	{"architecture", "dependency boundaries between packages", runArchitecture},
 	{"format", "gofmt over the Go files this repository tracks", runFormat},
 	{"doc-links", "local Markdown links resolve to something", runDocLinks},
+	{"coverage", "summarise the Go coverage profile [--min N]", runCoverage},
 	{"clean-runtime", "remove build and runtime artefacts [--dry-run]", runCleanRuntime},
 	{"release", "everything above, plus tests, build and compose config", runRelease},
 }
@@ -107,8 +108,6 @@ type failures struct {
 func (f *failures) addf(format string, args ...any) {
 	f.items = append(f.items, fmt.Sprintf(format, args...))
 }
-
-func (f *failures) len() int { return len(f.items) }
 
 // err renders the collected failures as one error, or nil when there are none.
 func (f *failures) err(headline string) error {

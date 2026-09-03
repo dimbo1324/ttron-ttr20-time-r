@@ -28,6 +28,9 @@ the answer a bench someone can learn the protocol on rather than a script.
 10. Gateway domain layer.
 11. Web console.
 12. Live control plane.
+13. Infrastructure: the whole project in Docker, linting, vulnerability
+    scanning, coverage, a release pipeline, and documentation with pictures in
+    it.
 
 Step 5 is complete when proto contracts, generated Go code, emulator/gateway
 gRPC adapters, client helpers, integration tests, docs, and build/test checks
@@ -71,6 +74,13 @@ principles, and a Russian/English interface throughout.
 Step 12 is complete when the console can be pointed at a running Go stack and
 read it — status, history windows, fleet — drive the emulator's fault mode, and
 reconfigure a gateway that is already polling.
+
+Step 13 is complete when the console has an image of its own and the Compose
+stack runs the whole project rather than its backend; when the linters exist
+and the defects they were not catching are fixed; when advisories are scanned
+on a schedule rather than on a whim; when coverage is measured for both stacks
+and has a floor under it; when a tag produces a release; and when the
+documentation says what the code does and shows what it looks like.
 
 ## Not built, on purpose
 

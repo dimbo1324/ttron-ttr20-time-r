@@ -1,0 +1,12 @@
+{
+  "name": "ft12-docmedia",
+  "private": true,
+  "type": "module",
+  "description": "Captures the screenshots and animation frames used by the documentation.",
+  "scripts": {
+    "capture": "node capture.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.57.0"
+  }
+}

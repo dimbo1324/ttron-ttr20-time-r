@@ -11,11 +11,12 @@
     "dev": "next dev --port 3000",
     "build": "next build",
     "start": "next start --port 3000",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "test:cov": "jest --coverage",
+    "test:report": "jest --coverage --json --outputFile=../runtime/reports/web-tests.json"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",
@@ -49,6 +50,8 @@
     "@types/node": "^22.13.0",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.4",
     "jest": "^30",
     "jest-environment-jsdom": "^30",
     "tailwindcss": "^4.0.3",
