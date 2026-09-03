@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "test:cov": "jest --coverage",
+    "test:report": "jest --coverage --json --outputFile=../runtime/reports/web-tests.json"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",

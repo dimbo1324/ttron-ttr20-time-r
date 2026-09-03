@@ -245,3 +245,132 @@ func write(t *testing.T, path, body string) {
 		t.Fatal(err)
 	}
 }
+
+func TestGeneratedRecognisesProtobufOutput(t *testing.T) {
+	if !generated("internal/api/grpc/ft12/v1/gateway.pb.go") {
+		t.Fatal("a .pb.go file is generated")
+	}
+	if !generated("internal/api/grpc/ft12/v1/gateway_grpc.pb.go") {
+		t.Fatal("a _grpc.pb.go file is generated")
+	}
+	// Nothing else: excluding a hand-written file from coverage because its
+	// name looks similar would hide exactly the code the number is about.
+	if generated("internal/gateway/settings.go") {
+		t.Fatal("a hand-written file must be counted")
+	}
+	if generated("internal/protocol/frame/pb.go") {
+		t.Fatal("only the .pb.go suffix counts, not a file called pb.go")
+	}
+}
+
+func TestMergeFoldsRepeatedSpans(t *testing.T) {
+	// What -coverpkg=./... produces: every test binary reports on every
+	// package, so one span arrives once per binary. Summing them counted a
+	// module of 4,700 statements as one of 122,000 and reported six percent
+	// coverage of a well-tested tree.
+	merged := merge([]block{
+		{file: "a.go", span: "1.1,2.2", statements: 3, count: 0},
+		{file: "a.go", span: "1.1,2.2", statements: 3, count: 7},
+		{file: "a.go", span: "1.1,2.2", statements: 3, count: 0},
+		{file: "a.go", span: "9.1,9.9", statements: 1, count: 0},
+	})
+
+	if len(merged) != 2 {
+		t.Fatalf("merge() kept %d blocks, want 2", len(merged))
+	}
+	// A statement any binary reached is reached.
+	if merged[0].count != 7 {
+		t.Fatalf("count = %d, want the highest of the reports", merged[0].count)
+	}
+	if merged[1].count != 0 {
+		t.Fatalf("an uncovered span must stay uncovered, got %d", merged[1].count)
+	}
+}
+
+func TestMergeKeepsSpansApartWithinAFile(t *testing.T) {
+	merged := merge([]block{
+		{file: "a.go", span: "1.1,2.2", statements: 3, count: 1},
+		{file: "a.go", span: "3.1,4.2", statements: 5, count: 0},
+		{file: "b.go", span: "1.1,2.2", statements: 2, count: 0},
+	})
+
+	if len(merged) != 3 {
+		t.Fatalf("merge() kept %d blocks, want 3", len(merged))
+	}
+}
+
+func TestCoveragePercentOfNothing(t *testing.T) {
+	// A profile with no statements is not zero percent covered; it is a
+	// question with no answer, and dividing by zero would say NaN.
+	if got := (coverage{}).percent(); got != 0 {
+		t.Fatalf("percent() = %v", got)
+	}
+}
+
+func TestReadProfileParsesAndSurvivesRubbish(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "cover.out")
+	write(t, path, strings.Join([]string{
+		"mode: atomic",
+		"example.com/m/a.go:10.20,12.3 4 1",
+		"example.com/m/a.go:14.2,15.9 2 0",
+		"",
+		"a line this tool does not understand",
+		"example.com/m/b.go:1.1,1.2 notanumber 0",
+	}, "\n"))
+
+	blocks, mode, err := readProfile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if mode != "atomic" {
+		t.Fatalf("mode = %q", mode)
+	}
+	// Two good lines kept, the blank, the nonsense and the unparseable one
+	// dropped: a profile is machine output, and a tool that panics on one odd
+	// line is a tool that stops being run.
+	if len(blocks) != 2 {
+		t.Fatalf("blocks = %d, want 2", len(blocks))
+	}
+	if blocks[0].statements != 4 || blocks[0].count != 1 || blocks[0].span != "10.20,12.3" {
+		t.Fatalf("first block = %+v", blocks[0])
+	}
+}
+
+func TestWriteProfileDropsGeneratedAndKeepsSpans(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "reports", "authored.out")
+
+	err := writeProfile(path, "atomic", []block{
+		{file: "internal/gateway/settings.go", span: "1.1,2.2", statements: 3, count: 1},
+		{file: "internal/api/grpc/ft12/v1/gateway.pb.go", span: "1.1,2.2", statements: 900, count: 0},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(body)
+
+	if !strings.Contains(got, "mode: atomic") {
+		t.Fatalf("profile = %q, want a mode line", got)
+	}
+	// The span survives, so a coverage viewer can still find the source it
+	// refers to rather than being pointed at line one of everything.
+	if !strings.Contains(got, "internal/gateway/settings.go:1.1,2.2 3 1") {
+		t.Fatalf("profile = %q", got)
+	}
+	if strings.Contains(got, ".pb.go") {
+		t.Fatalf("generated code must not reach the filtered profile: %q", got)
+	}
+}
+
+func TestPackageOfStripsTheModulePath(t *testing.T) {
+	if got := packageOf(modulePath + "/internal/gateway/settings.go"); got != "internal/gateway" {
+		t.Fatalf("packageOf() = %q", got)
+	}
+}

@@ -100,6 +100,34 @@ go run ./tools/checks clean-runtime --dry-run
 go run ./tools/checks clean-runtime
 ```
 
+## Logs And Reports
+
+Everything a run produces goes under `runtime/`, which is gitignored and
+removed by `go run ./tools/checks clean-runtime`:
+
+```text
+runtime/logs/       service logs, when a service is given a log file
+runtime/reports/    coverage and test output for both stacks
+```
+
+```sh
+make reports
+```
+
+Writes `go-coverage.out` and an HTML view of it, the same for the console
+under `web-coverage/`, and the machine-readable run of each suite. The Go
+profile is measured with `-coverpkg=./...`, so a package counts as covered by
+whichever test exercises it rather than only by tests living beside it.
+
+```sh
+go run ./tools/checks coverage --min 70
+```
+
+Summarises the profile and fails below a floor. It reports hand-written code
+separately from the total: the protobuf output is nearly a third of the
+statements in this module, and a number that moves when the schema changes
+rather than when the tests do is measuring the wrong thing.
+
 ## Repository Checks
 
 The rules the compiler and the test suite cannot express live in

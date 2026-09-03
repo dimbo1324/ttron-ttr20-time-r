@@ -35,6 +35,7 @@ var checks = []check{
 	{"architecture", "dependency boundaries between packages", runArchitecture},
 	{"format", "gofmt over the Go files this repository tracks", runFormat},
 	{"doc-links", "local Markdown links resolve to something", runDocLinks},
+	{"coverage", "summarise the Go coverage profile [--min N]", runCoverage},
 	{"clean-runtime", "remove build and runtime artefacts [--dry-run]", runCleanRuntime},
 	{"release", "everything above, plus tests, build and compose config", runRelease},
 }

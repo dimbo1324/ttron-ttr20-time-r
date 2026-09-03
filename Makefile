@@ -6,7 +6,7 @@ PROTO_FILES := proto/ft12/v1/common.proto proto/ft12/v1/emulator.proto proto/ft1
 # The repository's own rules, in one place and one language. See tools/checks.
 CHECKS := go run ./tools/checks
 
-.PHONY: help fmt lint lint-web check-go-format test test-race test-fuzz build build-client build-emulator build-gateway build-cli build-api build-healthcheck run-emulator run-client run-gateway run-api proto check-architecture check-doc-links release-check clean-runtime clean-runtime-dry-run compose-config docker-build docker-up docker-down docker-logs docker-ps docker-smoke metrics-smoke ci-local verify clean
+.PHONY: help fmt lint lint-web reports reports-go reports-web check-go-format test test-race test-fuzz build build-client build-emulator build-gateway build-cli build-api build-healthcheck run-emulator run-client run-gateway run-api proto check-architecture check-doc-links release-check clean-runtime clean-runtime-dry-run compose-config docker-build docker-up docker-down docker-logs docker-ps docker-smoke metrics-smoke ci-local verify clean
 
 help:
 	@echo "Targets:"
@@ -15,6 +15,7 @@ help:
 	@echo "  lint-web        eslint over the console"
 	@echo "  check-go-format verify active Go files are gofmt-formatted"
 	@echo "  test            go test ./..."
+	@echo "  reports         coverage and test reports into runtime/reports/"
 	@echo "  test-race       go test -race ./..."
 	@echo "  test-fuzz       list documented fuzz entrypoint"
 	@echo "  build           go build ./..."
@@ -60,6 +61,25 @@ test:
 
 test-race:
 	go test -race ./...
+
+# Everything a run produces, in one place. See docs/development.md.
+REPORTS := runtime/reports
+
+reports: reports-go reports-web
+	@echo "reports written to $(REPORTS)/"
+
+reports-go:
+	@mkdir -p $(REPORTS)
+	# -coverpkg=./... so a package counts as covered by whichever test
+	# exercises it, not only by tests living next to it. Without it a helper
+	# used by every handler test reports zero.
+	go test ./... -coverpkg=./... -coverprofile=$(REPORTS)/go-coverage.out -covermode=atomic
+	go tool cover -html=$(REPORTS)/go-coverage.out -o $(REPORTS)/go-coverage.html
+	$(CHECKS) coverage
+
+reports-web:
+	@mkdir -p $(REPORTS)
+	pnpm --dir web test:report
 
 test-fuzz:
 	@echo "No mandatory fuzz corpus is configured yet. Use targeted go test -fuzz commands for protocol packages when adding fuzz tests."
