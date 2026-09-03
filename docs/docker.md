@@ -12,7 +12,7 @@ docker compose up --build
 
 Open:
 
-- Console: `http://localhost:3000/ru` (or `/en`)
+- Console: `http://localhost:3000/en` (or `/ru`) — [what you will see](tour.md)
 - API health: `http://localhost:8080/health`
 - API readiness: `http://localhost:8080/api/v1/ready`
 

@@ -1,6 +1,6 @@
 # Dependency Rules
 
-Step 5.5 adds explicit architecture checks for service boundaries.
+The boundaries the architecture check enforces, and why each one is there.
 
 ## Core Rule
 
@@ -46,21 +46,15 @@ Legacy implementations are retained only as reference material.
 
 ## Local Check
 
-Run:
-
-```powershell
-.\scripts\check-architecture.ps1
-```
-
-or:
-
 ```sh
-sh scripts/check-architecture.sh
+go run ./tools/checks architecture
 ```
 
-With `make`:
+It reads the real import graph from `go list`, so a forbidden package reached
+through two intermediate hops fails as clearly as a direct import, and the
+failure names the chain and the file and line the first hop is written on.
+Production code is checked transitively; test files are checked for direct
+imports only, because a test reaching a package through its own subject is not
+a boundary violation.
 
-```sh
-make check-architecture
-make verify
-```
+`make check-architecture` and `make verify` run the same thing.

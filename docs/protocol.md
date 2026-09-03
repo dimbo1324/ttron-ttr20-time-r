@@ -1,12 +1,10 @@
 # Protocol
 
-## Status
+The wire format, and the package that implements it.
 
-Step 2 adds a typed FT1.2-like protocol core under `internal/protocol`.
-
-The core is intentionally independent from TCP, gRPC, Docker, config,
-logging, and emulator/gateway service logic. It uses the Go standard library
-only.
+`internal/protocol` is intentionally independent of TCP, gRPC, Docker, config,
+logging and the emulator and gateway service packages. It uses the Go standard
+library only, and the architecture check keeps it that way.
 
 ## Package Layout
 

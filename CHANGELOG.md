@@ -34,6 +34,11 @@ read a real one, and the repository learned to check itself.
   ESLint, govulncheck, npm audit, CodeQL, Dependabot, and a release workflow
   that builds binaries for four platforms, publishes images with an SBOM, and
   cuts a GitHub release from this file.
+- **A visual tour** of the console (`docs/tour.md`): screenshots and
+  animations of every page, of the fleet view, of a fault being injected, and
+  of a running gateway being reconfigured. They are produced by a script
+  against a live stack (`tools/docmedia`), because a stale screenshot looks
+  authoritative and nobody diffs a PNG.
 
 ### Changed
 
@@ -46,6 +51,13 @@ read a real one, and the repository learned to check itself.
   anywhere.
 - Go 1.26.8, gRPC 1.83.2 and `golang.org/x/net` 0.58.0, which between them
   closed 24 reachable advisories.
+- The documentation describes the project as it now is. The README, the
+  architecture, CI, testing, development and console documents were written
+  for earlier milestones and had drifted: eight of them still told the reader
+  to run PowerShell scripts that no longer exist, the CI job table listed five
+  of the nine jobs that run, and the console document described a proxy
+  mechanism that had been replaced precisely because it did not survive
+  containerisation.
 
 ### Fixed
 

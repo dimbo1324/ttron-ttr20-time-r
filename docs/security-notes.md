@@ -13,10 +13,19 @@ production deployment.
 
 ## Existing Baseline
 
-- Docker Go services use multi-stage builds and distroless non-root runtime
+- Every image is a multi-stage build with a distroless Debian runtime running
+  as `nonroot:nonroot`, the console included. A runtime image carries the
+  binary and the health check and no toolchain.
+- Base images are pinned by digest, not by tag.
+- Each Dockerfile has its own ignore file, and none of them include `.env`,
+  logs, binaries or build output.
+- Every push and every Monday, `govulncheck` looks for Go advisories that are
+  actually reachable from this code, `pnpm audit` looks at the console's
+  production tree, and CodeQL runs over Go and TypeScript. See [CI](ci.md).
+- A release publishes an SBOM and a provenance attestation with each image and
+  scans them with Trivy into the repository's security tab.
+- Dependabot opens updates for Go modules, npm, GitHub Actions and Docker base
   images.
-- Build contexts exclude `.env`, logs, binaries, and build
-  outputs.
 - The HTTP API keeps recovery middleware and request IDs.
 - The HTTP API sets `X-Content-Type-Options`, `X-Frame-Options`, and
   `Referrer-Policy` headers.
@@ -37,12 +46,9 @@ deployment-specific hardening.
 
 ## Future Hardening
 
-Possible future work:
-
 - Auth/RBAC for control endpoints.
-- TLS/mTLS for API and gRPC.
-- Secrets/config management.
-- Read-only/user-scoped demo modes.
-- Container image scanning.
-- SBOM generation.
-- Signed release artifacts.
+- TLS/mTLS for the API and for gRPC.
+- Secrets and config management.
+- A read-only or user-scoped demo mode.
+- Signed release artefacts. Releases carry checksums and a provenance
+  attestation today; the binaries themselves are not signed.

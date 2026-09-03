@@ -87,8 +87,10 @@ git push origin v0.1.0
 
 7. Create a GitHub release from the tag.
 8. Include release notes from [CHANGELOG.md](../CHANGELOG.md).
-9. Attach built binaries only if a dedicated release-binary workflow exists.
-10. Verify the Docker quick start from a fresh clone.
+9. Verify the Docker quick start from a fresh clone.
+
+Binaries, images and the release notes are produced by the workflow; steps 1
+to 8 are the judgement it cannot make.
 
 ## Release Notes Checklist
 

@@ -48,12 +48,13 @@ Default ports:
 - `9100`: emulator gRPC
 - `9200`: gateway gRPC
 - `8080`: HTTP API
+- `3000`: web console
 - `9090`: Prometheus
 
 Windows check:
 
 ```powershell
-Get-NetTCPConnection -LocalPort 9000,9100,9200,8080,9090 -ErrorAction SilentlyContinue
+Get-NetTCPConnection -LocalPort 9000,9100,9200,8080,3000,9090 -ErrorAction SilentlyContinue
 ```
 
 Stop stale Compose services:
@@ -96,14 +97,16 @@ docker compose --profile observability up -d --build
 Open `http://localhost:9090`, then inspect targets. The expected scrape target
 is `ft12-api:8080/metrics`.
 
-## Windows PowerShell Notes
+## Windows Without `make`
 
-`make` and `sh` may be unavailable on Windows. Use PowerShell equivalents:
+`make` and `sh` are often unavailable on Windows. Nothing here needs them: the
+repository's checks are one Go program, so the command is identical on every
+platform.
 
-```powershell
-.\scripts\check-architecture.ps1
-.\scripts\check-doc-links.ps1
-.\scripts\release-check.ps1
+```sh
+go run ./tools/checks release
+go run ./tools/checks architecture
+go run ./tools/checks doc-links
 ```
 
 Git may warn that LF will be replaced by CRLF. That warning is expected in some
@@ -119,7 +122,7 @@ Symptoms:
 Actions:
 
 - Run `go fmt ./...`.
-- Run `.\scripts\check-go-format.ps1`.
+- Run `go run ./tools/checks format`.
 - Check that `.gitattributes` is present.
 - Do not include `legacy/` in active formatting/build/test fixes unless legacy
   reference code is intentionally being changed.
@@ -137,8 +140,8 @@ Preview cleanup:
 go run ./tools/checks clean-runtime --dry-run
 ```
 
-Then remove ignored runtime/build artifacts:
+Then remove them:
 
-```powershell
-.\scripts\clean-runtime.ps1
+```sh
+go run ./tools/checks clean-runtime
 ```

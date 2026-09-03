@@ -4,6 +4,11 @@ The gateway is a TCP polling service. It connects to an FT1.2-like
 emulator/device, sends read-time requests, parses responses, tracks status, and
 reconnects with backoff after errors.
 
+Everything below is visible and editable from the console; [the tour](tour.md)
+shows what it looks like.
+
+![Schedule, retries, clock thresholds and availability policy](media/gateway.png)
+
 ## Schedule
 
 With no flags the gateway reads the device clock **on the fifth second of
