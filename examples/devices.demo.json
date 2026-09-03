@@ -1,0 +1,27 @@
+{
+  "devices": [
+    {
+      "id": "alpha",
+      "name": "TTR20 alpha",
+      "target": "127.0.0.1:9000",
+      "scheduleMode": "aligned",
+      "pollInterval": "5s",
+      "pollOffset": "1s",
+      "enabled": true
+    },
+    {
+      "id": "beta",
+      "name": "TTR20 beta",
+      "target": "127.0.0.1:9000",
+      "pollInterval": "3s",
+      "enabled": true
+    },
+    {
+      "id": "gamma",
+      "name": "TTR20 gamma (nothing listening)",
+      "target": "127.0.0.1:9099",
+      "pollInterval": "4s",
+      "enabled": true
+    }
+  ]
+}
