@@ -1,0 +1,78 @@
+# Dependency updates.
+#
+# Weekly rather than daily: this is a two-person repository, and a queue of
+# pull requests nobody has time to read is how the important one -- the
+# security patch -- ends up scrolled past with the rest.
+#
+# Everything is grouped by ecosystem. Fifteen separate bumps of one lockfile
+# is fifteen CI runs and fifteen review decisions to answer one question.
+version: 2
+
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      go:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "build(deps)"
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Split so a React or Next major -- the ones that need a person to look
+      # at the app afterwards -- does not arrive inside a pull request that is
+      # otherwise a rubber stamp.
+      next:
+        patterns:
+          - "next"
+          - "@next/*"
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      dev:
+        dependency-type: development
+        exclude-patterns:
+          - "next"
+          - "@next/*"
+      production:
+        dependency-type: production
+        exclude-patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+    commit-message:
+      prefix: "build(deps)"
+
+  # The workflows themselves age too, and an action pinned to a tag that has
+  # since moved is the one dependency nobody thinks to check.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "ci(deps)"
+
+  - package-ecosystem: docker
+    directories:
+      - /deploy/docker
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "build(deps)"
