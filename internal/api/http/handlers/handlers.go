@@ -50,6 +50,7 @@ func (h *Handler) Routes() http.Handler {
 	mux.HandleFunc("/api/v1/gateway/stop", h.gatewayStop)
 	mux.HandleFunc("/api/v1/gateway/last-read-time", h.gatewayLastReadTime)
 	mux.HandleFunc("/api/v1/gateway/events", h.gatewayEvents)
+	mux.HandleFunc("/api/v1/gateway/fleet", h.gatewayFleet)
 	mux.HandleFunc("/api/v1/events", h.events)
 	mux.HandleFunc("/api/v1/export/events.json", h.exportEventsJSON)
 	mux.HandleFunc("/api/v1/export/events.csv", h.exportEventsCSV)
@@ -254,6 +255,23 @@ func (h *Handler) gatewayLastReadTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperrors.WriteJSON(w, http.StatusOK, dto.LastReadTime(read))
+}
+
+// gatewayFleet answers for every device the gateway polls. A gateway running
+// without a device inventory reports a fleet of one, so the console can render
+// the same table either way.
+func (h *Handler) gatewayFleet(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodGet) {
+		return
+	}
+	ctx, cancel := h.requestContext(r)
+	defer cancel()
+	fleet, err := h.gateway.GetFleet(ctx)
+	if err != nil {
+		httperrors.WriteUpstreamError(w, "GATEWAY", err)
+		return
+	}
+	httperrors.WriteJSON(w, http.StatusOK, dto.Fleet(fleet))
 }
 
 func (h *Handler) gatewayEvents(w http.ResponseWriter, r *http.Request) {

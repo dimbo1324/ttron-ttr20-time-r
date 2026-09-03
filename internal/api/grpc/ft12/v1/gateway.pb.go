@@ -22,6 +22,565 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// How the poll loop is timed.
+//
+// `mode` is "interval" (every N after the last poll) or "aligned" (every N
+// past the epoch, so a fleet answers on the same wall-clock boundary rather
+// than drifting apart by however long each device took to reply).
+type ScheduleStatus struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Mode          string                 `protobuf:"bytes,1,opt,name=mode,proto3" json:"mode,omitempty"`
+	IntervalMs    int64                  `protobuf:"varint,2,opt,name=interval_ms,json=intervalMs,proto3" json:"interval_ms,omitempty"`
+	OffsetMs      int64                  `protobuf:"varint,3,opt,name=offset_ms,json=offsetMs,proto3" json:"offset_ms,omitempty"`
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	NextPollAt    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=next_poll_at,json=nextPollAt,proto3" json:"next_poll_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ScheduleStatus) Reset() {
+	*x = ScheduleStatus{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ScheduleStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ScheduleStatus) ProtoMessage() {}
+
+func (x *ScheduleStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ScheduleStatus.ProtoReflect.Descriptor instead.
+func (*ScheduleStatus) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ScheduleStatus) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
+func (x *ScheduleStatus) GetIntervalMs() int64 {
+	if x != nil {
+		return x.IntervalMs
+	}
+	return 0
+}
+
+func (x *ScheduleStatus) GetOffsetMs() int64 {
+	if x != nil {
+		return x.OffsetMs
+	}
+	return 0
+}
+
+func (x *ScheduleStatus) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ScheduleStatus) GetNextPollAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.NextPollAt
+	}
+	return nil
+}
+
+// In-session retries: a frame that arrived corrupt or late is retried on the
+// same connection, so `total_retries` counts attempts and `exhausted_polls`
+// counts the polls that ran out of them.
+type RetryStatus struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Attempts       int32                  `protobuf:"varint,1,opt,name=attempts,proto3" json:"attempts,omitempty"`
+	DelayMs        int64                  `protobuf:"varint,2,opt,name=delay_ms,json=delayMs,proto3" json:"delay_ms,omitempty"`
+	MaxDelayMs     int64                  `protobuf:"varint,3,opt,name=max_delay_ms,json=maxDelayMs,proto3" json:"max_delay_ms,omitempty"`
+	TotalRetries   uint64                 `protobuf:"varint,4,opt,name=total_retries,json=totalRetries,proto3" json:"total_retries,omitempty"`
+	ExhaustedPolls uint64                 `protobuf:"varint,5,opt,name=exhausted_polls,json=exhaustedPolls,proto3" json:"exhausted_polls,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RetryStatus) Reset() {
+	*x = RetryStatus{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RetryStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RetryStatus) ProtoMessage() {}
+
+func (x *RetryStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RetryStatus.ProtoReflect.Descriptor instead.
+func (*RetryStatus) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *RetryStatus) GetAttempts() int32 {
+	if x != nil {
+		return x.Attempts
+	}
+	return 0
+}
+
+func (x *RetryStatus) GetDelayMs() int64 {
+	if x != nil {
+		return x.DelayMs
+	}
+	return 0
+}
+
+func (x *RetryStatus) GetMaxDelayMs() int64 {
+	if x != nil {
+		return x.MaxDelayMs
+	}
+	return 0
+}
+
+func (x *RetryStatus) GetTotalRetries() uint64 {
+	if x != nil {
+		return x.TotalRetries
+	}
+	return 0
+}
+
+func (x *RetryStatus) GetExhaustedPolls() uint64 {
+	if x != nil {
+		return x.ExhaustedPolls
+	}
+	return 0
+}
+
+// The device clock as the gateway measures it.
+//
+// Skew is signed: positive means the device reads ahead of the gateway. The
+// median is what the state is judged on, because one sample carries the whole
+// round trip's jitter. Drift is a least-squares fit over the window, and
+// `drift_fit` is its R^2 -- a rate with a poor fit is noise, not drift.
+type ClockStatus struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	State               string                 `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
+	SkewMs              int64                  `protobuf:"varint,2,opt,name=skew_ms,json=skewMs,proto3" json:"skew_ms,omitempty"`
+	MedianSkewMs        int64                  `protobuf:"varint,3,opt,name=median_skew_ms,json=medianSkewMs,proto3" json:"median_skew_ms,omitempty"`
+	MinSkewMs           int64                  `protobuf:"varint,4,opt,name=min_skew_ms,json=minSkewMs,proto3" json:"min_skew_ms,omitempty"`
+	MaxSkewMs           int64                  `protobuf:"varint,5,opt,name=max_skew_ms,json=maxSkewMs,proto3" json:"max_skew_ms,omitempty"`
+	DriftPerDayMs       int64                  `protobuf:"varint,6,opt,name=drift_per_day_ms,json=driftPerDayMs,proto3" json:"drift_per_day_ms,omitempty"`
+	DriftDetermined     bool                   `protobuf:"varint,7,opt,name=drift_determined,json=driftDetermined,proto3" json:"drift_determined,omitempty"`
+	DriftFit            float64                `protobuf:"fixed64,8,opt,name=drift_fit,json=driftFit,proto3" json:"drift_fit,omitempty"`
+	Samples             int32                  `protobuf:"varint,9,opt,name=samples,proto3" json:"samples,omitempty"`
+	WarnThresholdMs     int64                  `protobuf:"varint,10,opt,name=warn_threshold_ms,json=warnThresholdMs,proto3" json:"warn_threshold_ms,omitempty"`
+	CriticalThresholdMs int64                  `protobuf:"varint,11,opt,name=critical_threshold_ms,json=criticalThresholdMs,proto3" json:"critical_threshold_ms,omitempty"`
+	RoundTripMs         int64                  `protobuf:"varint,12,opt,name=round_trip_ms,json=roundTripMs,proto3" json:"round_trip_ms,omitempty"`
+	UpdatedAt           *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ObservedSamples     uint64                 `protobuf:"varint,14,opt,name=observed_samples,json=observedSamples,proto3" json:"observed_samples,omitempty"`
+	RejectedSamples     uint64                 `protobuf:"varint,15,opt,name=rejected_samples,json=rejectedSamples,proto3" json:"rejected_samples,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *ClockStatus) Reset() {
+	*x = ClockStatus{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClockStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClockStatus) ProtoMessage() {}
+
+func (x *ClockStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClockStatus.ProtoReflect.Descriptor instead.
+func (*ClockStatus) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ClockStatus) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *ClockStatus) GetSkewMs() int64 {
+	if x != nil {
+		return x.SkewMs
+	}
+	return 0
+}
+
+func (x *ClockStatus) GetMedianSkewMs() int64 {
+	if x != nil {
+		return x.MedianSkewMs
+	}
+	return 0
+}
+
+func (x *ClockStatus) GetMinSkewMs() int64 {
+	if x != nil {
+		return x.MinSkewMs
+	}
+	return 0
+}
+
+func (x *ClockStatus) GetMaxSkewMs() int64 {
+	if x != nil {
+		return x.MaxSkewMs
+	}
+	return 0
+}
+
+func (x *ClockStatus) GetDriftPerDayMs() int64 {
+	if x != nil {
+		return x.DriftPerDayMs
+	}
+	return 0
+}
+
+func (x *ClockStatus) GetDriftDetermined() bool {
+	if x != nil {
+		return x.DriftDetermined
+	}
+	return false
+}
+
+func (x *ClockStatus) GetDriftFit() float64 {
+	if x != nil {
+		return x.DriftFit
+	}
+	return 0
+}
+
+func (x *ClockStatus) GetSamples() int32 {
+	if x != nil {
+		return x.Samples
+	}
+	return 0
+}
+
+func (x *ClockStatus) GetWarnThresholdMs() int64 {
+	if x != nil {
+		return x.WarnThresholdMs
+	}
+	return 0
+}
+
+func (x *ClockStatus) GetCriticalThresholdMs() int64 {
+	if x != nil {
+		return x.CriticalThresholdMs
+	}
+	return 0
+}
+
+func (x *ClockStatus) GetRoundTripMs() int64 {
+	if x != nil {
+		return x.RoundTripMs
+	}
+	return 0
+}
+
+func (x *ClockStatus) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *ClockStatus) GetObservedSamples() uint64 {
+	if x != nil {
+		return x.ObservedSamples
+	}
+	return 0
+}
+
+func (x *ClockStatus) GetRejectedSamples() uint64 {
+	if x != nil {
+		return x.RejectedSamples
+	}
+	return 0
+}
+
+// Reachability with hysteresis: it takes `degrade_after` consecutive failures
+// to leave "online" and `recover_after` consecutive successes to return, so a
+// single dropped frame does not flap the state.
+type DeviceHealth struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	State                string                 `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
+	Since                *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=since,proto3" json:"since,omitempty"`
+	Availability         float64                `protobuf:"fixed64,3,opt,name=availability,proto3" json:"availability,omitempty"`
+	WindowSamples        int32                  `protobuf:"varint,4,opt,name=window_samples,json=windowSamples,proto3" json:"window_samples,omitempty"`
+	ConsecutiveFailures  int32                  `protobuf:"varint,5,opt,name=consecutive_failures,json=consecutiveFailures,proto3" json:"consecutive_failures,omitempty"`
+	ConsecutiveSuccesses int32                  `protobuf:"varint,6,opt,name=consecutive_successes,json=consecutiveSuccesses,proto3" json:"consecutive_successes,omitempty"`
+	LatencyP50Ms         int64                  `protobuf:"varint,7,opt,name=latency_p50_ms,json=latencyP50Ms,proto3" json:"latency_p50_ms,omitempty"`
+	LatencyP95Ms         int64                  `protobuf:"varint,8,opt,name=latency_p95_ms,json=latencyP95Ms,proto3" json:"latency_p95_ms,omitempty"`
+	LatencyP99Ms         int64                  `protobuf:"varint,9,opt,name=latency_p99_ms,json=latencyP99Ms,proto3" json:"latency_p99_ms,omitempty"`
+	LatencyMaxMs         int64                  `protobuf:"varint,10,opt,name=latency_max_ms,json=latencyMaxMs,proto3" json:"latency_max_ms,omitempty"`
+	LatencyMeanMs        int64                  `protobuf:"varint,11,opt,name=latency_mean_ms,json=latencyMeanMs,proto3" json:"latency_mean_ms,omitempty"`
+	DegradeAfter         int32                  `protobuf:"varint,12,opt,name=degrade_after,json=degradeAfter,proto3" json:"degrade_after,omitempty"`
+	OfflineAfter         int32                  `protobuf:"varint,13,opt,name=offline_after,json=offlineAfter,proto3" json:"offline_after,omitempty"`
+	RecoverAfter         int32                  `protobuf:"varint,14,opt,name=recover_after,json=recoverAfter,proto3" json:"recover_after,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *DeviceHealth) Reset() {
+	*x = DeviceHealth{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeviceHealth) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeviceHealth) ProtoMessage() {}
+
+func (x *DeviceHealth) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeviceHealth.ProtoReflect.Descriptor instead.
+func (*DeviceHealth) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *DeviceHealth) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *DeviceHealth) GetSince() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Since
+	}
+	return nil
+}
+
+func (x *DeviceHealth) GetAvailability() float64 {
+	if x != nil {
+		return x.Availability
+	}
+	return 0
+}
+
+func (x *DeviceHealth) GetWindowSamples() int32 {
+	if x != nil {
+		return x.WindowSamples
+	}
+	return 0
+}
+
+func (x *DeviceHealth) GetConsecutiveFailures() int32 {
+	if x != nil {
+		return x.ConsecutiveFailures
+	}
+	return 0
+}
+
+func (x *DeviceHealth) GetConsecutiveSuccesses() int32 {
+	if x != nil {
+		return x.ConsecutiveSuccesses
+	}
+	return 0
+}
+
+func (x *DeviceHealth) GetLatencyP50Ms() int64 {
+	if x != nil {
+		return x.LatencyP50Ms
+	}
+	return 0
+}
+
+func (x *DeviceHealth) GetLatencyP95Ms() int64 {
+	if x != nil {
+		return x.LatencyP95Ms
+	}
+	return 0
+}
+
+func (x *DeviceHealth) GetLatencyP99Ms() int64 {
+	if x != nil {
+		return x.LatencyP99Ms
+	}
+	return 0
+}
+
+func (x *DeviceHealth) GetLatencyMaxMs() int64 {
+	if x != nil {
+		return x.LatencyMaxMs
+	}
+	return 0
+}
+
+func (x *DeviceHealth) GetLatencyMeanMs() int64 {
+	if x != nil {
+		return x.LatencyMeanMs
+	}
+	return 0
+}
+
+func (x *DeviceHealth) GetDegradeAfter() int32 {
+	if x != nil {
+		return x.DegradeAfter
+	}
+	return 0
+}
+
+func (x *DeviceHealth) GetOfflineAfter() int32 {
+	if x != nil {
+		return x.OfflineAfter
+	}
+	return 0
+}
+
+func (x *DeviceHealth) GetRecoverAfter() int32 {
+	if x != nil {
+		return x.RecoverAfter
+	}
+	return 0
+}
+
+// What the read-identity probe found. `supported` goes false for a device that
+// answers the probe with a plain acknowledgement instead of a nameplate.
+type DeviceIdentity struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Known         bool                   `protobuf:"varint,1,opt,name=known,proto3" json:"known,omitempty"`
+	Supported     bool                   `protobuf:"varint,2,opt,name=supported,proto3" json:"supported,omitempty"`
+	Model         string                 `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`
+	Serial        string                 `protobuf:"bytes,4,opt,name=serial,proto3" json:"serial,omitempty"`
+	Firmware      string                 `protobuf:"bytes,5,opt,name=firmware,proto3" json:"firmware,omitempty"`
+	ReadAt        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=read_at,json=readAt,proto3" json:"read_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeviceIdentity) Reset() {
+	*x = DeviceIdentity{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeviceIdentity) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeviceIdentity) ProtoMessage() {}
+
+func (x *DeviceIdentity) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeviceIdentity.ProtoReflect.Descriptor instead.
+func (*DeviceIdentity) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *DeviceIdentity) GetKnown() bool {
+	if x != nil {
+		return x.Known
+	}
+	return false
+}
+
+func (x *DeviceIdentity) GetSupported() bool {
+	if x != nil {
+		return x.Supported
+	}
+	return false
+}
+
+func (x *DeviceIdentity) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *DeviceIdentity) GetSerial() string {
+	if x != nil {
+		return x.Serial
+	}
+	return ""
+}
+
+func (x *DeviceIdentity) GetFirmware() string {
+	if x != nil {
+		return x.Firmware
+	}
+	return ""
+}
+
+func (x *DeviceIdentity) GetReadAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ReadAt
+	}
+	return nil
+}
+
 type GatewayStatus struct {
 	state                  protoimpl.MessageState `protogen:"open.v1"`
 	State                  ServiceState           `protobuf:"varint,1,opt,name=state,proto3,enum=ft12.v1.ServiceState" json:"state,omitempty"`
@@ -41,13 +600,22 @@ type GatewayStatus struct {
 	LastTxTime             *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=last_tx_time,json=lastTxTime,proto3" json:"last_tx_time,omitempty"`
 	LastRxTime             *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=last_rx_time,json=lastRxTime,proto3" json:"last_rx_time,omitempty"`
 	RecentFramesCount      uint32                 `protobuf:"varint,17,opt,name=recent_frames_count,json=recentFramesCount,proto3" json:"recent_frames_count,omitempty"`
+	ProtocolErrors         uint64                 `protobuf:"varint,18,opt,name=protocol_errors,json=protocolErrors,proto3" json:"protocol_errors,omitempty"`
+	LastRoundTripMs        int64                  `protobuf:"varint,19,opt,name=last_round_trip_ms,json=lastRoundTripMs,proto3" json:"last_round_trip_ms,omitempty"`
+	DeviceId               string                 `protobuf:"bytes,20,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
+	DeviceName             string                 `protobuf:"bytes,21,opt,name=device_name,json=deviceName,proto3" json:"device_name,omitempty"`
+	Schedule               *ScheduleStatus        `protobuf:"bytes,22,opt,name=schedule,proto3" json:"schedule,omitempty"`
+	Retry                  *RetryStatus           `protobuf:"bytes,23,opt,name=retry,proto3" json:"retry,omitempty"`
+	Clock                  *ClockStatus           `protobuf:"bytes,24,opt,name=clock,proto3" json:"clock,omitempty"`
+	Health                 *DeviceHealth          `protobuf:"bytes,25,opt,name=health,proto3" json:"health,omitempty"`
+	Identity               *DeviceIdentity        `protobuf:"bytes,26,opt,name=identity,proto3" json:"identity,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
 
 func (x *GatewayStatus) Reset() {
 	*x = GatewayStatus{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[0]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -59,7 +627,7 @@ func (x *GatewayStatus) String() string {
 func (*GatewayStatus) ProtoMessage() {}
 
 func (x *GatewayStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[0]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -72,7 +640,7 @@ func (x *GatewayStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GatewayStatus.ProtoReflect.Descriptor instead.
 func (*GatewayStatus) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{0}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GatewayStatus) GetState() ServiceState {
@@ -194,6 +762,204 @@ func (x *GatewayStatus) GetRecentFramesCount() uint32 {
 	return 0
 }
 
+func (x *GatewayStatus) GetProtocolErrors() uint64 {
+	if x != nil {
+		return x.ProtocolErrors
+	}
+	return 0
+}
+
+func (x *GatewayStatus) GetLastRoundTripMs() int64 {
+	if x != nil {
+		return x.LastRoundTripMs
+	}
+	return 0
+}
+
+func (x *GatewayStatus) GetDeviceId() string {
+	if x != nil {
+		return x.DeviceId
+	}
+	return ""
+}
+
+func (x *GatewayStatus) GetDeviceName() string {
+	if x != nil {
+		return x.DeviceName
+	}
+	return ""
+}
+
+func (x *GatewayStatus) GetSchedule() *ScheduleStatus {
+	if x != nil {
+		return x.Schedule
+	}
+	return nil
+}
+
+func (x *GatewayStatus) GetRetry() *RetryStatus {
+	if x != nil {
+		return x.Retry
+	}
+	return nil
+}
+
+func (x *GatewayStatus) GetClock() *ClockStatus {
+	if x != nil {
+		return x.Clock
+	}
+	return nil
+}
+
+func (x *GatewayStatus) GetHealth() *DeviceHealth {
+	if x != nil {
+		return x.Health
+	}
+	return nil
+}
+
+func (x *GatewayStatus) GetIdentity() *DeviceIdentity {
+	if x != nil {
+		return x.Identity
+	}
+	return nil
+}
+
+// Counts across every device the supervisor is polling, plus a pointer to the
+// device whose clock is furthest out -- the one an operator should look at
+// first when the fleet is larger than a screen.
+type FleetSummary struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Devices            int32                  `protobuf:"varint,1,opt,name=devices,proto3" json:"devices,omitempty"`
+	Running            int32                  `protobuf:"varint,2,opt,name=running,proto3" json:"running,omitempty"`
+	Online             int32                  `protobuf:"varint,3,opt,name=online,proto3" json:"online,omitempty"`
+	Degraded           int32                  `protobuf:"varint,4,opt,name=degraded,proto3" json:"degraded,omitempty"`
+	Offline            int32                  `protobuf:"varint,5,opt,name=offline,proto3" json:"offline,omitempty"`
+	Unknown            int32                  `protobuf:"varint,6,opt,name=unknown,proto3" json:"unknown,omitempty"`
+	ClockOk            int32                  `protobuf:"varint,7,opt,name=clock_ok,json=clockOk,proto3" json:"clock_ok,omitempty"`
+	ClockWarn          int32                  `protobuf:"varint,8,opt,name=clock_warn,json=clockWarn,proto3" json:"clock_warn,omitempty"`
+	ClockCritical      int32                  `protobuf:"varint,9,opt,name=clock_critical,json=clockCritical,proto3" json:"clock_critical,omitempty"`
+	ClockUnknown       int32                  `protobuf:"varint,10,opt,name=clock_unknown,json=clockUnknown,proto3" json:"clock_unknown,omitempty"`
+	WorstClockSkewMs   int64                  `protobuf:"varint,11,opt,name=worst_clock_skew_ms,json=worstClockSkewMs,proto3" json:"worst_clock_skew_ms,omitempty"`
+	WorstClockDeviceId string                 `protobuf:"bytes,12,opt,name=worst_clock_device_id,json=worstClockDeviceId,proto3" json:"worst_clock_device_id,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *FleetSummary) Reset() {
+	*x = FleetSummary{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FleetSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FleetSummary) ProtoMessage() {}
+
+func (x *FleetSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FleetSummary.ProtoReflect.Descriptor instead.
+func (*FleetSummary) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *FleetSummary) GetDevices() int32 {
+	if x != nil {
+		return x.Devices
+	}
+	return 0
+}
+
+func (x *FleetSummary) GetRunning() int32 {
+	if x != nil {
+		return x.Running
+	}
+	return 0
+}
+
+func (x *FleetSummary) GetOnline() int32 {
+	if x != nil {
+		return x.Online
+	}
+	return 0
+}
+
+func (x *FleetSummary) GetDegraded() int32 {
+	if x != nil {
+		return x.Degraded
+	}
+	return 0
+}
+
+func (x *FleetSummary) GetOffline() int32 {
+	if x != nil {
+		return x.Offline
+	}
+	return 0
+}
+
+func (x *FleetSummary) GetUnknown() int32 {
+	if x != nil {
+		return x.Unknown
+	}
+	return 0
+}
+
+func (x *FleetSummary) GetClockOk() int32 {
+	if x != nil {
+		return x.ClockOk
+	}
+	return 0
+}
+
+func (x *FleetSummary) GetClockWarn() int32 {
+	if x != nil {
+		return x.ClockWarn
+	}
+	return 0
+}
+
+func (x *FleetSummary) GetClockCritical() int32 {
+	if x != nil {
+		return x.ClockCritical
+	}
+	return 0
+}
+
+func (x *FleetSummary) GetClockUnknown() int32 {
+	if x != nil {
+		return x.ClockUnknown
+	}
+	return 0
+}
+
+func (x *FleetSummary) GetWorstClockSkewMs() int64 {
+	if x != nil {
+		return x.WorstClockSkewMs
+	}
+	return 0
+}
+
+func (x *FleetSummary) GetWorstClockDeviceId() string {
+	if x != nil {
+		return x.WorstClockDeviceId
+	}
+	return ""
+}
+
 type GetGatewayStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -202,7 +968,7 @@ type GetGatewayStatusRequest struct {
 
 func (x *GetGatewayStatusRequest) Reset() {
 	*x = GetGatewayStatusRequest{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[1]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -214,7 +980,7 @@ func (x *GetGatewayStatusRequest) String() string {
 func (*GetGatewayStatusRequest) ProtoMessage() {}
 
 func (x *GetGatewayStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[1]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -227,7 +993,7 @@ func (x *GetGatewayStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGatewayStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetGatewayStatusRequest) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{1}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{7}
 }
 
 type GetGatewayStatusResponse struct {
@@ -239,7 +1005,7 @@ type GetGatewayStatusResponse struct {
 
 func (x *GetGatewayStatusResponse) Reset() {
 	*x = GetGatewayStatusResponse{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[2]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -251,7 +1017,7 @@ func (x *GetGatewayStatusResponse) String() string {
 func (*GetGatewayStatusResponse) ProtoMessage() {}
 
 func (x *GetGatewayStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[2]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -264,7 +1030,7 @@ func (x *GetGatewayStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGatewayStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetGatewayStatusResponse) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{2}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetGatewayStatusResponse) GetStatus() *GatewayStatus {
@@ -282,7 +1048,7 @@ type StartPollingRequest struct {
 
 func (x *StartPollingRequest) Reset() {
 	*x = StartPollingRequest{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[3]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -294,7 +1060,7 @@ func (x *StartPollingRequest) String() string {
 func (*StartPollingRequest) ProtoMessage() {}
 
 func (x *StartPollingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[3]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -307,7 +1073,7 @@ func (x *StartPollingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartPollingRequest.ProtoReflect.Descriptor instead.
 func (*StartPollingRequest) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{3}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{9}
 }
 
 type StartPollingResponse struct {
@@ -319,7 +1085,7 @@ type StartPollingResponse struct {
 
 func (x *StartPollingResponse) Reset() {
 	*x = StartPollingResponse{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[4]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -331,7 +1097,7 @@ func (x *StartPollingResponse) String() string {
 func (*StartPollingResponse) ProtoMessage() {}
 
 func (x *StartPollingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[4]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -344,7 +1110,7 @@ func (x *StartPollingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartPollingResponse.ProtoReflect.Descriptor instead.
 func (*StartPollingResponse) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{4}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *StartPollingResponse) GetStatus() *GatewayStatus {
@@ -362,7 +1128,7 @@ type StopPollingRequest struct {
 
 func (x *StopPollingRequest) Reset() {
 	*x = StopPollingRequest{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[5]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -374,7 +1140,7 @@ func (x *StopPollingRequest) String() string {
 func (*StopPollingRequest) ProtoMessage() {}
 
 func (x *StopPollingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[5]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -387,7 +1153,7 @@ func (x *StopPollingRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopPollingRequest.ProtoReflect.Descriptor instead.
 func (*StopPollingRequest) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{5}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{11}
 }
 
 type StopPollingResponse struct {
@@ -399,7 +1165,7 @@ type StopPollingResponse struct {
 
 func (x *StopPollingResponse) Reset() {
 	*x = StopPollingResponse{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[6]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -411,7 +1177,7 @@ func (x *StopPollingResponse) String() string {
 func (*StopPollingResponse) ProtoMessage() {}
 
 func (x *StopPollingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[6]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -424,7 +1190,7 @@ func (x *StopPollingResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopPollingResponse.ProtoReflect.Descriptor instead.
 func (*StopPollingResponse) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{6}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *StopPollingResponse) GetStatus() *GatewayStatus {
@@ -442,7 +1208,7 @@ type GetLastReadTimeRequest struct {
 
 func (x *GetLastReadTimeRequest) Reset() {
 	*x = GetLastReadTimeRequest{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[7]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -454,7 +1220,7 @@ func (x *GetLastReadTimeRequest) String() string {
 func (*GetLastReadTimeRequest) ProtoMessage() {}
 
 func (x *GetLastReadTimeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[7]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -467,7 +1233,7 @@ func (x *GetLastReadTimeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLastReadTimeRequest.ProtoReflect.Descriptor instead.
 func (*GetLastReadTimeRequest) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{7}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{13}
 }
 
 type GetLastReadTimeResponse struct {
@@ -481,7 +1247,7 @@ type GetLastReadTimeResponse struct {
 
 func (x *GetLastReadTimeResponse) Reset() {
 	*x = GetLastReadTimeResponse{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[8]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -493,7 +1259,7 @@ func (x *GetLastReadTimeResponse) String() string {
 func (*GetLastReadTimeResponse) ProtoMessage() {}
 
 func (x *GetLastReadTimeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[8]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -506,7 +1272,7 @@ func (x *GetLastReadTimeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetLastReadTimeResponse.ProtoReflect.Descriptor instead.
 func (*GetLastReadTimeResponse) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{8}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetLastReadTimeResponse) GetDeviceTime() *timestamppb.Timestamp {
@@ -530,11 +1296,155 @@ func (x *GetLastReadTimeResponse) GetAvailable() bool {
 	return false
 }
 
+type GetFleetRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFleetRequest) Reset() {
+	*x = GetFleetRequest{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFleetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFleetRequest) ProtoMessage() {}
+
+func (x *GetFleetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFleetRequest.ProtoReflect.Descriptor instead.
+func (*GetFleetRequest) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{15}
+}
+
+type GetFleetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Summary       *FleetSummary          `protobuf:"bytes,1,opt,name=summary,proto3" json:"summary,omitempty"`
+	Devices       []*GatewayStatus       `protobuf:"bytes,2,rep,name=devices,proto3" json:"devices,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetFleetResponse) Reset() {
+	*x = GetFleetResponse{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetFleetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetFleetResponse) ProtoMessage() {}
+
+func (x *GetFleetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetFleetResponse.ProtoReflect.Descriptor instead.
+func (*GetFleetResponse) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetFleetResponse) GetSummary() *FleetSummary {
+	if x != nil {
+		return x.Summary
+	}
+	return nil
+}
+
+func (x *GetFleetResponse) GetDevices() []*GatewayStatus {
+	if x != nil {
+		return x.Devices
+	}
+	return nil
+}
+
 var File_proto_ft12_v1_gateway_proto protoreflect.FileDescriptor
 
 const file_proto_ft12_v1_gateway_proto_rawDesc = "" +
 	"\n" +
-	"\x1bproto/ft12/v1/gateway.proto\x12\aft12.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1aproto/ft12/v1/common.proto\"\xca\x06\n" +
+	"\x1bproto/ft12/v1/gateway.proto\x12\aft12.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1aproto/ft12/v1/common.proto\"\xc2\x01\n" +
+	"\x0eScheduleStatus\x12\x12\n" +
+	"\x04mode\x18\x01 \x01(\tR\x04mode\x12\x1f\n" +
+	"\vinterval_ms\x18\x02 \x01(\x03R\n" +
+	"intervalMs\x12\x1b\n" +
+	"\toffset_ms\x18\x03 \x01(\x03R\boffsetMs\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12<\n" +
+	"\fnext_poll_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"nextPollAt\"\xb4\x01\n" +
+	"\vRetryStatus\x12\x1a\n" +
+	"\battempts\x18\x01 \x01(\x05R\battempts\x12\x19\n" +
+	"\bdelay_ms\x18\x02 \x01(\x03R\adelayMs\x12 \n" +
+	"\fmax_delay_ms\x18\x03 \x01(\x03R\n" +
+	"maxDelayMs\x12#\n" +
+	"\rtotal_retries\x18\x04 \x01(\x04R\ftotalRetries\x12'\n" +
+	"\x0fexhausted_polls\x18\x05 \x01(\x04R\x0eexhaustedPolls\"\xc2\x04\n" +
+	"\vClockStatus\x12\x14\n" +
+	"\x05state\x18\x01 \x01(\tR\x05state\x12\x17\n" +
+	"\askew_ms\x18\x02 \x01(\x03R\x06skewMs\x12$\n" +
+	"\x0emedian_skew_ms\x18\x03 \x01(\x03R\fmedianSkewMs\x12\x1e\n" +
+	"\vmin_skew_ms\x18\x04 \x01(\x03R\tminSkewMs\x12\x1e\n" +
+	"\vmax_skew_ms\x18\x05 \x01(\x03R\tmaxSkewMs\x12'\n" +
+	"\x10drift_per_day_ms\x18\x06 \x01(\x03R\rdriftPerDayMs\x12)\n" +
+	"\x10drift_determined\x18\a \x01(\bR\x0fdriftDetermined\x12\x1b\n" +
+	"\tdrift_fit\x18\b \x01(\x01R\bdriftFit\x12\x18\n" +
+	"\asamples\x18\t \x01(\x05R\asamples\x12*\n" +
+	"\x11warn_threshold_ms\x18\n" +
+	" \x01(\x03R\x0fwarnThresholdMs\x122\n" +
+	"\x15critical_threshold_ms\x18\v \x01(\x03R\x13criticalThresholdMs\x12\"\n" +
+	"\rround_trip_ms\x18\f \x01(\x03R\vroundTripMs\x129\n" +
+	"\n" +
+	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12)\n" +
+	"\x10observed_samples\x18\x0e \x01(\x04R\x0fobservedSamples\x12)\n" +
+	"\x10rejected_samples\x18\x0f \x01(\x04R\x0frejectedSamples\"\xb8\x04\n" +
+	"\fDeviceHealth\x12\x14\n" +
+	"\x05state\x18\x01 \x01(\tR\x05state\x120\n" +
+	"\x05since\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x05since\x12\"\n" +
+	"\favailability\x18\x03 \x01(\x01R\favailability\x12%\n" +
+	"\x0ewindow_samples\x18\x04 \x01(\x05R\rwindowSamples\x121\n" +
+	"\x14consecutive_failures\x18\x05 \x01(\x05R\x13consecutiveFailures\x123\n" +
+	"\x15consecutive_successes\x18\x06 \x01(\x05R\x14consecutiveSuccesses\x12$\n" +
+	"\x0elatency_p50_ms\x18\a \x01(\x03R\flatencyP50Ms\x12$\n" +
+	"\x0elatency_p95_ms\x18\b \x01(\x03R\flatencyP95Ms\x12$\n" +
+	"\x0elatency_p99_ms\x18\t \x01(\x03R\flatencyP99Ms\x12$\n" +
+	"\x0elatency_max_ms\x18\n" +
+	" \x01(\x03R\flatencyMaxMs\x12&\n" +
+	"\x0flatency_mean_ms\x18\v \x01(\x03R\rlatencyMeanMs\x12#\n" +
+	"\rdegrade_after\x18\f \x01(\x05R\fdegradeAfter\x12#\n" +
+	"\roffline_after\x18\r \x01(\x05R\fofflineAfter\x12#\n" +
+	"\rrecover_after\x18\x0e \x01(\x05R\frecoverAfter\"\xc3\x01\n" +
+	"\x0eDeviceIdentity\x12\x14\n" +
+	"\x05known\x18\x01 \x01(\bR\x05known\x12\x1c\n" +
+	"\tsupported\x18\x02 \x01(\bR\tsupported\x12\x14\n" +
+	"\x05model\x18\x03 \x01(\tR\x05model\x12\x16\n" +
+	"\x06serial\x18\x04 \x01(\tR\x06serial\x12\x1a\n" +
+	"\bfirmware\x18\x05 \x01(\tR\bfirmware\x123\n" +
+	"\aread_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x06readAt\"\xcf\t\n" +
 	"\rGatewayStatus\x12+\n" +
 	"\x05state\x18\x01 \x01(\x0e2\x15.ft12.v1.ServiceStateR\x05state\x12\x1f\n" +
 	"\vtarget_addr\x18\x02 \x01(\tR\n" +
@@ -559,7 +1469,32 @@ const file_proto_ft12_v1_gateway_proto_rawDesc = "" +
 	"lastTxTime\x12<\n" +
 	"\flast_rx_time\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"lastRxTime\x12.\n" +
-	"\x13recent_frames_count\x18\x11 \x01(\rR\x11recentFramesCount\"\x19\n" +
+	"\x13recent_frames_count\x18\x11 \x01(\rR\x11recentFramesCount\x12'\n" +
+	"\x0fprotocol_errors\x18\x12 \x01(\x04R\x0eprotocolErrors\x12+\n" +
+	"\x12last_round_trip_ms\x18\x13 \x01(\x03R\x0flastRoundTripMs\x12\x1b\n" +
+	"\tdevice_id\x18\x14 \x01(\tR\bdeviceId\x12\x1f\n" +
+	"\vdevice_name\x18\x15 \x01(\tR\n" +
+	"deviceName\x123\n" +
+	"\bschedule\x18\x16 \x01(\v2\x17.ft12.v1.ScheduleStatusR\bschedule\x12*\n" +
+	"\x05retry\x18\x17 \x01(\v2\x14.ft12.v1.RetryStatusR\x05retry\x12*\n" +
+	"\x05clock\x18\x18 \x01(\v2\x14.ft12.v1.ClockStatusR\x05clock\x12-\n" +
+	"\x06health\x18\x19 \x01(\v2\x15.ft12.v1.DeviceHealthR\x06health\x123\n" +
+	"\bidentity\x18\x1a \x01(\v2\x17.ft12.v1.DeviceIdentityR\bidentity\"\x92\x03\n" +
+	"\fFleetSummary\x12\x18\n" +
+	"\adevices\x18\x01 \x01(\x05R\adevices\x12\x18\n" +
+	"\arunning\x18\x02 \x01(\x05R\arunning\x12\x16\n" +
+	"\x06online\x18\x03 \x01(\x05R\x06online\x12\x1a\n" +
+	"\bdegraded\x18\x04 \x01(\x05R\bdegraded\x12\x18\n" +
+	"\aoffline\x18\x05 \x01(\x05R\aoffline\x12\x18\n" +
+	"\aunknown\x18\x06 \x01(\x05R\aunknown\x12\x19\n" +
+	"\bclock_ok\x18\a \x01(\x05R\aclockOk\x12\x1d\n" +
+	"\n" +
+	"clock_warn\x18\b \x01(\x05R\tclockWarn\x12%\n" +
+	"\x0eclock_critical\x18\t \x01(\x05R\rclockCritical\x12#\n" +
+	"\rclock_unknown\x18\n" +
+	" \x01(\x05R\fclockUnknown\x12-\n" +
+	"\x13worst_clock_skew_ms\x18\v \x01(\x03R\x10worstClockSkewMs\x121\n" +
+	"\x15worst_clock_device_id\x18\f \x01(\tR\x12worstClockDeviceId\"\x19\n" +
 	"\x17GetGatewayStatusRequest\"J\n" +
 	"\x18GetGatewayStatusResponse\x12.\n" +
 	"\x06status\x18\x01 \x01(\v2\x16.ft12.v1.GatewayStatusR\x06status\"\x15\n" +
@@ -574,13 +1509,18 @@ const file_proto_ft12_v1_gateway_proto_rawDesc = "" +
 	"\vdevice_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"deviceTime\x127\n" +
 	"\tread_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\breadTime\x12\x1c\n" +
-	"\tavailable\x18\x03 \x01(\bR\tavailable2\xa5\x03\n" +
+	"\tavailable\x18\x03 \x01(\bR\tavailable\"\x11\n" +
+	"\x0fGetFleetRequest\"u\n" +
+	"\x10GetFleetResponse\x12/\n" +
+	"\asummary\x18\x01 \x01(\v2\x15.ft12.v1.FleetSummaryR\asummary\x120\n" +
+	"\adevices\x18\x02 \x03(\v2\x16.ft12.v1.GatewayStatusR\adevices2\xe6\x03\n" +
 	"\x0eGatewayService\x12P\n" +
 	"\tGetStatus\x12 .ft12.v1.GetGatewayStatusRequest\x1a!.ft12.v1.GetGatewayStatusResponse\x12K\n" +
 	"\fStartPolling\x12\x1c.ft12.v1.StartPollingRequest\x1a\x1d.ft12.v1.StartPollingResponse\x12H\n" +
 	"\vStopPolling\x12\x1b.ft12.v1.StopPollingRequest\x1a\x1c.ft12.v1.StopPollingResponse\x12T\n" +
 	"\x0fGetRecentEvents\x12\x1f.ft12.v1.GetRecentEventsRequest\x1a .ft12.v1.GetRecentEventsResponse\x12T\n" +
-	"\x0fGetLastReadTime\x12\x1f.ft12.v1.GetLastReadTimeRequest\x1a .ft12.v1.GetLastReadTimeResponseBJZHgithub.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1;ft12v1b\x06proto3"
+	"\x0fGetLastReadTime\x12\x1f.ft12.v1.GetLastReadTimeRequest\x1a .ft12.v1.GetLastReadTimeResponse\x12?\n" +
+	"\bGetFleet\x12\x18.ft12.v1.GetFleetRequest\x1a\x19.ft12.v1.GetFleetResponseBJZHgithub.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1;ft12v1b\x06proto3"
 
 var (
 	file_proto_ft12_v1_gateway_proto_rawDescOnce sync.Once
@@ -594,50 +1534,71 @@ func file_proto_ft12_v1_gateway_proto_rawDescGZIP() []byte {
 	return file_proto_ft12_v1_gateway_proto_rawDescData
 }
 
-var file_proto_ft12_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_proto_ft12_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_proto_ft12_v1_gateway_proto_goTypes = []any{
-	(*GatewayStatus)(nil),            // 0: ft12.v1.GatewayStatus
-	(*GetGatewayStatusRequest)(nil),  // 1: ft12.v1.GetGatewayStatusRequest
-	(*GetGatewayStatusResponse)(nil), // 2: ft12.v1.GetGatewayStatusResponse
-	(*StartPollingRequest)(nil),      // 3: ft12.v1.StartPollingRequest
-	(*StartPollingResponse)(nil),     // 4: ft12.v1.StartPollingResponse
-	(*StopPollingRequest)(nil),       // 5: ft12.v1.StopPollingRequest
-	(*StopPollingResponse)(nil),      // 6: ft12.v1.StopPollingResponse
-	(*GetLastReadTimeRequest)(nil),   // 7: ft12.v1.GetLastReadTimeRequest
-	(*GetLastReadTimeResponse)(nil),  // 8: ft12.v1.GetLastReadTimeResponse
-	(ServiceState)(0),                // 9: ft12.v1.ServiceState
-	(ChecksumMode)(0),                // 10: ft12.v1.ChecksumMode
-	(*timestamppb.Timestamp)(nil),    // 11: google.protobuf.Timestamp
-	(*GetRecentEventsRequest)(nil),   // 12: ft12.v1.GetRecentEventsRequest
-	(*GetRecentEventsResponse)(nil),  // 13: ft12.v1.GetRecentEventsResponse
+	(*ScheduleStatus)(nil),           // 0: ft12.v1.ScheduleStatus
+	(*RetryStatus)(nil),              // 1: ft12.v1.RetryStatus
+	(*ClockStatus)(nil),              // 2: ft12.v1.ClockStatus
+	(*DeviceHealth)(nil),             // 3: ft12.v1.DeviceHealth
+	(*DeviceIdentity)(nil),           // 4: ft12.v1.DeviceIdentity
+	(*GatewayStatus)(nil),            // 5: ft12.v1.GatewayStatus
+	(*FleetSummary)(nil),             // 6: ft12.v1.FleetSummary
+	(*GetGatewayStatusRequest)(nil),  // 7: ft12.v1.GetGatewayStatusRequest
+	(*GetGatewayStatusResponse)(nil), // 8: ft12.v1.GetGatewayStatusResponse
+	(*StartPollingRequest)(nil),      // 9: ft12.v1.StartPollingRequest
+	(*StartPollingResponse)(nil),     // 10: ft12.v1.StartPollingResponse
+	(*StopPollingRequest)(nil),       // 11: ft12.v1.StopPollingRequest
+	(*StopPollingResponse)(nil),      // 12: ft12.v1.StopPollingResponse
+	(*GetLastReadTimeRequest)(nil),   // 13: ft12.v1.GetLastReadTimeRequest
+	(*GetLastReadTimeResponse)(nil),  // 14: ft12.v1.GetLastReadTimeResponse
+	(*GetFleetRequest)(nil),          // 15: ft12.v1.GetFleetRequest
+	(*GetFleetResponse)(nil),         // 16: ft12.v1.GetFleetResponse
+	(*timestamppb.Timestamp)(nil),    // 17: google.protobuf.Timestamp
+	(ServiceState)(0),                // 18: ft12.v1.ServiceState
+	(ChecksumMode)(0),                // 19: ft12.v1.ChecksumMode
+	(*GetRecentEventsRequest)(nil),   // 20: ft12.v1.GetRecentEventsRequest
+	(*GetRecentEventsResponse)(nil),  // 21: ft12.v1.GetRecentEventsResponse
 }
 var file_proto_ft12_v1_gateway_proto_depIdxs = []int32{
-	9,  // 0: ft12.v1.GatewayStatus.state:type_name -> ft12.v1.ServiceState
-	10, // 1: ft12.v1.GatewayStatus.checksum_mode:type_name -> ft12.v1.ChecksumMode
-	11, // 2: ft12.v1.GatewayStatus.last_successful_read_time:type_name -> google.protobuf.Timestamp
-	11, // 3: ft12.v1.GatewayStatus.last_device_time:type_name -> google.protobuf.Timestamp
-	11, // 4: ft12.v1.GatewayStatus.last_tx_time:type_name -> google.protobuf.Timestamp
-	11, // 5: ft12.v1.GatewayStatus.last_rx_time:type_name -> google.protobuf.Timestamp
-	0,  // 6: ft12.v1.GetGatewayStatusResponse.status:type_name -> ft12.v1.GatewayStatus
-	0,  // 7: ft12.v1.StartPollingResponse.status:type_name -> ft12.v1.GatewayStatus
-	0,  // 8: ft12.v1.StopPollingResponse.status:type_name -> ft12.v1.GatewayStatus
-	11, // 9: ft12.v1.GetLastReadTimeResponse.device_time:type_name -> google.protobuf.Timestamp
-	11, // 10: ft12.v1.GetLastReadTimeResponse.read_time:type_name -> google.protobuf.Timestamp
-	1,  // 11: ft12.v1.GatewayService.GetStatus:input_type -> ft12.v1.GetGatewayStatusRequest
-	3,  // 12: ft12.v1.GatewayService.StartPolling:input_type -> ft12.v1.StartPollingRequest
-	5,  // 13: ft12.v1.GatewayService.StopPolling:input_type -> ft12.v1.StopPollingRequest
-	12, // 14: ft12.v1.GatewayService.GetRecentEvents:input_type -> ft12.v1.GetRecentEventsRequest
-	7,  // 15: ft12.v1.GatewayService.GetLastReadTime:input_type -> ft12.v1.GetLastReadTimeRequest
-	2,  // 16: ft12.v1.GatewayService.GetStatus:output_type -> ft12.v1.GetGatewayStatusResponse
-	4,  // 17: ft12.v1.GatewayService.StartPolling:output_type -> ft12.v1.StartPollingResponse
-	6,  // 18: ft12.v1.GatewayService.StopPolling:output_type -> ft12.v1.StopPollingResponse
-	13, // 19: ft12.v1.GatewayService.GetRecentEvents:output_type -> ft12.v1.GetRecentEventsResponse
-	8,  // 20: ft12.v1.GatewayService.GetLastReadTime:output_type -> ft12.v1.GetLastReadTimeResponse
-	16, // [16:21] is the sub-list for method output_type
-	11, // [11:16] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	17, // 0: ft12.v1.ScheduleStatus.next_poll_at:type_name -> google.protobuf.Timestamp
+	17, // 1: ft12.v1.ClockStatus.updated_at:type_name -> google.protobuf.Timestamp
+	17, // 2: ft12.v1.DeviceHealth.since:type_name -> google.protobuf.Timestamp
+	17, // 3: ft12.v1.DeviceIdentity.read_at:type_name -> google.protobuf.Timestamp
+	18, // 4: ft12.v1.GatewayStatus.state:type_name -> ft12.v1.ServiceState
+	19, // 5: ft12.v1.GatewayStatus.checksum_mode:type_name -> ft12.v1.ChecksumMode
+	17, // 6: ft12.v1.GatewayStatus.last_successful_read_time:type_name -> google.protobuf.Timestamp
+	17, // 7: ft12.v1.GatewayStatus.last_device_time:type_name -> google.protobuf.Timestamp
+	17, // 8: ft12.v1.GatewayStatus.last_tx_time:type_name -> google.protobuf.Timestamp
+	17, // 9: ft12.v1.GatewayStatus.last_rx_time:type_name -> google.protobuf.Timestamp
+	0,  // 10: ft12.v1.GatewayStatus.schedule:type_name -> ft12.v1.ScheduleStatus
+	1,  // 11: ft12.v1.GatewayStatus.retry:type_name -> ft12.v1.RetryStatus
+	2,  // 12: ft12.v1.GatewayStatus.clock:type_name -> ft12.v1.ClockStatus
+	3,  // 13: ft12.v1.GatewayStatus.health:type_name -> ft12.v1.DeviceHealth
+	4,  // 14: ft12.v1.GatewayStatus.identity:type_name -> ft12.v1.DeviceIdentity
+	5,  // 15: ft12.v1.GetGatewayStatusResponse.status:type_name -> ft12.v1.GatewayStatus
+	5,  // 16: ft12.v1.StartPollingResponse.status:type_name -> ft12.v1.GatewayStatus
+	5,  // 17: ft12.v1.StopPollingResponse.status:type_name -> ft12.v1.GatewayStatus
+	17, // 18: ft12.v1.GetLastReadTimeResponse.device_time:type_name -> google.protobuf.Timestamp
+	17, // 19: ft12.v1.GetLastReadTimeResponse.read_time:type_name -> google.protobuf.Timestamp
+	6,  // 20: ft12.v1.GetFleetResponse.summary:type_name -> ft12.v1.FleetSummary
+	5,  // 21: ft12.v1.GetFleetResponse.devices:type_name -> ft12.v1.GatewayStatus
+	7,  // 22: ft12.v1.GatewayService.GetStatus:input_type -> ft12.v1.GetGatewayStatusRequest
+	9,  // 23: ft12.v1.GatewayService.StartPolling:input_type -> ft12.v1.StartPollingRequest
+	11, // 24: ft12.v1.GatewayService.StopPolling:input_type -> ft12.v1.StopPollingRequest
+	20, // 25: ft12.v1.GatewayService.GetRecentEvents:input_type -> ft12.v1.GetRecentEventsRequest
+	13, // 26: ft12.v1.GatewayService.GetLastReadTime:input_type -> ft12.v1.GetLastReadTimeRequest
+	15, // 27: ft12.v1.GatewayService.GetFleet:input_type -> ft12.v1.GetFleetRequest
+	8,  // 28: ft12.v1.GatewayService.GetStatus:output_type -> ft12.v1.GetGatewayStatusResponse
+	10, // 29: ft12.v1.GatewayService.StartPolling:output_type -> ft12.v1.StartPollingResponse
+	12, // 30: ft12.v1.GatewayService.StopPolling:output_type -> ft12.v1.StopPollingResponse
+	21, // 31: ft12.v1.GatewayService.GetRecentEvents:output_type -> ft12.v1.GetRecentEventsResponse
+	14, // 32: ft12.v1.GatewayService.GetLastReadTime:output_type -> ft12.v1.GetLastReadTimeResponse
+	16, // 33: ft12.v1.GatewayService.GetFleet:output_type -> ft12.v1.GetFleetResponse
+	28, // [28:34] is the sub-list for method output_type
+	22, // [22:28] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_proto_ft12_v1_gateway_proto_init() }
@@ -652,7 +1613,7 @@ func file_proto_ft12_v1_gateway_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_ft12_v1_gateway_proto_rawDesc), len(file_proto_ft12_v1_gateway_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

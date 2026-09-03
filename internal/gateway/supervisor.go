@@ -202,7 +202,16 @@ func (s *Supervisor) Statuses() []Status {
 }
 
 func (s *Supervisor) Fleet() FleetStatus {
-	statuses := s.Statuses()
+	return SummarizeFleet(s.Statuses())
+}
+
+// SummarizeFleet counts a set of device statuses into one fleet view.
+//
+// It is separate from the supervisor because a gateway running a single
+// device has no supervisor at all, and the control plane still has to answer
+// the same question. Counting in one place keeps the single-device answer and
+// the inventory answer from drifting apart.
+func SummarizeFleet(statuses []Status) FleetStatus {
 	fleet := FleetStatus{Devices: len(statuses), Statuses: statuses}
 
 	for _, status := range statuses {

@@ -27,12 +27,48 @@ go run ./cmd/ft12-api -http-listen 127.0.0.1:8080 -emulator-grpc 127.0.0.1:9100 
 - `POST /api/v1/gateway/stop`
 - `GET /api/v1/gateway/last-read-time`
 - `GET /api/v1/gateway/events?limit=100`
+- `GET /api/v1/gateway/fleet`
 - `GET /api/v1/events?source=all&limit=100`
 - `GET /api/v1/export/events.json?source=all&limit=100`
 - `GET /api/v1/export/events.csv?source=all&limit=100`
 - `GET /api/v1/export/overview.json?limit=50`
 - `GET /api/v1/export/emulator-status.json`
 - `GET /api/v1/export/gateway-status.json`
+
+## Gateway Status
+
+`GET /api/v1/gateway/status` returns the flat connection counters plus five
+nested sections that describe how the gateway is behaving, not just whether it
+is up:
+
+- `schedule` — poll timing: `mode` (`interval` or `aligned`), `intervalMs`,
+  `offsetMs`, and `nextPollAt`.
+- `retry` — the in-session retry budget (`attempts`, `delayMs`, `maxDelayMs`)
+  and how much of it has been spent (`totalRetries`, `exhaustedPolls`).
+- `clock` — the measured device clock. `skewMs` is signed: positive means the
+  device reads ahead of the gateway. `medianSkewMs` is what `state`
+  (`unknown` / `ok` / `warn` / `critical`) is judged on, because a single
+  sample carries the whole round trip. `driftPerDayMs` is a least-squares rate
+  over the sample window and `driftFit` is its R², so a rate with a poor fit
+  can be recognised as noise.
+- `health` — reachability with hysteresis (`state`, `availability`,
+  `consecutiveFailures`, the `degradeAfter` / `offlineAfter` / `recoverAfter`
+  policy) and the latency percentiles the decision was made on.
+- `identity` — the nameplate the read-identity probe found. `supported` goes
+  false for a device that answers the probe with a plain acknowledgement.
+
+Every duration in these sections is milliseconds. `clock.state` and
+`health.state` are always a named state, never an empty string.
+
+## Gateway Fleet
+
+`GET /api/v1/gateway/fleet` returns `summary` — device counts by health and
+clock state, plus `worstClockSkewMs` and `worstClockDeviceId` — and `devices`,
+an array of the same status objects.
+
+A gateway started without a device inventory reports a fleet of one, so a
+consumer renders the same view in either configuration and never has to ask
+which mode the gateway is in.
 
 ## Fault Mode Update
 

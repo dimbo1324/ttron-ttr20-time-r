@@ -8,14 +8,30 @@ import (
 	domain "github.com/dimbo1324/ttron-ttr20-time-r/internal/gateway"
 )
 
+// FleetSource is anything that can report on more than one device -- in
+// practice the supervisor. It is an interface, and optional, because a gateway
+// configured without a device inventory has no supervisor at all; see GetFleet
+// for what happens then.
+type FleetSource interface {
+	Fleet() domain.FleetStatus
+}
+
 type Service struct {
 	ft12v1.UnimplementedGatewayServiceServer
 	gateway *domain.Service
+	fleet   FleetSource
 	rootCtx context.Context
 }
 
 func New(rootCtx context.Context, service *domain.Service) *Service {
 	return &Service{rootCtx: rootCtx, gateway: service}
+}
+
+// WithFleet attaches the multi-device view. Without it the service still
+// answers GetFleet, using the single device it controls.
+func (s *Service) WithFleet(fleet FleetSource) *Service {
+	s.fleet = fleet
+	return s
 }
 
 func (s *Service) GetStatus(context.Context, *ft12v1.GetGatewayStatusRequest) (*ft12v1.GetGatewayStatusResponse, error) {
@@ -45,4 +61,14 @@ func (s *Service) GetLastReadTime(context.Context, *ft12v1.GetLastReadTimeReques
 		ReadTime:   mapping.Time(status.LastSuccessfulReadTime),
 		Available:  !status.LastParsedDeviceTime.IsZero(),
 	}, nil
+}
+
+// GetFleet answers for every device, and for a gateway without an inventory
+// that is a fleet of one. Callers therefore never have to ask which mode the
+// gateway is in before reading the reply.
+func (s *Service) GetFleet(context.Context, *ft12v1.GetFleetRequest) (*ft12v1.GetFleetResponse, error) {
+	if s.fleet != nil {
+		return mapFleet(s.fleet.Fleet()), nil
+	}
+	return mapFleet(domain.SummarizeFleet([]domain.Status{s.gateway.Status()})), nil
 }

@@ -19,6 +19,7 @@ type GatewayClient interface {
 	StopPolling(context.Context) (*ft12v1.GatewayStatus, error)
 	GetLastReadTime(context.Context) (*ft12v1.GetLastReadTimeResponse, error)
 	GetRecentEvents(context.Context, uint32) ([]*ft12v1.FrameEvent, error)
+	GetFleet(context.Context) (*ft12v1.GetFleetResponse, error)
 }
 
 type EmulatorGRPCClient struct {
@@ -103,4 +104,8 @@ func (c *GatewayGRPCClient) GetRecentEvents(ctx context.Context, limit uint32) (
 		return nil, err
 	}
 	return resp.GetEvents(), nil
+}
+
+func (c *GatewayGRPCClient) GetFleet(ctx context.Context) (*ft12v1.GetFleetResponse, error) {
+	return c.client.GetFleet(ctx, &ft12v1.GetFleetRequest{})
 }

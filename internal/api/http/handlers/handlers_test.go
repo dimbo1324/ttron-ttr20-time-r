@@ -52,6 +52,8 @@ type fakeGateway struct {
 	started   bool
 	stopped   bool
 	events    []*ft12v1.FrameEvent
+	fleet     *ft12v1.GetFleetResponse
+	fleetErr  error
 }
 
 func (f *fakeGateway) GetStatus(context.Context) (*ft12v1.GatewayStatus, error) {
@@ -78,6 +80,19 @@ func (f *fakeGateway) GetLastReadTime(context.Context) (*ft12v1.GetLastReadTimeR
 
 func (f *fakeGateway) GetRecentEvents(context.Context, uint32) ([]*ft12v1.FrameEvent, error) {
 	return f.events, nil
+}
+
+func (f *fakeGateway) GetFleet(context.Context) (*ft12v1.GetFleetResponse, error) {
+	if f.fleetErr != nil {
+		return nil, f.fleetErr
+	}
+	if f.fleet != nil {
+		return f.fleet, nil
+	}
+	return &ft12v1.GetFleetResponse{
+		Summary: &ft12v1.FleetSummary{Devices: 1, Running: 1, Online: 1},
+		Devices: []*ft12v1.GatewayStatus{f.status},
+	}, nil
 }
 
 func testHandler() (*Handler, *fakeEmulator, *fakeGateway) {

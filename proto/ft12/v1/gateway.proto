@@ -7,6 +7,85 @@ import "proto/ft12/v1/common.proto";
 
 option go_package = "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1;ft12v1";
 
+// How the poll loop is timed.
+//
+// `mode` is "interval" (every N after the last poll) or "aligned" (every N
+// past the epoch, so a fleet answers on the same wall-clock boundary rather
+// than drifting apart by however long each device took to reply).
+message ScheduleStatus {
+  string mode = 1;
+  int64 interval_ms = 2;
+  int64 offset_ms = 3;
+  string description = 4;
+  google.protobuf.Timestamp next_poll_at = 5;
+}
+
+// In-session retries: a frame that arrived corrupt or late is retried on the
+// same connection, so `total_retries` counts attempts and `exhausted_polls`
+// counts the polls that ran out of them.
+message RetryStatus {
+  int32 attempts = 1;
+  int64 delay_ms = 2;
+  int64 max_delay_ms = 3;
+  uint64 total_retries = 4;
+  uint64 exhausted_polls = 5;
+}
+
+// The device clock as the gateway measures it.
+//
+// Skew is signed: positive means the device reads ahead of the gateway. The
+// median is what the state is judged on, because one sample carries the whole
+// round trip's jitter. Drift is a least-squares fit over the window, and
+// `drift_fit` is its R^2 -- a rate with a poor fit is noise, not drift.
+message ClockStatus {
+  string state = 1;
+  int64 skew_ms = 2;
+  int64 median_skew_ms = 3;
+  int64 min_skew_ms = 4;
+  int64 max_skew_ms = 5;
+  int64 drift_per_day_ms = 6;
+  bool drift_determined = 7;
+  double drift_fit = 8;
+  int32 samples = 9;
+  int64 warn_threshold_ms = 10;
+  int64 critical_threshold_ms = 11;
+  int64 round_trip_ms = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  uint64 observed_samples = 14;
+  uint64 rejected_samples = 15;
+}
+
+// Reachability with hysteresis: it takes `degrade_after` consecutive failures
+// to leave "online" and `recover_after` consecutive successes to return, so a
+// single dropped frame does not flap the state.
+message DeviceHealth {
+  string state = 1;
+  google.protobuf.Timestamp since = 2;
+  double availability = 3;
+  int32 window_samples = 4;
+  int32 consecutive_failures = 5;
+  int32 consecutive_successes = 6;
+  int64 latency_p50_ms = 7;
+  int64 latency_p95_ms = 8;
+  int64 latency_p99_ms = 9;
+  int64 latency_max_ms = 10;
+  int64 latency_mean_ms = 11;
+  int32 degrade_after = 12;
+  int32 offline_after = 13;
+  int32 recover_after = 14;
+}
+
+// What the read-identity probe found. `supported` goes false for a device that
+// answers the probe with a plain acknowledgement instead of a nameplate.
+message DeviceIdentity {
+  bool known = 1;
+  bool supported = 2;
+  string model = 3;
+  string serial = 4;
+  string firmware = 5;
+  google.protobuf.Timestamp read_at = 6;
+}
+
 message GatewayStatus {
   ServiceState state = 1;
   string target_addr = 2;
@@ -25,6 +104,34 @@ message GatewayStatus {
   google.protobuf.Timestamp last_tx_time = 15;
   google.protobuf.Timestamp last_rx_time = 16;
   uint32 recent_frames_count = 17;
+
+  uint64 protocol_errors = 18;
+  int64 last_round_trip_ms = 19;
+  string device_id = 20;
+  string device_name = 21;
+  ScheduleStatus schedule = 22;
+  RetryStatus retry = 23;
+  ClockStatus clock = 24;
+  DeviceHealth health = 25;
+  DeviceIdentity identity = 26;
+}
+
+// Counts across every device the supervisor is polling, plus a pointer to the
+// device whose clock is furthest out -- the one an operator should look at
+// first when the fleet is larger than a screen.
+message FleetSummary {
+  int32 devices = 1;
+  int32 running = 2;
+  int32 online = 3;
+  int32 degraded = 4;
+  int32 offline = 5;
+  int32 unknown = 6;
+  int32 clock_ok = 7;
+  int32 clock_warn = 8;
+  int32 clock_critical = 9;
+  int32 clock_unknown = 10;
+  int64 worst_clock_skew_ms = 11;
+  string worst_clock_device_id = 12;
 }
 
 message GetGatewayStatusRequest {}
@@ -53,10 +160,18 @@ message GetLastReadTimeResponse {
   bool available = 3;
 }
 
+message GetFleetRequest {}
+
+message GetFleetResponse {
+  FleetSummary summary = 1;
+  repeated GatewayStatus devices = 2;
+}
+
 service GatewayService {
   rpc GetStatus(GetGatewayStatusRequest) returns (GetGatewayStatusResponse);
   rpc StartPolling(StartPollingRequest) returns (StartPollingResponse);
   rpc StopPolling(StopPollingRequest) returns (StopPollingResponse);
   rpc GetRecentEvents(GetRecentEventsRequest) returns (GetRecentEventsResponse);
   rpc GetLastReadTime(GetLastReadTimeRequest) returns (GetLastReadTimeResponse);
+  rpc GetFleet(GetFleetRequest) returns (GetFleetResponse);
 }

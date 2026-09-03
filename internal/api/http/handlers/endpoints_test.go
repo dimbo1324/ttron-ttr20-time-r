@@ -184,6 +184,44 @@ func TestGatewayEventsEndpoint(t *testing.T) {
 	}
 }
 
+func TestGatewayFleetEndpoint(t *testing.T) {
+	handler, _, _ := testHandler()
+
+	rec := doRequest(t, handler, http.MethodGet, "/api/v1/gateway/fleet")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	body := decodeBody(t, rec)
+	summary, ok := body["summary"].(map[string]any)
+	if !ok || summary["devices"] != float64(1) {
+		t.Fatalf("summary = %s", rec.Body.String())
+	}
+	devices, ok := body["devices"].([]any)
+	if !ok || len(devices) != 1 {
+		t.Fatalf("devices = %s", rec.Body.String())
+	}
+}
+
+func TestGatewayFleetEndpointReportsUpstreamFailure(t *testing.T) {
+	handler, _, gateway := testHandler()
+	gateway.fleetErr = errors.New("gateway unavailable")
+
+	rec := doRequest(t, handler, http.MethodGet, "/api/v1/gateway/fleet")
+	if rec.Code == http.StatusOK {
+		t.Fatalf("status = %d, want a failure", rec.Code)
+	}
+}
+
+func TestGatewayFleetRejectsWrites(t *testing.T) {
+	handler, _, _ := testHandler()
+
+	rec := doRequest(t, handler, http.MethodPost, "/api/v1/gateway/fleet")
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+	}
+}
+
 func TestGatewayEventsRejectsInvalidLimit(t *testing.T) {
 	handler, _, _ := testHandler()
 
