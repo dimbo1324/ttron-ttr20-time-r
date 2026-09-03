@@ -52,7 +52,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ft12-healthcheck .
 
 # ---------------------------------------------------------------- runtime
 # gcr.io/distroless/nodejs22-debian12:nonroot
-FROM gcr.io/distroless/nodejs22-debian12@sha256:13593b7570658e8477de39e2f4a1dd25db2f836d68a0ba771251572d23bb4f8e
+FROM gcr.io/distroless/nodejs22-debian12@sha256:8a3e96fe3345b5d83ecec2066e7c498139a02a6d1214e4f6c39f9ce359f3f5bc
 WORKDIR /app
 
 ENV NODE_ENV=production
