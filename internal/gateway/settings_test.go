@@ -257,6 +257,38 @@ func TestUpdateSettingsWhileTheGatewayIsPolling(t *testing.T) {
 	waitFor(t, 3*time.Second, func() bool { return service.Status().SuccessfulReads > before })
 }
 
+func TestUpdateSettingsSurvivesAStopAndStart(t *testing.T) {
+	wire := testWire(t, "sum")
+	device := startScriptedDevice(t, "sum", func(request frame.Frame, _ int) deviceReply {
+		return timeReply(t, wire, request, time.Now())
+	})
+
+	cfg := testGatewayConfig(device.addr())
+	service := newTestService(t, cfg)
+
+	next := validSettings()
+	next.ScheduleMode = string(schedule.ModeInterval)
+	next.PollInterval = 40 * time.Millisecond
+	next.PollOffset = 0
+	next.RequestTimeout = 20 * time.Millisecond
+	if _, err := service.UpdateSettings(next); err != nil {
+		t.Fatal(err)
+	}
+
+	// Configured while stopped, honoured when started: the settings live on
+	// the service, not on the session, so a gateway reconfigured between runs
+	// does not quietly come back up on its startup flags.
+	runService(t, service)
+	waitFor(t, 3*time.Second, func() bool { return service.Status().SuccessfulReads > 0 })
+
+	if got := service.Status().Schedule.Interval; got != 40*time.Millisecond {
+		t.Fatalf("Schedule.Interval = %s, want the configured value", got)
+	}
+	if got := service.Settings().RequestTimeout; got != 20*time.Millisecond {
+		t.Fatalf("RequestTimeout = %s", got)
+	}
+}
+
 func TestUpdateSettingsWakesASessionParkedOnALongWait(t *testing.T) {
 	wire := testWire(t, "sum")
 	device := startScriptedDevice(t, "sum", func(request frame.Frame, _ int) deviceReply {
