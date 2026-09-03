@@ -25,6 +25,7 @@ const (
 	GatewayService_GetRecentEvents_FullMethodName = "/ft12.v1.GatewayService/GetRecentEvents"
 	GatewayService_GetLastReadTime_FullMethodName = "/ft12.v1.GatewayService/GetLastReadTime"
 	GatewayService_GetFleet_FullMethodName        = "/ft12.v1.GatewayService/GetFleet"
+	GatewayService_GetHistory_FullMethodName      = "/ft12.v1.GatewayService/GetHistory"
 )
 
 // GatewayServiceClient is the client API for GatewayService service.
@@ -37,6 +38,7 @@ type GatewayServiceClient interface {
 	GetRecentEvents(ctx context.Context, in *GetRecentEventsRequest, opts ...grpc.CallOption) (*GetRecentEventsResponse, error)
 	GetLastReadTime(ctx context.Context, in *GetLastReadTimeRequest, opts ...grpc.CallOption) (*GetLastReadTimeResponse, error)
 	GetFleet(ctx context.Context, in *GetFleetRequest, opts ...grpc.CallOption) (*GetFleetResponse, error)
+	GetHistory(ctx context.Context, in *GetHistoryRequest, opts ...grpc.CallOption) (*GetHistoryResponse, error)
 }
 
 type gatewayServiceClient struct {
@@ -107,6 +109,16 @@ func (c *gatewayServiceClient) GetFleet(ctx context.Context, in *GetFleetRequest
 	return out, nil
 }
 
+func (c *gatewayServiceClient) GetHistory(ctx context.Context, in *GetHistoryRequest, opts ...grpc.CallOption) (*GetHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetHistoryResponse)
+	err := c.cc.Invoke(ctx, GatewayService_GetHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GatewayServiceServer is the server API for GatewayService service.
 // All implementations must embed UnimplementedGatewayServiceServer
 // for forward compatibility.
@@ -117,6 +129,7 @@ type GatewayServiceServer interface {
 	GetRecentEvents(context.Context, *GetRecentEventsRequest) (*GetRecentEventsResponse, error)
 	GetLastReadTime(context.Context, *GetLastReadTimeRequest) (*GetLastReadTimeResponse, error)
 	GetFleet(context.Context, *GetFleetRequest) (*GetFleetResponse, error)
+	GetHistory(context.Context, *GetHistoryRequest) (*GetHistoryResponse, error)
 	mustEmbedUnimplementedGatewayServiceServer()
 }
 
@@ -144,6 +157,9 @@ func (UnimplementedGatewayServiceServer) GetLastReadTime(context.Context, *GetLa
 }
 func (UnimplementedGatewayServiceServer) GetFleet(context.Context, *GetFleetRequest) (*GetFleetResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetFleet not implemented")
+}
+func (UnimplementedGatewayServiceServer) GetHistory(context.Context, *GetHistoryRequest) (*GetHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetHistory not implemented")
 }
 func (UnimplementedGatewayServiceServer) mustEmbedUnimplementedGatewayServiceServer() {}
 func (UnimplementedGatewayServiceServer) testEmbeddedByValue()                        {}
@@ -274,6 +290,24 @@ func _GatewayService_GetFleet_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GatewayService_GetHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayServiceServer).GetHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GatewayService_GetHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayServiceServer).GetHistory(ctx, req.(*GetHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GatewayService_ServiceDesc is the grpc.ServiceDesc for GatewayService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -304,6 +338,10 @@ var GatewayService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetFleet",
 			Handler:    _GatewayService_GetFleet_Handler,
+		},
+		{
+			MethodName: "GetHistory",
+			Handler:    _GatewayService_GetHistory_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

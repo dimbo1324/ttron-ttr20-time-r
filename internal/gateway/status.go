@@ -3,6 +3,8 @@ package gateway
 import (
 	"time"
 
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/clock"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/health"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/observability/events"
 )
 
@@ -98,4 +100,13 @@ type Status struct {
 type Snapshot struct {
 	Status Status
 	Recent []events.FrameRecord
+}
+
+// History is the contents of the two rolling windows, oldest first. It is kept
+// out of Status deliberately: Status is copied on every read by callers that
+// only want the current numbers, and carrying two slices along would make that
+// read cost proportional to the window size.
+type History struct {
+	ClockSamples   []clock.Point
+	HealthOutcomes []health.Outcome
 }

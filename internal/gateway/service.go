@@ -182,6 +182,16 @@ func (s *Service) HealthSnapshot() health.Snapshot {
 	return s.health.Snapshot()
 }
 
+// History is the raw material behind the two aggregates -- the skew window and
+// the outcome window, oldest first. Status reports what those windows add up
+// to; this reports what is in them, for a caller that has to draw the run.
+func (s *Service) History() History {
+	return History{
+		ClockSamples:   s.skew.Samples(),
+		HealthOutcomes: s.health.Outcomes(),
+	}
+}
+
 func (s *Service) DeviceID() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

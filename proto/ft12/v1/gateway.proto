@@ -160,6 +160,30 @@ message GetLastReadTimeResponse {
   bool available = 3;
 }
 
+// One skew measurement, at the reference instant it belongs to.
+message ClockSample {
+  google.protobuf.Timestamp at = 1;
+  int64 skew_ms = 2;
+  int64 round_trip_ms = 3;
+}
+
+// One recorded poll. `latency_ms` is meaningful only when `success` is true.
+message HealthOutcome {
+  google.protobuf.Timestamp at = 1;
+  bool success = 2;
+  int64 latency_ms = 3;
+}
+
+message GetHistoryRequest {}
+
+// The contents of the two rolling windows, oldest first -- the raw material
+// the median, the drift line and the availability figure are computed from.
+// Kept out of GatewayStatus so an ordinary status read stays a fixed size.
+message GetHistoryResponse {
+  repeated ClockSample clock_samples = 1;
+  repeated HealthOutcome health_outcomes = 2;
+}
+
 message GetFleetRequest {}
 
 message GetFleetResponse {
@@ -174,4 +198,5 @@ service GatewayService {
   rpc GetRecentEvents(GetRecentEventsRequest) returns (GetRecentEventsResponse);
   rpc GetLastReadTime(GetLastReadTimeRequest) returns (GetLastReadTimeResponse);
   rpc GetFleet(GetFleetRequest) returns (GetFleetResponse);
+  rpc GetHistory(GetHistoryRequest) returns (GetHistoryResponse);
 }

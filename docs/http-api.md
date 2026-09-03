@@ -28,6 +28,7 @@ go run ./cmd/ft12-api -http-listen 127.0.0.1:8080 -emulator-grpc 127.0.0.1:9100 
 - `GET /api/v1/gateway/last-read-time`
 - `GET /api/v1/gateway/events?limit=100`
 - `GET /api/v1/gateway/fleet`
+- `GET /api/v1/gateway/history`
 - `GET /api/v1/events?source=all&limit=100`
 - `GET /api/v1/export/events.json?source=all&limit=100`
 - `GET /api/v1/export/events.csv?source=all&limit=100`
@@ -69,6 +70,19 @@ an array of the same status objects.
 A gateway started without a device inventory reports a fleet of one, so a
 consumer renders the same view in either configuration and never has to ask
 which mode the gateway is in.
+
+## Gateway History
+
+`GET /api/v1/gateway/history` returns the two rolling windows the aggregates
+are computed from, oldest first:
+
+- `clockSamples` — `at`, `skewMs`, `roundTripMs` per measurement.
+- `healthOutcomes` — `at`, `success`, `latencyMs` per poll. `latencyMs` is
+  meaningful only where `success` is true.
+
+It is a separate call from `gateway/status` so an ordinary status read stays a
+fixed size regardless of the window. A consumer that only needs the current
+numbers never pays for the history.
 
 ## Fault Mode Update
 

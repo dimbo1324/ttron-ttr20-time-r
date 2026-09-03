@@ -51,6 +51,7 @@ func (h *Handler) Routes() http.Handler {
 	mux.HandleFunc("/api/v1/gateway/last-read-time", h.gatewayLastReadTime)
 	mux.HandleFunc("/api/v1/gateway/events", h.gatewayEvents)
 	mux.HandleFunc("/api/v1/gateway/fleet", h.gatewayFleet)
+	mux.HandleFunc("/api/v1/gateway/history", h.gatewayHistory)
 	mux.HandleFunc("/api/v1/events", h.events)
 	mux.HandleFunc("/api/v1/export/events.json", h.exportEventsJSON)
 	mux.HandleFunc("/api/v1/export/events.csv", h.exportEventsCSV)
@@ -272,6 +273,22 @@ func (h *Handler) gatewayFleet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperrors.WriteJSON(w, http.StatusOK, dto.Fleet(fleet))
+}
+
+// gatewayHistory returns the skew and outcome windows a console needs to draw
+// the run behind the current numbers.
+func (h *Handler) gatewayHistory(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodGet) {
+		return
+	}
+	ctx, cancel := h.requestContext(r)
+	defer cancel()
+	history, err := h.gateway.GetHistory(ctx)
+	if err != nil {
+		httperrors.WriteUpstreamError(w, "GATEWAY", err)
+		return
+	}
+	httperrors.WriteJSON(w, http.StatusOK, dto.History(history))
 }
 
 func (h *Handler) gatewayEvents(w http.ResponseWriter, r *http.Request) {

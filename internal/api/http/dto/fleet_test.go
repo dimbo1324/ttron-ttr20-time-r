@@ -109,3 +109,33 @@ func TestFleetOfNothingSerialisesAsAnEmptyList(t *testing.T) {
 		t.Fatalf("devices = %d", len(decoded.Devices))
 	}
 }
+
+func TestHistoryMapsBothWindows(t *testing.T) {
+	at := timestamppb.New(time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC))
+	got := History(&ft12v1.GetHistoryResponse{
+		ClockSamples:   []*ft12v1.ClockSample{{At: at, SkewMs: -120, RoundTripMs: 8}},
+		HealthOutcomes: []*ft12v1.HealthOutcome{{At: at, Success: true, LatencyMs: 8}, {Success: false}},
+	})
+
+	if len(got.ClockSamples) != 1 || got.ClockSamples[0].SkewMs != -120 {
+		t.Fatalf("samples = %+v", got.ClockSamples)
+	}
+	if len(got.HealthOutcomes) != 2 || !got.HealthOutcomes[0].Success {
+		t.Fatalf("outcomes = %+v", got.HealthOutcomes)
+	}
+	// An outcome recorded before the tracker had a clock carries no instant;
+	// the field is omitted rather than sent as a zero timestamp.
+	if got.HealthOutcomes[1].At != nil {
+		t.Fatalf("unset instant = %v", *got.HealthOutcomes[1].At)
+	}
+}
+
+func TestHistoryOfNothingSerialisesAsEmptyLists(t *testing.T) {
+	body, err := json.Marshal(History(nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != `{"clockSamples":[],"healthOutcomes":[]}` {
+		t.Fatalf("body = %s", body)
+	}
+}

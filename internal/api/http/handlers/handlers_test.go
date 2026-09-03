@@ -47,13 +47,14 @@ func (f *fakeEmulator) GetRecentEvents(context.Context, uint32) ([]*ft12v1.Frame
 }
 
 type fakeGateway struct {
-	status    *ft12v1.GatewayStatus
-	statusErr error
-	started   bool
-	stopped   bool
-	events    []*ft12v1.FrameEvent
-	fleet     *ft12v1.GetFleetResponse
-	fleetErr  error
+	status     *ft12v1.GatewayStatus
+	statusErr  error
+	started    bool
+	stopped    bool
+	events     []*ft12v1.FrameEvent
+	fleet      *ft12v1.GetFleetResponse
+	fleetErr   error
+	historyErr error
 }
 
 func (f *fakeGateway) GetStatus(context.Context) (*ft12v1.GatewayStatus, error) {
@@ -80,6 +81,16 @@ func (f *fakeGateway) GetLastReadTime(context.Context) (*ft12v1.GetLastReadTimeR
 
 func (f *fakeGateway) GetRecentEvents(context.Context, uint32) ([]*ft12v1.FrameEvent, error) {
 	return f.events, nil
+}
+
+func (f *fakeGateway) GetHistory(context.Context) (*ft12v1.GetHistoryResponse, error) {
+	if f.historyErr != nil {
+		return nil, f.historyErr
+	}
+	return &ft12v1.GetHistoryResponse{
+		ClockSamples:   []*ft12v1.ClockSample{{At: timestamppb.New(time.Unix(3, 0).UTC()), SkewMs: -120, RoundTripMs: 8}},
+		HealthOutcomes: []*ft12v1.HealthOutcome{{At: timestamppb.New(time.Unix(3, 0).UTC()), Success: true, LatencyMs: 8}},
+	}, nil
 }
 
 func (f *fakeGateway) GetFleet(context.Context) (*ft12v1.GetFleetResponse, error) {

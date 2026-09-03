@@ -120,6 +120,28 @@ type FleetDTO struct {
 	Devices []GatewayStatusDTO `json:"devices"`
 }
 
+// ClockSampleDTO is one skew measurement, at the reference instant it belongs
+// to -- the request time plus half the round trip.
+type ClockSampleDTO struct {
+	At          *string `json:"at,omitempty"`
+	SkewMs      int64   `json:"skewMs"`
+	RoundTripMs int64   `json:"roundTripMs"`
+}
+
+// HealthOutcomeDTO is one recorded poll. LatencyMs is meaningful only when
+// Success is true.
+type HealthOutcomeDTO struct {
+	At        *string `json:"at,omitempty"`
+	Success   bool    `json:"success"`
+	LatencyMs int64   `json:"latencyMs"`
+}
+
+// HistoryDTO carries both rolling windows, oldest first.
+type HistoryDTO struct {
+	ClockSamples   []ClockSampleDTO   `json:"clockSamples"`
+	HealthOutcomes []HealthOutcomeDTO `json:"healthOutcomes"`
+}
+
 type LastReadTimeDTO struct {
 	Available  bool    `json:"available"`
 	DeviceTime *string `json:"deviceTime,omitempty"`
@@ -275,6 +297,28 @@ func Fleet(fleet *ft12v1.GetFleetResponse) FleetDTO {
 	}
 	for _, device := range fleet.GetDevices() {
 		out.Devices = append(out.Devices, GatewayStatus(device))
+	}
+	return out
+}
+
+func History(history *ft12v1.GetHistoryResponse) HistoryDTO {
+	out := HistoryDTO{ClockSamples: []ClockSampleDTO{}, HealthOutcomes: []HealthOutcomeDTO{}}
+	if history == nil {
+		return out
+	}
+	for _, sample := range history.GetClockSamples() {
+		out.ClockSamples = append(out.ClockSamples, ClockSampleDTO{
+			At:          Timestamp(sample.GetAt()),
+			SkewMs:      sample.GetSkewMs(),
+			RoundTripMs: sample.GetRoundTripMs(),
+		})
+	}
+	for _, outcome := range history.GetHealthOutcomes() {
+		out.HealthOutcomes = append(out.HealthOutcomes, HealthOutcomeDTO{
+			At:        Timestamp(outcome.GetAt()),
+			Success:   outcome.GetSuccess(),
+			LatencyMs: outcome.GetLatencyMs(),
+		})
 	}
 	return out
 }

@@ -132,6 +132,26 @@ func mapFleet(fleet domain.FleetStatus) *ft12v1.GetFleetResponse {
 	}
 }
 
+func mapHistory(history domain.History) *ft12v1.GetHistoryResponse {
+	samples := make([]*ft12v1.ClockSample, 0, len(history.ClockSamples))
+	for _, sample := range history.ClockSamples {
+		samples = append(samples, &ft12v1.ClockSample{
+			At:          mapping.Time(sample.At),
+			SkewMs:      mapping.Millis(sample.Skew),
+			RoundTripMs: mapping.Millis(sample.RoundTrip),
+		})
+	}
+	outcomes := make([]*ft12v1.HealthOutcome, 0, len(history.HealthOutcomes))
+	for _, outcome := range history.HealthOutcomes {
+		outcomes = append(outcomes, &ft12v1.HealthOutcome{
+			At:        mapping.Time(outcome.At),
+			Success:   outcome.Success,
+			LatencyMs: mapping.Millis(outcome.Latency),
+		})
+	}
+	return &ft12v1.GetHistoryResponse{ClockSamples: samples, HealthOutcomes: outcomes}
+}
+
 func mapEvents(records []events.FrameRecord, limit uint32) []*ft12v1.FrameEvent {
 	return mapping.Events(records, limit)
 }

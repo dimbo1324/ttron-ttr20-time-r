@@ -176,3 +176,27 @@ func (t *Tracker) Reset() {
 	t.consecutiveSuccesses = 0
 	t.lastError = ""
 }
+
+// Outcome is one recorded poll, as the window remembers it.
+type Outcome struct {
+	At      time.Time
+	Success bool
+	Latency time.Duration
+}
+
+// Outcomes returns the rolling window, oldest first.
+//
+// The aggregates in Snapshot answer "how is it now"; a console showing a run
+// of polls needs the individual results, and reconstructing them from polled
+// snapshots would lose every outcome that happened between two reads.
+func (t *Tracker) Outcomes() []Outcome {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	items := t.window.ordered()
+	out := make([]Outcome, 0, len(items))
+	for _, item := range items {
+		out = append(out, Outcome{At: item.at, Success: item.success, Latency: item.latency})
+	}
+	return out
+}

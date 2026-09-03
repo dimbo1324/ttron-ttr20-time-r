@@ -72,3 +72,9 @@ func (s *Service) GetFleet(context.Context, *ft12v1.GetFleetRequest) (*ft12v1.Ge
 	}
 	return mapFleet(domain.SummarizeFleet([]domain.Status{s.gateway.Status()})), nil
 }
+
+// GetHistory returns the two rolling windows behind the aggregates in
+// GetStatus, so a console can draw the run rather than only its summary.
+func (s *Service) GetHistory(context.Context, *ft12v1.GetHistoryRequest) (*ft12v1.GetHistoryResponse, error) {
+	return mapHistory(s.gateway.History()), nil
+}

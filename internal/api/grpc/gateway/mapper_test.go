@@ -8,8 +8,10 @@ import (
 	"time"
 
 	ft12v1 "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/clock"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/config"
 	domain "github.com/dimbo1324/ttron-ttr20-time-r/internal/gateway"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/health"
 )
 
 // richStatus is a status with every nested section populated and no two
@@ -239,6 +241,50 @@ func TestMapFleetOfNothing(t *testing.T) {
 	}
 	if got.GetSummary().GetWorstClockDeviceId() != "" {
 		t.Fatal("an empty fleet has no worst device")
+	}
+}
+
+func TestMapHistoryPreservesOrderAndSign(t *testing.T) {
+	at := time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC)
+	got := mapHistory(domain.History{
+		ClockSamples: []clock.Point{
+			{At: at, Skew: -120 * time.Millisecond, RoundTrip: 8 * time.Millisecond},
+			{At: at.Add(time.Second), Skew: 340 * time.Millisecond, RoundTrip: 9 * time.Millisecond},
+		},
+		HealthOutcomes: []health.Outcome{
+			{At: at, Success: true, Latency: 8 * time.Millisecond},
+			{At: at.Add(time.Second), Success: false},
+		},
+	})
+
+	samples := got.GetClockSamples()
+	if len(samples) != 2 {
+		t.Fatalf("samples = %d", len(samples))
+	}
+	// Oldest first: a chart drawn from a reversed window would show a device
+	// converging when it is actually drifting away.
+	if samples[0].GetSkewMs() != -120 || samples[1].GetSkewMs() != 340 {
+		t.Fatalf("skews = %d, %d", samples[0].GetSkewMs(), samples[1].GetSkewMs())
+	}
+
+	outcomes := got.GetHealthOutcomes()
+	if len(outcomes) != 2 || !outcomes[0].GetSuccess() || outcomes[1].GetSuccess() {
+		t.Fatalf("outcomes = %+v", outcomes)
+	}
+	if outcomes[0].GetLatencyMs() != 8 {
+		t.Fatalf("latency = %d", outcomes[0].GetLatencyMs())
+	}
+}
+
+func TestGetHistoryOfAGatewayThatHasNotPolled(t *testing.T) {
+	service := newTestGatewayService(t)
+
+	got, err := New(context.Background(), service).GetHistory(context.Background(), &ft12v1.GetHistoryRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.GetClockSamples()) != 0 || len(got.GetHealthOutcomes()) != 0 {
+		t.Fatalf("history = %+v", got)
 	}
 }
 

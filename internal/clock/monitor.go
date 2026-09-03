@@ -137,3 +137,26 @@ func (m *Monitor) Reset() {
 	m.state = StateUnknown
 	m.last = Report{}
 }
+
+// Point is one skew measurement, at the reference instant it belongs to --
+// the request time plus half the round trip, which is where the device most
+// plausibly read its own clock.
+type Point struct {
+	At        time.Time
+	Skew      time.Duration
+	RoundTrip time.Duration
+}
+
+// Samples returns the skew window, oldest first, so a caller can draw the
+// history the median and the drift line were computed from.
+func (m *Monitor) Samples() []Point {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	items := m.window.ordered()
+	out := make([]Point, 0, len(items))
+	for _, item := range items {
+		out = append(out, Point{At: item.at, Skew: item.skew, RoundTrip: item.roundTrip})
+	}
+	return out
+}

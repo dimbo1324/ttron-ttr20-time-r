@@ -1296,6 +1296,219 @@ func (x *GetLastReadTimeResponse) GetAvailable() bool {
 	return false
 }
 
+// One skew measurement, at the reference instant it belongs to.
+type ClockSample struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	At            *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=at,proto3" json:"at,omitempty"`
+	SkewMs        int64                  `protobuf:"varint,2,opt,name=skew_ms,json=skewMs,proto3" json:"skew_ms,omitempty"`
+	RoundTripMs   int64                  `protobuf:"varint,3,opt,name=round_trip_ms,json=roundTripMs,proto3" json:"round_trip_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClockSample) Reset() {
+	*x = ClockSample{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClockSample) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClockSample) ProtoMessage() {}
+
+func (x *ClockSample) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClockSample.ProtoReflect.Descriptor instead.
+func (*ClockSample) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ClockSample) GetAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.At
+	}
+	return nil
+}
+
+func (x *ClockSample) GetSkewMs() int64 {
+	if x != nil {
+		return x.SkewMs
+	}
+	return 0
+}
+
+func (x *ClockSample) GetRoundTripMs() int64 {
+	if x != nil {
+		return x.RoundTripMs
+	}
+	return 0
+}
+
+// One recorded poll. `latency_ms` is meaningful only when `success` is true.
+type HealthOutcome struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	At            *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=at,proto3" json:"at,omitempty"`
+	Success       bool                   `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	LatencyMs     int64                  `protobuf:"varint,3,opt,name=latency_ms,json=latencyMs,proto3" json:"latency_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HealthOutcome) Reset() {
+	*x = HealthOutcome{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HealthOutcome) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthOutcome) ProtoMessage() {}
+
+func (x *HealthOutcome) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthOutcome.ProtoReflect.Descriptor instead.
+func (*HealthOutcome) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *HealthOutcome) GetAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.At
+	}
+	return nil
+}
+
+func (x *HealthOutcome) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *HealthOutcome) GetLatencyMs() int64 {
+	if x != nil {
+		return x.LatencyMs
+	}
+	return 0
+}
+
+type GetHistoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetHistoryRequest) Reset() {
+	*x = GetHistoryRequest{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetHistoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHistoryRequest) ProtoMessage() {}
+
+func (x *GetHistoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHistoryRequest.ProtoReflect.Descriptor instead.
+func (*GetHistoryRequest) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{17}
+}
+
+// The contents of the two rolling windows, oldest first -- the raw material
+// the median, the drift line and the availability figure are computed from.
+// Kept out of GatewayStatus so an ordinary status read stays a fixed size.
+type GetHistoryResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ClockSamples   []*ClockSample         `protobuf:"bytes,1,rep,name=clock_samples,json=clockSamples,proto3" json:"clock_samples,omitempty"`
+	HealthOutcomes []*HealthOutcome       `protobuf:"bytes,2,rep,name=health_outcomes,json=healthOutcomes,proto3" json:"health_outcomes,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetHistoryResponse) Reset() {
+	*x = GetHistoryResponse{}
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetHistoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHistoryResponse) ProtoMessage() {}
+
+func (x *GetHistoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHistoryResponse.ProtoReflect.Descriptor instead.
+func (*GetHistoryResponse) Descriptor() ([]byte, []int) {
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *GetHistoryResponse) GetClockSamples() []*ClockSample {
+	if x != nil {
+		return x.ClockSamples
+	}
+	return nil
+}
+
+func (x *GetHistoryResponse) GetHealthOutcomes() []*HealthOutcome {
+	if x != nil {
+		return x.HealthOutcomes
+	}
+	return nil
+}
+
 type GetFleetRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1304,7 +1517,7 @@ type GetFleetRequest struct {
 
 func (x *GetFleetRequest) Reset() {
 	*x = GetFleetRequest{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[15]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1316,7 +1529,7 @@ func (x *GetFleetRequest) String() string {
 func (*GetFleetRequest) ProtoMessage() {}
 
 func (x *GetFleetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[15]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1329,7 +1542,7 @@ func (x *GetFleetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFleetRequest.ProtoReflect.Descriptor instead.
 func (*GetFleetRequest) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{15}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{19}
 }
 
 type GetFleetResponse struct {
@@ -1342,7 +1555,7 @@ type GetFleetResponse struct {
 
 func (x *GetFleetResponse) Reset() {
 	*x = GetFleetResponse{}
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[16]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1354,7 +1567,7 @@ func (x *GetFleetResponse) String() string {
 func (*GetFleetResponse) ProtoMessage() {}
 
 func (x *GetFleetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[16]
+	mi := &file_proto_ft12_v1_gateway_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1367,7 +1580,7 @@ func (x *GetFleetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFleetResponse.ProtoReflect.Descriptor instead.
 func (*GetFleetResponse) Descriptor() ([]byte, []int) {
-	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{16}
+	return file_proto_ft12_v1_gateway_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GetFleetResponse) GetSummary() *FleetSummary {
@@ -1509,18 +1722,33 @@ const file_proto_ft12_v1_gateway_proto_rawDesc = "" +
 	"\vdevice_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"deviceTime\x127\n" +
 	"\tread_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\breadTime\x12\x1c\n" +
-	"\tavailable\x18\x03 \x01(\bR\tavailable\"\x11\n" +
+	"\tavailable\x18\x03 \x01(\bR\tavailable\"v\n" +
+	"\vClockSample\x12*\n" +
+	"\x02at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\x12\x17\n" +
+	"\askew_ms\x18\x02 \x01(\x03R\x06skewMs\x12\"\n" +
+	"\rround_trip_ms\x18\x03 \x01(\x03R\vroundTripMs\"t\n" +
+	"\rHealthOutcome\x12*\n" +
+	"\x02at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\x02at\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x1d\n" +
+	"\n" +
+	"latency_ms\x18\x03 \x01(\x03R\tlatencyMs\"\x13\n" +
+	"\x11GetHistoryRequest\"\x90\x01\n" +
+	"\x12GetHistoryResponse\x129\n" +
+	"\rclock_samples\x18\x01 \x03(\v2\x14.ft12.v1.ClockSampleR\fclockSamples\x12?\n" +
+	"\x0fhealth_outcomes\x18\x02 \x03(\v2\x16.ft12.v1.HealthOutcomeR\x0ehealthOutcomes\"\x11\n" +
 	"\x0fGetFleetRequest\"u\n" +
 	"\x10GetFleetResponse\x12/\n" +
 	"\asummary\x18\x01 \x01(\v2\x15.ft12.v1.FleetSummaryR\asummary\x120\n" +
-	"\adevices\x18\x02 \x03(\v2\x16.ft12.v1.GatewayStatusR\adevices2\xe6\x03\n" +
+	"\adevices\x18\x02 \x03(\v2\x16.ft12.v1.GatewayStatusR\adevices2\xad\x04\n" +
 	"\x0eGatewayService\x12P\n" +
 	"\tGetStatus\x12 .ft12.v1.GetGatewayStatusRequest\x1a!.ft12.v1.GetGatewayStatusResponse\x12K\n" +
 	"\fStartPolling\x12\x1c.ft12.v1.StartPollingRequest\x1a\x1d.ft12.v1.StartPollingResponse\x12H\n" +
 	"\vStopPolling\x12\x1b.ft12.v1.StopPollingRequest\x1a\x1c.ft12.v1.StopPollingResponse\x12T\n" +
 	"\x0fGetRecentEvents\x12\x1f.ft12.v1.GetRecentEventsRequest\x1a .ft12.v1.GetRecentEventsResponse\x12T\n" +
 	"\x0fGetLastReadTime\x12\x1f.ft12.v1.GetLastReadTimeRequest\x1a .ft12.v1.GetLastReadTimeResponse\x12?\n" +
-	"\bGetFleet\x12\x18.ft12.v1.GetFleetRequest\x1a\x19.ft12.v1.GetFleetResponseBJZHgithub.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1;ft12v1b\x06proto3"
+	"\bGetFleet\x12\x18.ft12.v1.GetFleetRequest\x1a\x19.ft12.v1.GetFleetResponse\x12E\n" +
+	"\n" +
+	"GetHistory\x12\x1a.ft12.v1.GetHistoryRequest\x1a\x1b.ft12.v1.GetHistoryResponseBJZHgithub.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1;ft12v1b\x06proto3"
 
 var (
 	file_proto_ft12_v1_gateway_proto_rawDescOnce sync.Once
@@ -1534,7 +1762,7 @@ func file_proto_ft12_v1_gateway_proto_rawDescGZIP() []byte {
 	return file_proto_ft12_v1_gateway_proto_rawDescData
 }
 
-var file_proto_ft12_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_proto_ft12_v1_gateway_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_proto_ft12_v1_gateway_proto_goTypes = []any{
 	(*ScheduleStatus)(nil),           // 0: ft12.v1.ScheduleStatus
 	(*RetryStatus)(nil),              // 1: ft12.v1.RetryStatus
@@ -1551,25 +1779,29 @@ var file_proto_ft12_v1_gateway_proto_goTypes = []any{
 	(*StopPollingResponse)(nil),      // 12: ft12.v1.StopPollingResponse
 	(*GetLastReadTimeRequest)(nil),   // 13: ft12.v1.GetLastReadTimeRequest
 	(*GetLastReadTimeResponse)(nil),  // 14: ft12.v1.GetLastReadTimeResponse
-	(*GetFleetRequest)(nil),          // 15: ft12.v1.GetFleetRequest
-	(*GetFleetResponse)(nil),         // 16: ft12.v1.GetFleetResponse
-	(*timestamppb.Timestamp)(nil),    // 17: google.protobuf.Timestamp
-	(ServiceState)(0),                // 18: ft12.v1.ServiceState
-	(ChecksumMode)(0),                // 19: ft12.v1.ChecksumMode
-	(*GetRecentEventsRequest)(nil),   // 20: ft12.v1.GetRecentEventsRequest
-	(*GetRecentEventsResponse)(nil),  // 21: ft12.v1.GetRecentEventsResponse
+	(*ClockSample)(nil),              // 15: ft12.v1.ClockSample
+	(*HealthOutcome)(nil),            // 16: ft12.v1.HealthOutcome
+	(*GetHistoryRequest)(nil),        // 17: ft12.v1.GetHistoryRequest
+	(*GetHistoryResponse)(nil),       // 18: ft12.v1.GetHistoryResponse
+	(*GetFleetRequest)(nil),          // 19: ft12.v1.GetFleetRequest
+	(*GetFleetResponse)(nil),         // 20: ft12.v1.GetFleetResponse
+	(*timestamppb.Timestamp)(nil),    // 21: google.protobuf.Timestamp
+	(ServiceState)(0),                // 22: ft12.v1.ServiceState
+	(ChecksumMode)(0),                // 23: ft12.v1.ChecksumMode
+	(*GetRecentEventsRequest)(nil),   // 24: ft12.v1.GetRecentEventsRequest
+	(*GetRecentEventsResponse)(nil),  // 25: ft12.v1.GetRecentEventsResponse
 }
 var file_proto_ft12_v1_gateway_proto_depIdxs = []int32{
-	17, // 0: ft12.v1.ScheduleStatus.next_poll_at:type_name -> google.protobuf.Timestamp
-	17, // 1: ft12.v1.ClockStatus.updated_at:type_name -> google.protobuf.Timestamp
-	17, // 2: ft12.v1.DeviceHealth.since:type_name -> google.protobuf.Timestamp
-	17, // 3: ft12.v1.DeviceIdentity.read_at:type_name -> google.protobuf.Timestamp
-	18, // 4: ft12.v1.GatewayStatus.state:type_name -> ft12.v1.ServiceState
-	19, // 5: ft12.v1.GatewayStatus.checksum_mode:type_name -> ft12.v1.ChecksumMode
-	17, // 6: ft12.v1.GatewayStatus.last_successful_read_time:type_name -> google.protobuf.Timestamp
-	17, // 7: ft12.v1.GatewayStatus.last_device_time:type_name -> google.protobuf.Timestamp
-	17, // 8: ft12.v1.GatewayStatus.last_tx_time:type_name -> google.protobuf.Timestamp
-	17, // 9: ft12.v1.GatewayStatus.last_rx_time:type_name -> google.protobuf.Timestamp
+	21, // 0: ft12.v1.ScheduleStatus.next_poll_at:type_name -> google.protobuf.Timestamp
+	21, // 1: ft12.v1.ClockStatus.updated_at:type_name -> google.protobuf.Timestamp
+	21, // 2: ft12.v1.DeviceHealth.since:type_name -> google.protobuf.Timestamp
+	21, // 3: ft12.v1.DeviceIdentity.read_at:type_name -> google.protobuf.Timestamp
+	22, // 4: ft12.v1.GatewayStatus.state:type_name -> ft12.v1.ServiceState
+	23, // 5: ft12.v1.GatewayStatus.checksum_mode:type_name -> ft12.v1.ChecksumMode
+	21, // 6: ft12.v1.GatewayStatus.last_successful_read_time:type_name -> google.protobuf.Timestamp
+	21, // 7: ft12.v1.GatewayStatus.last_device_time:type_name -> google.protobuf.Timestamp
+	21, // 8: ft12.v1.GatewayStatus.last_tx_time:type_name -> google.protobuf.Timestamp
+	21, // 9: ft12.v1.GatewayStatus.last_rx_time:type_name -> google.protobuf.Timestamp
 	0,  // 10: ft12.v1.GatewayStatus.schedule:type_name -> ft12.v1.ScheduleStatus
 	1,  // 11: ft12.v1.GatewayStatus.retry:type_name -> ft12.v1.RetryStatus
 	2,  // 12: ft12.v1.GatewayStatus.clock:type_name -> ft12.v1.ClockStatus
@@ -1578,27 +1810,33 @@ var file_proto_ft12_v1_gateway_proto_depIdxs = []int32{
 	5,  // 15: ft12.v1.GetGatewayStatusResponse.status:type_name -> ft12.v1.GatewayStatus
 	5,  // 16: ft12.v1.StartPollingResponse.status:type_name -> ft12.v1.GatewayStatus
 	5,  // 17: ft12.v1.StopPollingResponse.status:type_name -> ft12.v1.GatewayStatus
-	17, // 18: ft12.v1.GetLastReadTimeResponse.device_time:type_name -> google.protobuf.Timestamp
-	17, // 19: ft12.v1.GetLastReadTimeResponse.read_time:type_name -> google.protobuf.Timestamp
-	6,  // 20: ft12.v1.GetFleetResponse.summary:type_name -> ft12.v1.FleetSummary
-	5,  // 21: ft12.v1.GetFleetResponse.devices:type_name -> ft12.v1.GatewayStatus
-	7,  // 22: ft12.v1.GatewayService.GetStatus:input_type -> ft12.v1.GetGatewayStatusRequest
-	9,  // 23: ft12.v1.GatewayService.StartPolling:input_type -> ft12.v1.StartPollingRequest
-	11, // 24: ft12.v1.GatewayService.StopPolling:input_type -> ft12.v1.StopPollingRequest
-	20, // 25: ft12.v1.GatewayService.GetRecentEvents:input_type -> ft12.v1.GetRecentEventsRequest
-	13, // 26: ft12.v1.GatewayService.GetLastReadTime:input_type -> ft12.v1.GetLastReadTimeRequest
-	15, // 27: ft12.v1.GatewayService.GetFleet:input_type -> ft12.v1.GetFleetRequest
-	8,  // 28: ft12.v1.GatewayService.GetStatus:output_type -> ft12.v1.GetGatewayStatusResponse
-	10, // 29: ft12.v1.GatewayService.StartPolling:output_type -> ft12.v1.StartPollingResponse
-	12, // 30: ft12.v1.GatewayService.StopPolling:output_type -> ft12.v1.StopPollingResponse
-	21, // 31: ft12.v1.GatewayService.GetRecentEvents:output_type -> ft12.v1.GetRecentEventsResponse
-	14, // 32: ft12.v1.GatewayService.GetLastReadTime:output_type -> ft12.v1.GetLastReadTimeResponse
-	16, // 33: ft12.v1.GatewayService.GetFleet:output_type -> ft12.v1.GetFleetResponse
-	28, // [28:34] is the sub-list for method output_type
-	22, // [22:28] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	21, // 18: ft12.v1.GetLastReadTimeResponse.device_time:type_name -> google.protobuf.Timestamp
+	21, // 19: ft12.v1.GetLastReadTimeResponse.read_time:type_name -> google.protobuf.Timestamp
+	21, // 20: ft12.v1.ClockSample.at:type_name -> google.protobuf.Timestamp
+	21, // 21: ft12.v1.HealthOutcome.at:type_name -> google.protobuf.Timestamp
+	15, // 22: ft12.v1.GetHistoryResponse.clock_samples:type_name -> ft12.v1.ClockSample
+	16, // 23: ft12.v1.GetHistoryResponse.health_outcomes:type_name -> ft12.v1.HealthOutcome
+	6,  // 24: ft12.v1.GetFleetResponse.summary:type_name -> ft12.v1.FleetSummary
+	5,  // 25: ft12.v1.GetFleetResponse.devices:type_name -> ft12.v1.GatewayStatus
+	7,  // 26: ft12.v1.GatewayService.GetStatus:input_type -> ft12.v1.GetGatewayStatusRequest
+	9,  // 27: ft12.v1.GatewayService.StartPolling:input_type -> ft12.v1.StartPollingRequest
+	11, // 28: ft12.v1.GatewayService.StopPolling:input_type -> ft12.v1.StopPollingRequest
+	24, // 29: ft12.v1.GatewayService.GetRecentEvents:input_type -> ft12.v1.GetRecentEventsRequest
+	13, // 30: ft12.v1.GatewayService.GetLastReadTime:input_type -> ft12.v1.GetLastReadTimeRequest
+	19, // 31: ft12.v1.GatewayService.GetFleet:input_type -> ft12.v1.GetFleetRequest
+	17, // 32: ft12.v1.GatewayService.GetHistory:input_type -> ft12.v1.GetHistoryRequest
+	8,  // 33: ft12.v1.GatewayService.GetStatus:output_type -> ft12.v1.GetGatewayStatusResponse
+	10, // 34: ft12.v1.GatewayService.StartPolling:output_type -> ft12.v1.StartPollingResponse
+	12, // 35: ft12.v1.GatewayService.StopPolling:output_type -> ft12.v1.StopPollingResponse
+	25, // 36: ft12.v1.GatewayService.GetRecentEvents:output_type -> ft12.v1.GetRecentEventsResponse
+	14, // 37: ft12.v1.GatewayService.GetLastReadTime:output_type -> ft12.v1.GetLastReadTimeResponse
+	20, // 38: ft12.v1.GatewayService.GetFleet:output_type -> ft12.v1.GetFleetResponse
+	18, // 39: ft12.v1.GatewayService.GetHistory:output_type -> ft12.v1.GetHistoryResponse
+	33, // [33:40] is the sub-list for method output_type
+	26, // [26:33] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_proto_ft12_v1_gateway_proto_init() }
@@ -1613,7 +1851,7 @@ func file_proto_ft12_v1_gateway_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_ft12_v1_gateway_proto_rawDesc), len(file_proto_ft12_v1_gateway_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
