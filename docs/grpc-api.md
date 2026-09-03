@@ -66,7 +66,7 @@ RPCs:
 Run:
 
 ```powershell
-go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 1s -grpc-listen 127.0.0.1:9200
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -schedule interval -interval 1s -grpc-listen 127.0.0.1:9200
 ```
 
 The gateway starts polling by default for backward compatibility. `StopPolling`

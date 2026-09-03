@@ -19,6 +19,9 @@ type GatewayClient interface {
 	StopPolling(context.Context) (*ft12v1.GatewayStatus, error)
 	GetLastReadTime(context.Context) (*ft12v1.GetLastReadTimeResponse, error)
 	GetRecentEvents(context.Context, uint32) ([]*ft12v1.FrameEvent, error)
+	GetFleet(context.Context) (*ft12v1.GetFleetResponse, error)
+	GetHistory(context.Context) (*ft12v1.GetHistoryResponse, error)
+	UpdateSettings(context.Context, *ft12v1.GatewaySettings) (*ft12v1.GatewaySettings, *ft12v1.GatewayStatus, error)
 }
 
 type EmulatorGRPCClient struct {
@@ -103,4 +106,20 @@ func (c *GatewayGRPCClient) GetRecentEvents(ctx context.Context, limit uint32) (
 		return nil, err
 	}
 	return resp.GetEvents(), nil
+}
+
+func (c *GatewayGRPCClient) GetFleet(ctx context.Context) (*ft12v1.GetFleetResponse, error) {
+	return c.client.GetFleet(ctx, &ft12v1.GetFleetRequest{})
+}
+
+func (c *GatewayGRPCClient) GetHistory(ctx context.Context) (*ft12v1.GetHistoryResponse, error) {
+	return c.client.GetHistory(ctx, &ft12v1.GetHistoryRequest{})
+}
+
+func (c *GatewayGRPCClient) UpdateSettings(ctx context.Context, settings *ft12v1.GatewaySettings) (*ft12v1.GatewaySettings, *ft12v1.GatewayStatus, error) {
+	resp, err := c.client.UpdateSettings(ctx, &ft12v1.UpdateGatewaySettingsRequest{Settings: settings})
+	if err != nil {
+		return nil, nil, err
+	}
+	return resp.GetSettings(), resp.GetStatus(), nil
 }

@@ -34,8 +34,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Check Go formatting
-        shell: pwsh
-        run: ./scripts/check-go-format.ps1
+        run: go run ./tools/checks format
       - name: Test
         run: go test ./...
       - name: Build
@@ -46,11 +45,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
       - name: Check architecture boundaries
-        run: sh scripts/check-architecture.sh
+        run: go run ./tools/checks architecture
 
   cleanup:
-    name: Cleanup Scripts
+    name: Cleanup (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -60,22 +63,24 @@ jobs:
           - windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: PowerShell cleanup dry-run
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: ./scripts/clean-runtime.ps1 -DryRun
-      - name: Shell cleanup dry-run
-        if: runner.os == 'Linux'
-        run: bash scripts/clean-runtime.sh --dry-run
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Cleanup dry-run
+        run: go run ./tools/checks clean-runtime --dry-run
 
   docs:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
       - name: Check local Markdown links
-        shell: pwsh
-        run: ./scripts/check-doc-links.ps1
+        run: go run ./tools/checks doc-links
 
   docker:
     name: Docker Compose

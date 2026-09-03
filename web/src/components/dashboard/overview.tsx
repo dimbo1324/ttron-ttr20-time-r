@@ -5,15 +5,17 @@ import { useMemo } from "react";
 
 import { useDictionary } from "@/components/locale-provider";
 import { OutcomeStrip, SkewHistory, SkewMeter, Sparkline } from "@/components/dashboard/charts";
+import { FleetPanel } from "@/components/dashboard/fleet";
+import { SourceNotice } from "@/components/layout/source-notice";
 import { Badge } from "@/components/ui/badge";
 import { Panel, PanelBody, PanelHeader, DefRow, Stat } from "@/components/ui/panel";
 import { StateBadge } from "@/components/ui/state-badge";
 import { StatusDot } from "@/components/ui/status-dot";
-import { availability, percentile } from "@/lib/bench/domain";
-import { useNow } from "@/lib/use-now";
-import { useFormat } from "@/lib/use-format";
 import { formatDeviceTime } from "@/lib/ft12";
-import { selectActiveFaultCount, useBenchStore, useClockReport } from "@/stores/bench-store";
+import { activeFaultCount } from "@/lib/telemetry/types";
+import { useTelemetry } from "@/lib/telemetry/use-telemetry";
+import { useFormat } from "@/lib/use-format";
+import { useNow } from "@/lib/use-now";
 
 /**
  * The overview.
@@ -27,22 +29,26 @@ export function Overview() {
   const dict = useDictionary();
   const format = useFormat();
 
-  const running = useBenchStore((state) => state.running);
-  const connected = useBenchStore((state) => state.connected);
-  const events = useBenchStore((state) => state.events);
-  const samples = useBenchStore((state) => state.samples);
-  const health = useBenchStore((state) => state.health);
-  const counters = useBenchStore((state) => state.counters);
-  const gateway = useBenchStore((state) => state.gateway);
-  const faults = useBenchStore((state) => state.faults);
-  const checksumMode = useBenchStore((state) => state.checksumMode);
-  const lastDeviceTime = useBenchStore((state) => state.lastDeviceTime);
-  const identityRead = useBenchStore((state) => state.identityRead);
-  const nextPoll = useBenchStore((state) => state.nextPollAt);
-  const lastCycleAt = useBenchStore((state) => state.lastCycleAt);
-  const activeFaults = useBenchStore(selectActiveFaultCount);
-  const clock = useClockReport();
+  const {
+    running,
+    connected,
+    events,
+    samples,
+    health,
+    counters,
+    faults,
+    fleet,
+    schedule,
+    thresholds,
+    checksumMode,
+    target,
+    lastDeviceTime,
+    identity,
+    lastCycleAt,
+    clock,
+  } = useTelemetry();
 
+  const activeFaults = activeFaultCount(faults);
   const now = useNow();
 
   const frameRate = useMemo(() => {
@@ -56,11 +62,11 @@ export function Overview() {
     return buckets;
   }, [events, now]);
 
-  const countdown = Math.max(0, nextPoll - now);
-  const latencies = health.latencies;
+  const countdown = Math.max(0, schedule.nextPollAt - now);
 
   return (
     <div className="space-y-4">
+      <SourceNotice />
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel>
           <PanelHeader
@@ -82,8 +88,8 @@ export function Overview() {
             </div>
             <SkewMeter
               skewMs={clock.skewMs}
-              warnMs={gateway.thresholds.warnMs}
-              criticalMs={gateway.thresholds.criticalMs}
+              warnMs={thresholds.warnMs}
+              criticalMs={thresholds.criticalMs}
               samples={clock.samples}
             />
             <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
@@ -119,14 +125,24 @@ export function Overview() {
           <PanelBody className="space-y-3">
             <div className="flex items-baseline gap-2">
               <span className="font-mono text-3xl font-semibold text-foreground tabular">
-                {health.window.length === 0 ? "—" : format.percent(availability(health))}
+                {health.windowSamples === 0 ? "—" : format.percent(health.availability)}
               </span>
               <span className="text-xs text-faint-foreground">{dict.overview.availability}</span>
             </div>
             <OutcomeStrip window={health.window} />
             <div className="grid grid-cols-3 gap-3 border-t border-border pt-3">
-              <Stat label="p50" value={latencies.length ? format.duration(percentile(latencies, 0.5)) : "—"} mono tone="muted" />
-              <Stat label="p95" value={latencies.length ? format.duration(percentile(latencies, 0.95)) : "—"} mono tone="muted" />
+              <Stat
+                label="p50"
+                value={health.windowSamples ? format.duration(health.latencyP50Ms) : "—"}
+                mono
+                tone="muted"
+              />
+              <Stat
+                label="p95"
+                value={health.windowSamples ? format.duration(health.latencyP95Ms) : "—"}
+                mono
+                tone="muted"
+              />
               <Stat
                 label={dict.gateway.failuresShort}
                 value={health.consecutiveFailures}
@@ -194,26 +210,42 @@ export function Overview() {
             </div>
             <div className="border-t border-border pt-2">
               <DefRow label={dict.overview.checksumMode} value={checksumMode} />
-              <DefRow
-                label={dict.emulator.clockOffset}
-                value={faults.clockOffsetMs === 0 ? "0" : format.duration(faults.clockOffsetMs, { signed: true })}
-              />
-              <DefRow
-                label={dict.emulator.clockDrift}
-                value={
-                  faults.clockDriftPerDayMs === 0 ? "0" : format.driftPerDay(faults.clockDriftPerDayMs)
-                }
-              />
-              <DefRow
-                label={dict.emulator.responseDelay}
-                value={faults.responseDelayMs === 0 ? "0" : format.duration(faults.responseDelayMs)}
-              />
+              {target ? <DefRow label={dict.source.target} value={target} /> : null}
+              {/* The clock rows are dropped rather than zeroed when the source
+                  cannot move the device clock: a "0" would claim it had been
+                  checked and found correct. */}
+              {faults && faults.clockOffsetMs !== null ? (
+                <DefRow
+                  label={dict.emulator.clockOffset}
+                  value={
+                    faults.clockOffsetMs === 0
+                      ? "0"
+                      : format.duration(faults.clockOffsetMs, { signed: true })
+                  }
+                />
+              ) : null}
+              {faults && faults.clockDriftPerDayMs !== null ? (
+                <DefRow
+                  label={dict.emulator.clockDrift}
+                  value={
+                    faults.clockDriftPerDayMs === 0
+                      ? "0"
+                      : format.driftPerDay(faults.clockDriftPerDayMs)
+                  }
+                />
+              ) : null}
+              {faults ? (
+                <DefRow
+                  label={dict.emulator.responseDelay}
+                  value={faults.responseDelayMs === 0 ? "0" : format.duration(faults.responseDelayMs)}
+                />
+              ) : null}
             </div>
-            {identityRead ? (
+            {identity ? (
               <div className="grid grid-cols-3 gap-2 border-t border-border pt-3">
-                <Stat label={dict.overview.model} value={identityRead.model} mono tone="muted" />
-                <Stat label={dict.overview.serial} value={identityRead.serial} mono tone="muted" />
-                <Stat label={dict.overview.firmware} value={identityRead.firmware} mono tone="muted" />
+                <Stat label={dict.overview.model} value={identity.model} mono tone="muted" />
+                <Stat label={dict.overview.serial} value={identity.serial} mono tone="muted" />
+                <Stat label={dict.overview.firmware} value={identity.firmware} mono tone="muted" />
               </div>
             ) : null}
           </PanelBody>
@@ -235,13 +267,13 @@ export function Overview() {
               <Stat
                 label={dict.overview.schedule}
                 value={
-                  gateway.scheduleMode === "aligned"
+                  schedule.mode === "aligned"
                     ? dict.gateway.scheduleAligned
                     : dict.gateway.scheduleInterval
                 }
-                hint={`${format.duration(gateway.intervalMs)}${
-                  gateway.scheduleMode === "aligned" && gateway.offsetMs > 0
-                    ? ` +${format.duration(gateway.offsetMs)}`
+                hint={`${format.duration(schedule.intervalMs)}${
+                  schedule.mode === "aligned" && schedule.offsetMs > 0
+                    ? ` +${format.duration(schedule.offsetMs)}`
                     : ""
                 }`}
               />
@@ -260,15 +292,14 @@ export function Overview() {
             </div>
             <div className="border-t border-border pt-3">
               <p className="eyebrow pb-1.5">{dict.gateway.skewChart}</p>
-              <SkewHistory
-                samples={samples}
-                medianMs={clock.medianMs}
-                warnMs={gateway.thresholds.warnMs}
-              />
+              <SkewHistory samples={samples} medianMs={clock.medianMs} warnMs={thresholds.warnMs} />
             </div>
           </PanelBody>
         </Panel>
       </div>
+
+      {/* Only a source that polls more than its own device has a fleet. */}
+      {fleet ? <FleetPanel fleet={fleet} /> : null}
     </div>
   );
 }

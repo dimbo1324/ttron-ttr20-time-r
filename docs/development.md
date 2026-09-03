@@ -17,7 +17,7 @@ go build ./...
 .\scripts\check-architecture.ps1
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode sum
 go run ./cmd/ft12-client -host 127.0.0.1 -port 9000 -crc sum
-go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 5s
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -schedule interval -interval 5s
 go run ./cmd/ft12-api -http-listen 127.0.0.1:8080
 make verify
 make proto
@@ -44,7 +44,7 @@ Useful service runs:
 
 ```powershell
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode crc16
-go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode crc16 -interval 1s
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode crc16 -schedule interval -interval 1s
 ```
 
 gRPC control:
@@ -95,31 +95,33 @@ secrets or request bodies. Protocol frame hex is logged for local diagnostics.
 
 Cleanup scripts remove ignored runtime/build artifacts only:
 
-```powershell
-.\scripts\clean-runtime.ps1 -DryRun
-.\scripts\clean-runtime.ps1
+```sh
+go run ./tools/checks clean-runtime --dry-run
+go run ./tools/checks clean-runtime
 ```
+
+## Repository Checks
+
+The rules the compiler and the test suite cannot express live in
+`tools/checks`, one Go command with a subcommand each:
 
 ```sh
-bash scripts/clean-runtime.sh --dry-run
-bash scripts/clean-runtime.sh
+go run ./tools/checks architecture    # dependency boundaries
+go run ./tools/checks format          # gofmt over tracked Go files
+go run ./tools/checks doc-links       # local Markdown links resolve
+go run ./tools/checks clean-runtime   # remove build and runtime artefacts
+go run ./tools/checks release         # all of the above, plus tests and build
 ```
 
-## Architecture Checks
+The architecture check keeps `internal/protocol` independent of transports,
+config, logging, the service packages, the gRPC adapters and any future adapter
+layer, and keeps the emulator and the gateway independent of each other. Active
+code must not import `legacy/`.
 
-Dependency boundary scripts live in `scripts/`:
-
-```powershell
-.\scripts\check-architecture.ps1
-```
-
-```sh
-sh scripts/check-architecture.sh
-```
-
-The checks keep `internal/protocol` independent from transports, config,
-logging, service packages, gRPC adapters, and future adapter layers. They also
-ensure active code does not import `legacy/`.
+It reads the real import graph from `go list`, so it sees a forbidden package
+reached through two hops as clearly as a direct import, and reports the chain
+and the line the first hop is written on. Production code is checked
+transitively; test files are checked for direct imports only.
 
 ## Local CI Flow
 

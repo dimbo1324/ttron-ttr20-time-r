@@ -38,6 +38,8 @@ services:
       - :9200
       - -mode
       - sum
+      - -schedule
+      - interval
       - -interval
       - 1s
       - -recent

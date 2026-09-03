@@ -2,20 +2,39 @@ package gateway
 
 import (
 	"context"
+	"errors"
 
 	ft12v1 "github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/ft12/v1"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/api/grpc/mapping"
 	domain "github.com/dimbo1324/ttron-ttr20-time-r/internal/gateway"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+// FleetSource is anything that can report on more than one device -- in
+// practice the supervisor. It is an interface, and optional, because a gateway
+// configured without a device inventory has no supervisor at all; see GetFleet
+// for what happens then.
+type FleetSource interface {
+	Fleet() domain.FleetStatus
+}
 
 type Service struct {
 	ft12v1.UnimplementedGatewayServiceServer
 	gateway *domain.Service
+	fleet   FleetSource
 	rootCtx context.Context
 }
 
 func New(rootCtx context.Context, service *domain.Service) *Service {
 	return &Service{rootCtx: rootCtx, gateway: service}
+}
+
+// WithFleet attaches the multi-device view. Without it the service still
+// answers GetFleet, using the single device it controls.
+func (s *Service) WithFleet(fleet FleetSource) *Service {
+	s.fleet = fleet
+	return s
 }
 
 func (s *Service) GetStatus(context.Context, *ft12v1.GetGatewayStatusRequest) (*ft12v1.GetGatewayStatusResponse, error) {
@@ -44,5 +63,40 @@ func (s *Service) GetLastReadTime(context.Context, *ft12v1.GetLastReadTimeReques
 		DeviceTime: mapping.Time(status.LastParsedDeviceTime),
 		ReadTime:   mapping.Time(status.LastSuccessfulReadTime),
 		Available:  !status.LastParsedDeviceTime.IsZero(),
+	}, nil
+}
+
+// GetFleet answers for every device, and for a gateway without an inventory
+// that is a fleet of one. Callers therefore never have to ask which mode the
+// gateway is in before reading the reply.
+func (s *Service) GetFleet(context.Context, *ft12v1.GetFleetRequest) (*ft12v1.GetFleetResponse, error) {
+	if s.fleet != nil {
+		return mapFleet(s.fleet.Fleet()), nil
+	}
+	return mapFleet(domain.SummarizeFleet([]domain.Status{s.gateway.Status()})), nil
+}
+
+// GetHistory returns the two rolling windows behind the aggregates in
+// GetStatus, so a console can draw the run rather than only its summary.
+func (s *Service) GetHistory(context.Context, *ft12v1.GetHistoryRequest) (*ft12v1.GetHistoryResponse, error) {
+	return mapHistory(s.gateway.History()), nil
+}
+
+// UpdateSettings reconfigures a gateway that may be mid-poll.
+//
+// A rejected setting comes back as InvalidArgument rather than as a generic
+// failure: it is the caller's request that is wrong, not the gateway, and the
+// HTTP adapter turns that distinction into a 400 rather than a 502.
+func (s *Service) UpdateSettings(_ context.Context, req *ft12v1.UpdateGatewaySettingsRequest) (*ft12v1.UpdateGatewaySettingsResponse, error) {
+	applied, err := s.gateway.UpdateSettings(settingsFromProto(req.GetSettings()))
+	if err != nil {
+		if errors.Is(err, domain.ErrInvalidSettings) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, err
+	}
+	return &ft12v1.UpdateGatewaySettingsResponse{
+		Settings: mapSettings(applied),
+		Status:   mapStatus(s.gateway.Status()),
 	}, nil
 }

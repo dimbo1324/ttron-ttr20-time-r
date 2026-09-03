@@ -38,17 +38,19 @@ func (s *Service) runSession(ctx context.Context, conn net.Conn) error {
 	if s.cfg.IdentityProbe {
 		session.probeIdentity()
 	}
-	if s.schedule.Mode() != schedule.ModeAligned {
+	if s.currentSchedule().Mode() != schedule.ModeAligned {
 		if err := session.pollWithRetry(ctx); err != nil {
 			return err
 		}
 	}
 
-	ticker := schedule.NewTicker(s.schedule)
 	for {
-		next := ticker.NextAt()
+		// The plan is re-read every iteration rather than captured once, so a
+		// schedule changed from the control plane takes effect at the next
+		// poll instead of waiting for a reconnect.
+		next := schedule.NewTicker(s.currentSchedule()).NextAt()
 		s.nextPollAt(next)
-		if _, ok := ticker.WaitUntil(ctx, next); !ok {
+		if !s.waitForPoll(ctx, next) {
 			return nil
 		}
 		if err := session.pollWithRetry(ctx); err != nil {
@@ -57,16 +59,45 @@ func (s *Service) runSession(ctx context.Context, conn net.Conn) error {
 	}
 }
 
+// waitForPoll sleeps until the next poll instant, and reports whether the
+// session should keep going.
+//
+// It is not schedule.Ticker.WaitUntil because it has a third thing to watch:
+// an operator who changes a one-minute interval to one second must not wait
+// out the minute already in progress. A reschedule signal returns early, and
+// the loop above re-plans from the new schedule.
+func (s *Service) waitForPoll(ctx context.Context, next time.Time) bool {
+	delay := time.Until(next)
+	if delay <= 0 {
+		return ctx.Err() == nil
+	}
+
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return false
+	case <-s.reschedule:
+		return true
+	case <-timer.C:
+		return true
+	}
+}
+
 func (p *pollSession) pollWithRetry(ctx context.Context) error {
 	service := p.service
 	var last error
 
-	for attempt := 0; attempt <= service.retry.Attempts; attempt++ {
+	// Read once for the whole exchange: a budget that changed halfway through
+	// would make the attempt numbers in the log describe two different rules.
+	policy := service.currentRetry()
+
+	for attempt := 0; attempt <= policy.Attempts; attempt++ {
 		if attempt > 0 {
-			delay := service.retry.DelayFor(attempt)
+			delay := policy.DelayFor(attempt)
 			service.incrementRetries()
 			service.logger.Printf("gateway retry attempt=%d/%d delay=%s cause=%v",
-				attempt, service.retry.Attempts, delay, last)
+				attempt, policy.Attempts, delay, last)
 			if !sleepContext(ctx, delay) {
 				return nil
 			}
@@ -85,7 +116,7 @@ func (p *pollSession) pollWithRetry(ctx context.Context) error {
 	}
 
 	service.incrementExhaustedPolls()
-	failure := fmt.Errorf("%w after %d attempts: %v", ErrPollExhausted, service.retry.Attempts+1, last)
+	failure := fmt.Errorf("%w after %d attempts: %v", ErrPollExhausted, policy.Attempts+1, last)
 	service.recordFailure(failure)
 	service.observeHealthFailure(failure)
 	service.logger.Printf("gateway poll exhausted target=%s last=%v", service.cfg.Target, last)
@@ -100,7 +131,7 @@ func (p *pollSession) pollOnce() error {
 		return err
 	}
 
-	deadline := time.Now().Add(service.cfg.RequestTimeout)
+	deadline := time.Now().Add(service.requestTimeout())
 	if err := p.conn.SetWriteDeadline(deadline); err != nil {
 		return fmt.Errorf("set write deadline: %w", err)
 	}

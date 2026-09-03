@@ -107,7 +107,7 @@ Run services manually:
 
 ```powershell
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode sum -grpc-listen 127.0.0.1:9100
-go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 1s -grpc-listen 127.0.0.1:9200
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -schedule interval -interval 1s -grpc-listen 127.0.0.1:9200
 go run ./cmd/ft12-api -http-listen 127.0.0.1:8080 -emulator-grpc 127.0.0.1:9100 -gateway-grpc 127.0.0.1:9200
 ```
 
@@ -127,14 +127,9 @@ Use `-log=` to keep a service on stdout, or pass another `-log` path for local
 diagnostics. `runtime/`, `tmp/`, logs, and similar generated output
 are ignored by Git. Cleanup helpers:
 
-```powershell
-.\scripts\clean-runtime.ps1 -DryRun
-.\scripts\clean-runtime.ps1
-```
-
 ```sh
-bash scripts/clean-runtime.sh --dry-run
-bash scripts/clean-runtime.sh
+go run ./tools/checks clean-runtime --dry-run
+go run ./tools/checks clean-runtime
 ```
 
 ## Service Ports
@@ -155,7 +150,7 @@ internal/   Go packages for protocol, services, API, config, platform helpers
 proto/      protobuf/gRPC contract sources
 deploy/     Docker and observability assets
 docs/       architecture, protocol, operations, release, examples
-scripts/    architecture, docs-link, and release-check scripts
+tools/      the repository's own checks: boundaries, formatting, links
 legacy/     retained reference implementations
 task/       original assignment documents
 ```

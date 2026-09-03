@@ -38,6 +38,43 @@ export const en: Dictionary = {
     language: "Language",
   },
 
+  source: {
+    label: "Data source",
+    bench: "Bench",
+    live: "Live stack",
+    benchHint:
+      "Everything is computed by the built-in device model, in this browser. No backend needed: this is the teaching and demo mode.",
+    liveHint:
+      "The console reads a running Go stack over the HTTP API. Every number on screen comes from the real gateway and the real device.",
+    switchTo: "Switch source",
+    linkReady: "Connected",
+    linkConnecting: "Connecting",
+    linkUnreachable: "API unreachable",
+    unreachableTitle: "The Go API is not answering",
+    unreachableBody:
+      "The console calls the HTTP API at /upstream, which proxies through to ft12-api. That process does not appear to be running.",
+    unreachableCommand:
+      "Start the three processes — each in its own terminal — then come back to this page:",
+    upstreamError: "The gateway returned an error",
+    readOnly: "Read-only",
+    liveSettingsHint:
+      "Changes go to the running gateway and take effect immediately, without waiting for a reconnect. The gateway validates the whole configuration: if any one value is not allowed, nothing is applied.",
+    settingsUnavailable:
+      "Settings are shown read-only until the link to the API is back.",
+    controlledDevice: "Controlled device",
+    settingsRejected: "The gateway refused the settings:",
+    target: "Polled device",
+    benchOnly: "Bench only",
+    benchOnlyHint:
+      "Clock offset and drift are produced by the device model in this browser. The Go emulator has no such setting, so these controls are unavailable on the live source.",
+    liveFaultsHint:
+      "These switches change the fault mode of the real Go emulator, over the API.",
+    emulatorUnavailable: "The emulator is not answering — the fault mode cannot be changed.",
+    identityLive:
+      "The nameplate is set by the emulator itself; on the live source the console only shows what was read.",
+    noReset: "Gateway counters are cleared only by restarting it.",
+  },
+
   common: {
     no: "no",
     none: "—",
@@ -120,6 +157,24 @@ export const en: Dictionary = {
     target: "Target",
     sessions: "Sessions",
     checksumMode: "Checksum",
+  },
+
+  fleet: {
+    title: "Device fleet",
+    hint: "Every device this gateway polls, and how each one is doing.",
+    device: "Device",
+    target: "Address",
+    state: "State",
+    clock: "Clock",
+    skew: "Skew",
+    availability: "Availability",
+    samples: "Samples",
+    worst: "Largest skew",
+    polling: "Polling",
+    idle: "Not polling",
+    empty: "The gateway reports no devices.",
+    single:
+      "The gateway was started without a device list and polls a single device. The list comes from an inventory file.",
   },
 
   protocol: {
@@ -274,6 +329,8 @@ export const en: Dictionary = {
     offset: "Offset inside the interval",
     requestTimeout: "Request timeout",
     retryAttempts: "Retries on a frame error",
+    retryDelay: "Delay before retry",
+    retryDelayHint: "Before the first retry; doubles on each further attempt.",
     retryHint:
       "A frame error is retried on the same connection. The link is dropped only on a transport failure.",
     clockThresholds: "Clock skew thresholds",

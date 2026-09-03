@@ -41,7 +41,7 @@ func Run(args []string) int {
 
 	group := lifecycle.NewGroup(logger)
 
-	service, err := buildRuntime(ctx, cfg, group, logger)
+	service, supervisor, err := buildRuntime(ctx, cfg, group, logger)
 	if err != nil {
 		logger.Printf("gateway runtime creation failed: %v", err)
 		return 1
@@ -49,7 +49,13 @@ func Run(args []string) int {
 
 	if cfg.GRPCListen != "" && service != nil {
 		control := grpcserver.New(cfg.GRPCListen, func(s *grpc.Server) {
-			ft12v1.RegisterGatewayServiceServer(s, gatewaygrpc.New(ctx, service))
+			api := gatewaygrpc.New(ctx, service)
+			// Without an inventory there is no supervisor, and the control
+			// plane reports a fleet of one rather than nothing at all.
+			if supervisor != nil {
+				api = api.WithFleet(supervisor)
+			}
+			ft12v1.RegisterGatewayServiceServer(s, api)
 		})
 		logger.Printf("gateway gRPC control listening on %s", cfg.GRPCListen)
 		group.Add("gateway-grpc", control.Run)
@@ -63,27 +69,30 @@ func Run(args []string) int {
 	return 0
 }
 
-func buildRuntime(ctx context.Context, cfg *config.GatewayConfig, group *lifecycle.Group, logger *log.Logger) (*gateway.Service, error) {
+// buildRuntime returns the service the control plane drives and, in inventory
+// mode, the supervisor behind it. Both are nil-able: an inventory with nothing
+// enabled has no primary device to control.
+func buildRuntime(ctx context.Context, cfg *config.GatewayConfig, group *lifecycle.Group, logger *log.Logger) (*gateway.Service, *gateway.Supervisor, error) {
 	if cfg.DevicesFile == "" {
 		service, err := gateway.NewService(cfg, logger)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		group.Add("gateway", func(ctx context.Context) error {
 			service.Start(ctx)
 			<-ctx.Done()
 			return service.Stop()
 		})
-		return service, nil
+		return service, nil, nil
 	}
 
 	registry, err := devices.Load(cfg.DevicesFile)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	supervisor, err := gateway.NewSupervisor(cfg, registry, logger)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	logger.Printf("gateway device inventory loaded file=%s devices=%d enabled=%d",
 		cfg.DevicesFile, registry.Len(), len(registry.Enabled()))
@@ -94,10 +103,10 @@ func buildRuntime(ctx context.Context, cfg *config.GatewayConfig, group *lifecyc
 		if cfg.GRPCListen != "" {
 			logger.Printf("gateway gRPC control disabled: device inventory has no enabled devices")
 		}
-		return nil, nil
+		return nil, supervisor, nil
 	}
 	if cfg.GRPCListen != "" {
 		logger.Printf("gateway gRPC control bound to primary device=%s", primary.DeviceID())
 	}
-	return primary, nil
+	return primary, supervisor, nil
 }

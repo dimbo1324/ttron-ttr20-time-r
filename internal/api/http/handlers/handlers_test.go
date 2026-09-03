@@ -47,11 +47,16 @@ func (f *fakeEmulator) GetRecentEvents(context.Context, uint32) ([]*ft12v1.Frame
 }
 
 type fakeGateway struct {
-	status    *ft12v1.GatewayStatus
-	statusErr error
-	started   bool
-	stopped   bool
-	events    []*ft12v1.FrameEvent
+	status      *ft12v1.GatewayStatus
+	statusErr   error
+	started     bool
+	stopped     bool
+	events      []*ft12v1.FrameEvent
+	fleet       *ft12v1.GetFleetResponse
+	fleetErr    error
+	historyErr  error
+	settings    *ft12v1.GatewaySettings
+	settingsErr error
 }
 
 func (f *fakeGateway) GetStatus(context.Context) (*ft12v1.GatewayStatus, error) {
@@ -78,6 +83,37 @@ func (f *fakeGateway) GetLastReadTime(context.Context) (*ft12v1.GetLastReadTimeR
 
 func (f *fakeGateway) GetRecentEvents(context.Context, uint32) ([]*ft12v1.FrameEvent, error) {
 	return f.events, nil
+}
+
+func (f *fakeGateway) UpdateSettings(_ context.Context, settings *ft12v1.GatewaySettings) (*ft12v1.GatewaySettings, *ft12v1.GatewayStatus, error) {
+	if f.settingsErr != nil {
+		return nil, nil, f.settingsErr
+	}
+	f.settings = settings
+	return settings, f.status, nil
+}
+
+func (f *fakeGateway) GetHistory(context.Context) (*ft12v1.GetHistoryResponse, error) {
+	if f.historyErr != nil {
+		return nil, f.historyErr
+	}
+	return &ft12v1.GetHistoryResponse{
+		ClockSamples:   []*ft12v1.ClockSample{{At: timestamppb.New(time.Unix(3, 0).UTC()), SkewMs: -120, RoundTripMs: 8}},
+		HealthOutcomes: []*ft12v1.HealthOutcome{{At: timestamppb.New(time.Unix(3, 0).UTC()), Success: true, LatencyMs: 8}},
+	}, nil
+}
+
+func (f *fakeGateway) GetFleet(context.Context) (*ft12v1.GetFleetResponse, error) {
+	if f.fleetErr != nil {
+		return nil, f.fleetErr
+	}
+	if f.fleet != nil {
+		return f.fleet, nil
+	}
+	return &ft12v1.GetFleetResponse{
+		Summary: &ft12v1.FleetSummary{Devices: 1, Running: 1, Online: 1},
+		Devices: []*ft12v1.GatewayStatus{f.status},
+	}, nil
 }
 
 func testHandler() (*Handler, *fakeEmulator, *fakeGateway) {

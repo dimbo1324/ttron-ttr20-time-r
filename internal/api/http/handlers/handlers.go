@@ -50,6 +50,9 @@ func (h *Handler) Routes() http.Handler {
 	mux.HandleFunc("/api/v1/gateway/stop", h.gatewayStop)
 	mux.HandleFunc("/api/v1/gateway/last-read-time", h.gatewayLastReadTime)
 	mux.HandleFunc("/api/v1/gateway/events", h.gatewayEvents)
+	mux.HandleFunc("/api/v1/gateway/fleet", h.gatewayFleet)
+	mux.HandleFunc("/api/v1/gateway/history", h.gatewayHistory)
+	mux.HandleFunc("/api/v1/gateway/settings", h.gatewaySettings)
 	mux.HandleFunc("/api/v1/events", h.events)
 	mux.HandleFunc("/api/v1/export/events.json", h.exportEventsJSON)
 	mux.HandleFunc("/api/v1/export/events.csv", h.exportEventsCSV)
@@ -254,6 +257,72 @@ func (h *Handler) gatewayLastReadTime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperrors.WriteJSON(w, http.StatusOK, dto.LastReadTime(read))
+}
+
+// gatewayFleet answers for every device the gateway polls. A gateway running
+// without a device inventory reports a fleet of one, so the console can render
+// the same table either way.
+func (h *Handler) gatewayFleet(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodGet) {
+		return
+	}
+	ctx, cancel := h.requestContext(r)
+	defer cancel()
+	fleet, err := h.gateway.GetFleet(ctx)
+	if err != nil {
+		httperrors.WriteUpstreamError(w, "GATEWAY", err)
+		return
+	}
+	httperrors.WriteJSON(w, http.StatusOK, dto.Fleet(fleet))
+}
+
+// gatewayHistory returns the skew and outcome windows a console needs to draw
+// the run behind the current numbers.
+func (h *Handler) gatewayHistory(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodGet) {
+		return
+	}
+	ctx, cancel := h.requestContext(r)
+	defer cancel()
+	history, err := h.gateway.GetHistory(ctx)
+	if err != nil {
+		httperrors.WriteUpstreamError(w, "GATEWAY", err)
+		return
+	}
+	httperrors.WriteJSON(w, http.StatusOK, dto.History(history))
+}
+
+// gatewaySettings reconfigures a running gateway.
+//
+// PUT rather than PATCH, and the whole configuration rather than a patch: a
+// partial update needs a field mask to tell "leave this alone" apart from "set
+// this to zero", and on a control plane with one operator that machinery is
+// not repaid. The reply carries both what was applied -- which is not always
+// what was asked for -- and the resulting status, so a console redraws without
+// a second round trip.
+func (h *Handler) gatewaySettings(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPut) {
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, h.maxBodyBytes())
+
+	var settings dto.SettingsDTO
+	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
+		httperrors.WriteError(w, http.StatusBadRequest, "BAD_JSON", "request body must be a valid settings JSON object")
+		return
+	}
+
+	ctx, cancel := h.requestContext(r)
+	defer cancel()
+	applied, status, err := h.gateway.UpdateSettings(ctx, dto.SettingsProto(settings))
+	if err != nil {
+		httperrors.WriteUpstreamError(w, "GATEWAY", err)
+		return
+	}
+	httperrors.WriteJSON(w, http.StatusOK, map[string]any{
+		"settings": dto.Settings(applied),
+		"status":   dto.GatewayStatus(status),
+	})
 }
 
 func (h *Handler) gatewayEvents(w http.ResponseWriter, r *http.Request) {

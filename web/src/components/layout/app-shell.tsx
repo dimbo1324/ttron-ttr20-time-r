@@ -14,8 +14,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
+import { SourceSwitch } from "@/components/layout/source-switch";
 import { useDictionary, useLocale } from "@/components/locale-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,8 +24,12 @@ import { StateBadge } from "@/components/ui/state-badge";
 import { LOCALE_SHORT, locales, withLocale } from "@/i18n";
 import { useFormat } from "@/lib/use-format";
 import { CLOCK_TONE } from "@/lib/status";
+import {
+  useTelemetry,
+  useTelemetryControls,
+  useTelemetryEngine,
+} from "@/lib/telemetry/use-telemetry";
 import { cn } from "@/lib/utils";
-import { useBenchStore, useClockReport } from "@/stores/bench-store";
 
 /**
  * The shell every page lives inside.
@@ -55,27 +60,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const format = useFormat();
   const pathname = usePathname();
 
-  const running = useBenchStore((state) => state.running);
-  const health = useBenchStore((state) => state.health.state);
-  const clock = useClockReport();
-  const start = useBenchStore((state) => state.start);
-  const stop = useBenchStore((state) => state.stop);
-  const reset = useBenchStore((state) => state.reset);
-  const tick = useBenchStore((state) => state.tick);
+  // One mount drives whichever source is selected; see use-telemetry.
+  useTelemetryEngine();
+  const telemetry = useTelemetry();
+  const { start, stop, reset, busy } = useTelemetryControls();
 
-  /**
-   * The engine ticker.
-   *
-   * 120ms is well below the fastest schedule the UI offers (1s) and well above
-   * the rate at which re-rendering a live log becomes the bottleneck; the
-   * store itself no-ops until the next poll instant, so a tick that lands
-   * early costs one comparison.
-   */
-  useEffect(() => {
-    if (!running) return;
-    const id = window.setInterval(() => tick(Date.now()), 120);
-    return () => window.clearInterval(id);
-  }, [running, tick]);
+  const { running, clock } = telemetry;
+  const health = telemetry.health.state;
 
   const base = `/${locale}`;
 
@@ -129,9 +120,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="border-t border-border p-3">
-          <p className="eyebrow pb-1.5">{dict.shell.benchMode}</p>
+          <p className="eyebrow pb-1.5">{dict.source.label}</p>
           <p className="text-[0.6875rem] leading-snug text-faint-foreground">
-            {dict.shell.benchModeHint}
+            {telemetry.source === "live" ? dict.source.liveHint : dict.source.benchHint}
           </p>
           <div className="mt-3 flex items-center gap-1">
             <span className="text-[0.6875rem] text-faint-foreground">{dict.shell.language}</span>
@@ -174,18 +165,25 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Badge>
           </div>
 
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex items-center gap-2">
+            <SourceSwitch link={telemetry.link} />
             <Button
               size="sm"
               variant={running ? "outline" : "default"}
+              disabled={busy || telemetry.link === "unreachable"}
               onClick={() => (running ? stop() : start())}
             >
               {running ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
               {running ? dict.common.stop : dict.common.start}
             </Button>
-            <Button size="iconSm" variant="ghost" onClick={reset} title={dict.common.reset}>
-              <RotateCcw className="size-4" />
-            </Button>
+            {/* Reset clears the bench's own counters. The live gateway's are
+                cleared only by restarting it, so the button is absent rather
+                than present and inert. */}
+            {reset ? (
+              <Button size="iconSm" variant="ghost" onClick={reset} title={dict.common.reset}>
+                <RotateCcw className="size-4" />
+              </Button>
+            ) : null}
           </div>
         </header>
 

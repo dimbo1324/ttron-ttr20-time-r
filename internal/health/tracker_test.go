@@ -240,3 +240,71 @@ func TestTrackerConcurrentRecording(t *testing.T) {
 		t.Fatalf("total outcomes = %d, want 200", total)
 	}
 }
+
+func TestSetPolicyMovesTheThresholds(t *testing.T) {
+	tracker := NewTracker(Policy{DegradeAfter: 3, OfflineAfter: 10, RecoverAfter: 2, WindowSize: 16})
+
+	applied := tracker.SetPolicy(Policy{DegradeAfter: 1, OfflineAfter: 2, RecoverAfter: 1})
+
+	if applied.DegradeAfter != 1 || applied.OfflineAfter != 2 || applied.RecoverAfter != 1 {
+		t.Fatalf("SetPolicy() = %+v", applied)
+	}
+	if got := tracker.Policy(); got != applied {
+		t.Fatalf("Policy() = %+v, want %+v", got, applied)
+	}
+	if tracker.Snapshot().Policy != applied {
+		t.Fatal("the snapshot must report the policy now in force")
+	}
+}
+
+func TestSetPolicyKeepsTheWindowItWasBuiltWith(t *testing.T) {
+	tracker := NewTracker(Policy{DegradeAfter: 3, OfflineAfter: 10, RecoverAfter: 2, WindowSize: 8})
+	for i := 0; i < 8; i++ {
+		tracker.RecordSuccess(time.Millisecond)
+	}
+
+	// Resizing the ring would discard the outcomes in it, so an operator
+	// nudging a threshold would silently erase the evidence they were reading.
+	applied := tracker.SetPolicy(Policy{DegradeAfter: 2, OfflineAfter: 4, RecoverAfter: 1, WindowSize: 1024})
+
+	if applied.WindowSize != 8 {
+		t.Fatalf("WindowSize = %d, want the window the tracker was built with", applied.WindowSize)
+	}
+	if got := tracker.Snapshot().WindowSamples; got != 8 {
+		t.Fatalf("WindowSamples = %d, want the history to survive", got)
+	}
+}
+
+func TestSetPolicyNormalizesWhatItIsGiven(t *testing.T) {
+	tracker := NewTracker(DefaultPolicy())
+
+	applied := tracker.SetPolicy(Policy{})
+
+	if err := applied.Validate(); err != nil {
+		t.Fatalf("SetPolicy() left an invalid policy in force: %v", err)
+	}
+}
+
+func TestSetPolicyDoesNotReclassifyThePast(t *testing.T) {
+	tracker := NewTracker(Policy{DegradeAfter: 5, OfflineAfter: 10, RecoverAfter: 2, WindowSize: 16})
+	tracker.RecordFailure(nil)
+	tracker.RecordFailure(nil)
+	if tracker.State() != StateUnknown && tracker.State() == StateDegraded {
+		t.Fatal("two failures must not degrade under a threshold of five")
+	}
+
+	// Tightening the threshold below the current failure count does not
+	// retroactively declare an outage: the new rule applies from the next
+	// poll, which is the only outcome it was written about.
+	tracker.SetPolicy(Policy{DegradeAfter: 1, OfflineAfter: 10, RecoverAfter: 2})
+	before := tracker.State()
+
+	transition := tracker.RecordFailure(nil)
+
+	if before == StateDegraded {
+		t.Fatalf("state moved to %s on a policy change alone", before)
+	}
+	if transition.To != StateDegraded {
+		t.Fatalf("the next failure must apply the new rule, got %s", transition.To)
+	}
+}

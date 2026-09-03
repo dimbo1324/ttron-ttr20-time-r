@@ -3,6 +3,9 @@
 BIN_DIR := bin
 PROTO_FILES := proto/ft12/v1/common.proto proto/ft12/v1/emulator.proto proto/ft12/v1/gateway.proto
 
+# The repository's own rules, in one place and one language. See tools/checks.
+CHECKS := go run ./tools/checks
+
 .PHONY: help fmt check-go-format test test-race test-fuzz build build-client build-emulator build-gateway build-cli build-api build-healthcheck run-emulator run-client run-gateway run-api proto check-architecture check-doc-links release-check clean-runtime clean-runtime-dry-run compose-config docker-build docker-up docker-down docker-logs docker-ps docker-smoke metrics-smoke ci-local verify clean
 
 help:
@@ -42,11 +45,7 @@ fmt:
 	go fmt ./...
 
 check-go-format:
-ifeq ($(OS),Windows_NT)
-	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-go-format.ps1
-else
-	sh scripts/check-go-format.sh
-endif
+	$(CHECKS) format
 
 test:
 	go test ./...
@@ -94,32 +93,16 @@ proto:
 	protoc --go_out=. --go_opt=module=github.com/dimbo1324/ttron-ttr20-time-r --go-grpc_out=. --go-grpc_opt=module=github.com/dimbo1324/ttron-ttr20-time-r $(PROTO_FILES)
 
 check-architecture:
-ifeq ($(OS),Windows_NT)
-	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-architecture.ps1
-else
-	sh scripts/check-architecture.sh
-endif
+	$(CHECKS) architecture
 
 check-doc-links:
-ifeq ($(OS),Windows_NT)
-	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-doc-links.ps1
-else
-	sh scripts/check-doc-links.sh
-endif
+	$(CHECKS) doc-links
 
 clean-runtime:
-ifeq ($(OS),Windows_NT)
-	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-runtime.ps1
-else
-	bash scripts/clean-runtime.sh
-endif
+	$(CHECKS) clean-runtime
 
 clean-runtime-dry-run:
-ifeq ($(OS),Windows_NT)
-	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-runtime.ps1 -DryRun
-else
-	bash scripts/clean-runtime.sh --dry-run
-endif
+	$(CHECKS) clean-runtime --dry-run
 
 compose-config:
 	docker compose config
@@ -155,11 +138,7 @@ metrics-smoke:
 ci-local: fmt check-go-format check-architecture test build compose-config check-doc-links clean-runtime-dry-run
 
 release-check:
-ifeq ($(OS),Windows_NT)
-	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-check.ps1
-else
-	sh scripts/release-check.sh
-endif
+	$(CHECKS) release
 
 verify: fmt check-architecture test build
 

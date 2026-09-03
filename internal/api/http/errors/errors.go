@@ -44,6 +44,11 @@ func WriteUpstreamError(w http.ResponseWriter, service string, err error) {
 		return
 	}
 	switch st.Code() {
+	case codes.InvalidArgument:
+		// The caller asked for something the service will not do. That is a
+		// bad request, not a failing upstream, and reporting it as a 502
+		// would send the reader looking for a broken process.
+		WriteError(w, http.StatusBadRequest, "INVALID_ARGUMENT", st.Message())
 	case codes.Unavailable:
 		WriteError(w, http.StatusServiceUnavailable, service+"_UNAVAILABLE", service+" gRPC service is unavailable")
 	case codes.DeadlineExceeded:

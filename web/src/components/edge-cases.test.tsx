@@ -23,6 +23,7 @@ import {
   withLocale,
 } from "@/i18n";
 import { createFormatter } from "@/lib/format";
+import { DEFAULT_GATEWAY } from "@/stores/bench-store";
 import { renderWithLocale, resetBenchStore } from "@/test/utils";
 
 /**
@@ -296,15 +297,14 @@ describe("FrameAnalyzer builder for identity", () => {
 });
 
 /** The store's shipped gateway defaults, for tests that only override one field. */
+/**
+ * The engine defaults, with the identity probe off so a test asserting on the
+ * log is not reading a nameplate exchange it did not ask for.
+ *
+ * Built from DEFAULT_GATEWAY rather than retyped: a hand-copied duplicate goes
+ * stale the moment a setting is added, and then fails to compile in a file
+ * that has nothing to do with the change.
+ */
 function resetGateway() {
-  return {
-    scheduleMode: "aligned" as const,
-    intervalMs: 5000,
-    offsetMs: 0,
-    requestTimeoutMs: 1500,
-    retryAttempts: 2,
-    thresholds: { warnMs: 2000, criticalMs: 30_000 },
-    policy: { degradeAfter: 3, offlineAfter: 10, recoverAfter: 2 },
-    identityProbe: false,
-  };
+  return { ...DEFAULT_GATEWAY, identityProbe: false };
 }

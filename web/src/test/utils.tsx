@@ -4,9 +4,13 @@ import type { ReactElement, ReactNode } from "react";
 import { LocaleProvider } from "@/components/locale-provider";
 import { getDictionary, type Locale } from "@/i18n";
 import { EMPTY_HEALTH } from "@/lib/bench/domain";
+import type { TelemetrySource } from "@/lib/telemetry/types";
 import { DEFAULT_FAULTS, DEFAULT_GATEWAY, useBenchStore } from "@/stores/bench-store";
+import { useLiveStore } from "@/stores/live-store";
+import { useSourceStore } from "@/stores/source-store";
 
 type BenchStoreState = ReturnType<typeof useBenchStore.getState>;
+type LiveStoreState = ReturnType<typeof useLiveStore.getState>;
 
 /**
  * Renders inside the dictionary provider every component in this app expects.
@@ -77,4 +81,193 @@ export function resetBenchStore(overrides: Partial<BenchStoreState> = {}) {
  */
 export function plain(value: string): string {
   return value.replace(/[\u00A0\u202F]/g, " ");
+}
+
+/**
+ * Returns the live source to its initial state.
+ *
+ * Same reasoning as `resetBenchStore`: both stores are module singletons, and
+ * a test that leaves a status behind makes the next one pass for the wrong
+ * reason. `reset()` is the store's own action, so this cannot drift from it.
+ */
+export function resetLiveStore(overrides: Partial<LiveStoreState> = {}) {
+  useLiveStore.getState().reset();
+  if (Object.keys(overrides).length > 0) useLiveStore.setState(overrides);
+}
+
+/** Selects a telemetry source for the components under test. */
+export function useSource(source: TelemetrySource) {
+  useSourceStore.setState({ source, hydrated: true });
+}
+
+/**
+ * A gateway status with every section filled in.
+ *
+ * Written as the JSON the API actually returns rather than as a parsed object,
+ * so a schema that stops accepting a real payload fails here.
+ */
+export function gatewayStatusFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    state: "running",
+    targetAddr: "127.0.0.1:9000",
+    checksumMode: "sum",
+    pollingIntervalMs: 5000,
+    requestTimeoutMs: 1500,
+    connectTimeoutMs: 2000,
+    connected: true,
+    connectionAttempts: 1,
+    successfulReads: 42,
+    failedReads: 3,
+    reconnects: 1,
+    protocolErrors: 2,
+    lastRoundTripMs: 8,
+    lastSuccessfulReadTime: "2026-09-02T12:00:00Z",
+    lastDeviceTime: "2026-09-02T11:59:58Z",
+    lastError: "",
+    recentFramesCount: 11,
+    deviceId: "alpha",
+    deviceName: "TTR20 alpha",
+    schedule: {
+      mode: "aligned",
+      intervalMs: 60_000,
+      offsetMs: 5000,
+      description: "aligned every 1m0s at offset 5s",
+      nextPollAt: "2026-09-02T12:01:05Z",
+    },
+    retry: { attempts: 2, delayMs: 200, maxDelayMs: 800, totalRetries: 7, exhaustedPolls: 1 },
+    clock: {
+      state: "warn",
+      skewMs: -2500,
+      medianSkewMs: -2400,
+      minSkewMs: -3000,
+      maxSkewMs: -1800,
+      driftPerDayMs: 24_000,
+      driftDetermined: true,
+      driftFit: 0.94,
+      samples: 31,
+      warnThresholdMs: 2000,
+      criticalThresholdMs: 30_000,
+      roundTripMs: 9,
+      updatedAt: "2026-09-02T12:00:00Z",
+      observedSamples: 32,
+      rejectedSamples: 1,
+    },
+    health: {
+      state: "degraded",
+      since: "2026-09-02T11:00:00Z",
+      availability: 0.875,
+      windowSamples: 40,
+      consecutiveFailures: 4,
+      consecutiveSuccesses: 0,
+      latencyP50Ms: 44,
+      latencyP95Ms: 45,
+      latencyP99Ms: 46,
+      latencyMaxMs: 47,
+      latencyMeanMs: 48,
+      degradeAfter: 3,
+      offlineAfter: 10,
+      recoverAfter: 2,
+    },
+    identity: {
+      known: true,
+      supported: true,
+      model: "TTR20",
+      serial: "SN-42",
+      firmware: "1.2.3",
+      readAt: "2026-09-02T11:59:00Z",
+    },
+    ...overrides,
+  };
+}
+
+export function fleetFixture() {
+  return {
+    summary: {
+      devices: 2,
+      running: 2,
+      online: 1,
+      degraded: 1,
+      offline: 0,
+      unknown: 0,
+      clockOk: 1,
+      clockWarn: 1,
+      clockCritical: 0,
+      clockUnknown: 0,
+      worstClockSkewMs: -2500,
+      worstClockDeviceId: "alpha",
+    },
+    devices: [
+      gatewayStatusFixture(),
+      gatewayStatusFixture({
+        deviceId: "beta",
+        deviceName: "TTR20 beta",
+        targetAddr: "127.0.0.1:9001",
+        health: { ...gatewayStatusFixture().health, state: "online", availability: 1 },
+        clock: { ...gatewayStatusFixture().clock, state: "ok", skewMs: 12, samples: 9 },
+      }),
+    ],
+  };
+}
+
+export function historyFixture() {
+  return {
+    clockSamples: [
+      { at: "2026-09-02T11:59:00Z", skewMs: -2600, roundTripMs: 8 },
+      { at: "2026-09-02T12:00:00Z", skewMs: -2500, roundTripMs: 9 },
+    ],
+    healthOutcomes: [
+      { at: "2026-09-02T11:59:00Z", success: true, latencyMs: 8 },
+      { at: "2026-09-02T12:00:00Z", success: false, latencyMs: 0 },
+    ],
+  };
+}
+
+export function faultModeFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    responseDelayMs: 0,
+    corruptChecksum: false,
+    corruptChecksumProbability: 0,
+    fragmentResponse: false,
+    fragmentProbability: 0,
+    fragmentDelayMs: 40,
+    noResponse: false,
+    closeAfterRequest: false,
+    ...overrides,
+  };
+}
+
+/** A gateway frame record, as `/gateway/events` returns it. */
+export function eventFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    timestamp: "2026-09-02T12:00:00.000Z",
+    source: "gateway",
+    service: "gateway",
+    direction: "TX",
+    remoteAddr: "127.0.0.1:9000",
+    checksumMode: "sum",
+    rawHex: "68 03 68 00 01 01 02 16",
+    command: "read-time",
+    error: "",
+    message: "",
+    ...overrides,
+  };
+}
+
+/** The settings the API returns and accepts, matching gatewayStatusFixture. */
+export function settingsFixture(overrides: Record<string, unknown> = {}) {
+  return {
+    scheduleMode: "aligned",
+    pollIntervalMs: 60_000,
+    pollOffsetMs: 5000,
+    requestTimeoutMs: 1500,
+    retryAttempts: 2,
+    retryDelayMs: 200,
+    clockWarnMs: 2000,
+    clockCriticalMs: 30_000,
+    degradeAfter: 3,
+    offlineAfter: 10,
+    recoverAfter: 2,
+    ...overrides,
+  };
 }

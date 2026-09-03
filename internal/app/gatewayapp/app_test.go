@@ -35,7 +35,7 @@ func TestBuildRuntimeSingleDevice(t *testing.T) {
 	logger := log.New(io.Discard, "", 0)
 	group := lifecycle.NewGroup(logger)
 
-	service, err := buildRuntime(context.Background(), testConfig(), group, logger)
+	service, _, err := buildRuntime(context.Background(), testConfig(), group, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestBuildRuntimeRejectsInvalidSingleDeviceConfig(t *testing.T) {
 	cfg := testConfig()
 	cfg.CRCMode = "md5"
 
-	if _, err := buildRuntime(context.Background(), cfg, lifecycle.NewGroup(logger), logger); err == nil {
+	if _, _, err := buildRuntime(context.Background(), cfg, lifecycle.NewGroup(logger), logger); err == nil {
 		t.Fatal("buildRuntime() must reject an unknown checksum mode")
 	}
 }
@@ -71,7 +71,7 @@ func TestBuildRuntimeLoadsDeviceInventory(t *testing.T) {
 	cfg := testConfig()
 	cfg.DevicesFile = path
 
-	service, err := buildRuntime(context.Background(), cfg, lifecycle.NewGroup(logger), logger)
+	service, _, err := buildRuntime(context.Background(), cfg, lifecycle.NewGroup(logger), logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestBuildRuntimeWithoutEnabledDevices(t *testing.T) {
 	cfg.DevicesFile = path
 	cfg.GRPCListen = ":9200"
 
-	service, err := buildRuntime(context.Background(), cfg, lifecycle.NewGroup(logger), logger)
+	service, _, err := buildRuntime(context.Background(), cfg, lifecycle.NewGroup(logger), logger)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestBuildRuntimeRejectsMissingInventory(t *testing.T) {
 	cfg := testConfig()
 	cfg.DevicesFile = filepath.Join(t.TempDir(), "absent.json")
 
-	if _, err := buildRuntime(context.Background(), cfg, lifecycle.NewGroup(logger), logger); err == nil {
+	if _, _, err := buildRuntime(context.Background(), cfg, lifecycle.NewGroup(logger), logger); err == nil {
 		t.Fatal("buildRuntime() must fail when the inventory is missing")
 	}
 }
@@ -120,7 +120,7 @@ func TestBuildRuntimeRejectsInvalidInventory(t *testing.T) {
 	cfg := testConfig()
 	cfg.DevicesFile = path
 
-	if _, err := buildRuntime(context.Background(), cfg, lifecycle.NewGroup(logger), logger); err == nil {
+	if _, _, err := buildRuntime(context.Background(), cfg, lifecycle.NewGroup(logger), logger); err == nil {
 		t.Fatal("buildRuntime() must reject an invalid inventory")
 	}
 }
@@ -141,7 +141,7 @@ func TestBuildRuntimeRegistersLifecycleTask(t *testing.T) {
 	logger := log.New(io.Discard, "", 0)
 	group := lifecycle.NewGroup(logger)
 
-	if _, err := buildRuntime(context.Background(), testConfig(), group, logger); err != nil {
+	if _, _, err := buildRuntime(context.Background(), testConfig(), group, logger); err != nil {
 		t.Fatal(err)
 	}
 

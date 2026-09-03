@@ -133,12 +133,8 @@ Service logs default to `runtime/logs`. This folder is ignored by Git.
 
 Preview cleanup:
 
-```powershell
-.\scripts\clean-runtime.ps1 -DryRun
-```
-
 ```sh
-bash scripts/clean-runtime.sh --dry-run
+go run ./tools/checks clean-runtime --dry-run
 ```
 
 Then remove ignored runtime/build artifacts:

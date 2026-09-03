@@ -17,8 +17,13 @@ func TestDefaultGatewayIsValid(t *testing.T) {
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("DefaultGateway() must be valid: %v", err)
 	}
-	if cfg.ScheduleMode != string(schedule.ModeInterval) {
+	// The shipped default is the brief this project answers: read the device
+	// clock on the fifth second of every minute.
+	if cfg.ScheduleMode != string(schedule.ModeAligned) {
 		t.Fatalf("ScheduleMode = %q", cfg.ScheduleMode)
+	}
+	if cfg.PollInterval != time.Minute || cfg.PollOffset != 5*time.Second {
+		t.Fatalf("default schedule = %s every %s", cfg.PollOffset, cfg.PollInterval)
 	}
 	if cfg.RetryAttempts != retry.DefaultAttempts || cfg.RetryDelay != retry.DefaultDelay {
 		t.Fatalf("retry defaults = (%d, %s)", cfg.RetryAttempts, cfg.RetryDelay)

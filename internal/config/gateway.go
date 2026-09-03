@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -43,12 +44,24 @@ type GatewayConfig struct {
 	DevicesFile   string
 }
 
+// DefaultGateway is the assignment this project was written for: read the
+// device clock on the fifth second of every minute.
+//
+// A general polling service could reasonably default to "every five seconds"
+// and leave the calendar to the operator. This one does not, because the
+// behaviour someone gets from `go run ./cmd/ft12-gateway` with no flags is the
+// behaviour they will believe the program has -- and a repository that answers
+// a specific brief should answer it when run, not only when configured.
+//
+// The cost is a sharp edge worth knowing about: an aligned schedule needs its
+// offset to fall inside its interval, so shortening the interval alone can
+// make the pair invalid. Validate says so by name; see below.
 func DefaultGateway() GatewayConfig {
 	return GatewayConfig{
 		Target:         "127.0.0.1:9000",
 		CRCMode:        "sum",
 		AdapterAddr:    1,
-		PollInterval:   5 * time.Second,
+		PollInterval:   time.Minute,
 		RequestTimeout: 1500 * time.Millisecond,
 		ConnectTimeout: 2 * time.Second,
 		BackoffInitial: 500 * time.Millisecond,
@@ -57,8 +70,8 @@ func DefaultGateway() GatewayConfig {
 		LogFile:        "runtime/logs/ft12-gateway.log",
 		GRPCListen:     ":9200",
 
-		ScheduleMode:  string(schedule.ModeInterval),
-		PollOffset:    0,
+		ScheduleMode:  string(schedule.ModeAligned),
+		PollOffset:    5 * time.Second,
 		RetryAttempts: retry.DefaultAttempts,
 		RetryDelay:    retry.DefaultDelay,
 
@@ -220,6 +233,15 @@ func (c GatewayConfig) Validate() error {
 		}
 	}
 	if _, err := c.Schedule(); err != nil {
+		// Named by flag rather than by field. The default schedule is aligned
+		// at +5s, so the first thing anyone does -- pass -interval on its own
+		// -- is also the first way to make the pair invalid, and the bare
+		// "offset must be below the interval" leaves them hunting for a knob
+		// they never touched.
+		if errors.Is(err, schedule.ErrInvalidOffset) {
+			return fmt.Errorf("%w: -poll-offset %s does not fit inside -interval %s (use -schedule interval for a fixed rate)",
+				err, c.PollOffset, c.PollInterval)
+		}
 		return err
 	}
 	if err := c.RetryPolicy().Validate(); err != nil {
