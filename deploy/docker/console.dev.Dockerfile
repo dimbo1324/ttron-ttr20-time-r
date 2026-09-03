@@ -11,10 +11,10 @@
 # Runs as root, keeps the full dependency tree, and expects the source to
 # arrive over a bind mount -- see docker-compose.dev.yml.
 
-ARG NODE_VERSION=22
-ARG GO_VERSION=1.26
+# Pinned by digest for the same reason as the production images.
 
-FROM golang:${GO_VERSION}-bookworm AS health
+# golang:1.26-bookworm
+FROM golang@sha256:9fdc884aacc3bec89b20ffc69f4bb369c78210e3e4f600387b5128b12c199f81 AS health
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -23,7 +23,8 @@ COPY internal ./internal
 COPY proto ./proto
 RUN CGO_ENABLED=0 go build -trimpath -o /out/ft12-healthcheck ./cmd/ft12-healthcheck
 
-FROM node:${NODE_VERSION}-bookworm-slim
+# node:22-bookworm-slim
+FROM node@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
 WORKDIR /src
 
 RUN npm install -g pnpm@9

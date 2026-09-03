@@ -15,6 +15,26 @@ Use semantic versioning for public tags:
 Go binaries expose build metadata through `/health` for the API. Docker builds
 can pass `VERSION`, `COMMIT`, and `BUILD_DATE` build args.
 
+## Cutting A Release
+
+Push a tag and the pipeline does the rest:
+
+```sh
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+`.github/workflows/release.yml` re-runs the full gate first -- a tag is a
+promise, and CI running afterwards is a promise made before it was checked --
+then builds binaries for linux/amd64, linux/arm64, windows/amd64 and
+darwin/arm64 with checksums, publishes multi-architecture images to GHCR with
+an SBOM and a provenance attestation, scans them, and creates the GitHub
+release from this version's section of `CHANGELOG.md`.
+
+To rehearse the whole thing without spending a version number, run the
+workflow by hand from the Actions tab with **Publish** left off: it builds and
+scans everything and pushes nothing.
+
 ## Local Release Check
 
 ```sh

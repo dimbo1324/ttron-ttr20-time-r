@@ -1,8 +1,13 @@
 # syntax=docker/dockerfile:1.7
 
-ARG GO_VERSION=1.26
+# Base images are pinned by digest, not by tag. A tag is a moving pointer:
+# `golang:1.26-bookworm` today and next month are two different filesystems,
+# so a build that "worked yesterday" can quietly produce a different image
+# from an unchanged Dockerfile. The tag stays in the comment so a reader can
+# still tell what it is.
 
-FROM golang:${GO_VERSION}-bookworm AS builder
+# golang:1.26-bookworm
+FROM golang@sha256:9fdc884aacc3bec89b20ffc69f4bb369c78210e3e4f600387b5128b12c199f81 AS builder
 WORKDIR /src
 
 ARG SERVICE=ft12-api
@@ -20,7 +25,8 @@ COPY proto ./proto
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/dimbo1324/ttron-ttr20-time-r/internal/version.Version=${VERSION} -X github.com/dimbo1324/ttron-ttr20-time-r/internal/version.Commit=${COMMIT} -X github.com/dimbo1324/ttron-ttr20-time-r/internal/version.BuildDate=${BUILD_DATE}" -o /out/service ./cmd/${SERVICE}
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ft12-healthcheck ./cmd/ft12-healthcheck
 
-FROM gcr.io/distroless/base-debian12:nonroot
+# gcr.io/distroless/base-debian12:nonroot
+FROM gcr.io/distroless/base-debian12@sha256:7f0c72cd138b442ae0deeb69c08b1acf5525439ba251a49ad93c320a061567e5
 WORKDIR /app
 COPY --from=builder /out/service /app/service
 COPY --from=builder /out/ft12-healthcheck /app/ft12-healthcheck

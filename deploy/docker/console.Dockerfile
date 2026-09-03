@@ -8,13 +8,15 @@
 # speaks HTTP and dials TCP. Building it here rather than inventing a second
 # check keeps one answer to "is this service up" across every container.
 
-ARG NODE_VERSION=22
-ARG GO_VERSION=1.26
+# Base images are pinned by digest rather than by tag, so an unchanged
+# Dockerfile cannot quietly produce a different image next month. The tag is
+# kept in a comment above each.
 
 # ---------------------------------------------------------------- deps
 # Dependencies are their own layer, keyed on the manifest and the lockfile, so
 # editing a component does not reinstall the tree.
-FROM node:${NODE_VERSION}-bookworm-slim AS deps
+# node:22-bookworm-slim
+FROM node@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS deps
 WORKDIR /src
 
 # Pinned to the major that wrote the lockfile: pnpm 10 rewrites a v9 lockfile,
@@ -25,7 +27,8 @@ COPY web/package.json web/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # ---------------------------------------------------------------- builder
-FROM node:${NODE_VERSION}-bookworm-slim AS builder
+# node:22-bookworm-slim
+FROM node@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS builder
 WORKDIR /src
 
 RUN npm install -g pnpm@9
@@ -37,7 +40,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 
 # ---------------------------------------------------------------- health
-FROM golang:${GO_VERSION}-bookworm AS health
+# golang:1.26-bookworm
+FROM golang@sha256:9fdc884aacc3bec89b20ffc69f4bb369c78210e3e4f600387b5128b12c199f81 AS health
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -47,7 +51,8 @@ COPY proto ./proto
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ft12-healthcheck ./cmd/ft12-healthcheck
 
 # ---------------------------------------------------------------- runtime
-FROM gcr.io/distroless/nodejs${NODE_VERSION}-debian12:nonroot
+# gcr.io/distroless/nodejs22-debian12:nonroot
+FROM gcr.io/distroless/nodejs22-debian12@sha256:13593b7570658e8477de39e2f4a1dd25db2f836d68a0ba771251572d23bb4f8e
 WORKDIR /app
 
 ENV NODE_ENV=production
