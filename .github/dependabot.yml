@@ -68,9 +68,12 @@ updates:
     commit-message:
       prefix: "ci(deps)"
 
+  # Base images. The Dockerfiles here carry a prefix rather than the bare
+  # name, which Dependabot's Docker ecosystem may or may not match depending
+  # on its version -- the digests below are pinned and updated by hand as
+  # well, so a miss here costs freshness rather than correctness.
   - package-ecosystem: docker
-    directories:
-      - /deploy/docker
+    directory: /deploy/docker
     schedule:
       interval: weekly
       day: monday
