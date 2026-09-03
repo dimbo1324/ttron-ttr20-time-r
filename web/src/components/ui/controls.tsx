@@ -293,3 +293,33 @@ export function SegmentedControl<T extends string>({
     </div>
   );
 }
+
+/**
+ * A value the current source will not let you change.
+ *
+ * Rendered instead of the control rather than as a disabled copy of it. A
+ * disabled `<select>` can only show a value that happens to be one of its
+ * options, and a gateway configured with an interval this UI never offers
+ * would render as blank — which reads as "not set" rather than "not editable".
+ *
+ * `<output>` because it is a labelable element: the `Field` above still binds
+ * its label to it, so the row keeps its meaning for a screen reader.
+ */
+export function ReadonlyValue({
+  children,
+  className,
+  ...props
+}: React.ComponentProps<"output">) {
+  return (
+    <output
+      className={cn(
+        "flex h-9 w-full items-center rounded-md border border-border border-dashed bg-surface-sunken/60",
+        "px-2.5 font-mono text-sm tabular text-muted-foreground",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </output>
+  );
+}

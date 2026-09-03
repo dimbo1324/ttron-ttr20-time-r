@@ -3,17 +3,20 @@
 import { ArrowLeftRight, Radio, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { SourceNotice } from "@/components/layout/source-notice";
 import { useDictionary } from "@/components/locale-provider";
 import { FrameInspector } from "@/components/protocol/frame-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, SegmentedControl } from "@/components/ui/controls";
 import { Panel, PanelBody, PanelHeader, Stat } from "@/components/ui/panel";
-import { useFormat } from "@/lib/use-format";
 import { formatHex } from "@/lib/ft12";
 import { DIRECTION_BG, DIRECTION_TEXT, DIRECTION_TONE } from "@/lib/status";
+import type { EventDirection, LogEvent } from "@/lib/telemetry/types";
+import { useTelemetry } from "@/lib/telemetry/use-telemetry";
+import { useFormat } from "@/lib/use-format";
 import { cn } from "@/lib/utils";
-import { useBenchStore, type BenchEvent, type EventDirection } from "@/stores/bench-store";
+import { useBenchStore } from "@/stores/bench-store";
 
 /**
  * Exchange monitor.
@@ -30,10 +33,13 @@ type Filter = "all" | EventDirection;
 export function ExchangeMonitor() {
   const dict = useDictionary();
   const format = useFormat();
-  const events = useBenchStore((state) => state.events);
-  const checksumMode = useBenchStore((state) => state.checksumMode);
-  const counters = useBenchStore((state) => state.counters);
-  const clearEvents = useBenchStore((state) => state.clearEvents);
+  const { source, events, checksumMode, counters } = useTelemetry();
+  /**
+   * Clearing is bench-only: the live log is the gateway's own frame history,
+   * and a console must not be able to erase a device's record from a toolbar.
+   */
+  const clearBenchEvents = useBenchStore((state) => state.clearEvents);
+  const clearEvents = source === "bench" ? clearBenchEvents : null;
 
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
@@ -66,6 +72,7 @@ export function ExchangeMonitor() {
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_23rem]">
       <div className="space-y-4">
+        <SourceNotice />
         <Panel>
           <PanelHeader
             icon={<ArrowLeftRight className="size-4" />}
@@ -91,9 +98,16 @@ export function ExchangeMonitor() {
                 >
                   {dict.monitor.autoscroll}
                 </Button>
-                <Button size="iconSm" variant="ghost" onClick={clearEvents} title={dict.monitor.clearLog}>
-                  <Trash2 className="size-4" />
-                </Button>
+                {clearEvents ? (
+                  <Button
+                    size="iconSm"
+                    variant="ghost"
+                    onClick={clearEvents}
+                    title={dict.monitor.clearLog}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                ) : null}
               </>
             }
           />
@@ -205,7 +219,7 @@ function EventRow({
   selected,
   onSelect,
 }: {
-  event: BenchEvent;
+  event: LogEvent;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -237,9 +251,9 @@ function EventRow({
           <span className="block truncate font-mono text-[0.6875rem] text-foreground tabular">
             {formatHex(event.bytes)}
           </span>
-        ) : event.errorCode ? (
+        ) : event.errorCode || (event.direction === "err" && event.detail) ? (
           <span className="text-[0.6875rem] text-destructive">
-            {dict.events.errors[event.errorCode]}
+            {event.errorCode ? dict.events.errors[event.errorCode] : event.detail}
           </span>
         ) : event.note ? (
           <span className="text-[0.6875rem] text-signal-sys">
@@ -250,6 +264,8 @@ function EventRow({
               </span>
             ) : null}
           </span>
+        ) : event.detail ? (
+          <span className="block truncate text-[0.6875rem] text-signal-sys">{event.detail}</span>
         ) : null}
       </td>
       <td className="w-14 py-1 pr-3.5 text-right align-top font-mono text-[0.6875rem] text-faint-foreground tabular">
@@ -259,7 +275,7 @@ function EventRow({
   );
 }
 
-function SystemEventDetail({ event }: { event: BenchEvent }) {
+function SystemEventDetail({ event }: { event: LogEvent }) {
   const dict = useDictionary();
   const format = useFormat();
 
@@ -271,13 +287,21 @@ function SystemEventDetail({ event }: { event: BenchEvent }) {
           {format.clock(event.at)}
         </span>
       </div>
-      <p className="text-sm text-foreground">
+      <p className="text-sm break-words text-foreground">
         {event.errorCode
           ? dict.events.errors[event.errorCode]
           : event.note
             ? dict.events[event.note]
-            : dict.common.none}
+            : (event.detail ?? dict.common.none)}
       </p>
+      {/* The source's own words, kept beside the translation rather than
+          instead of it: a gateway message names the sentinel that produced it,
+          which is what someone reading the Go log needs to match against. */}
+      {event.detail && (event.errorCode || event.note) ? (
+        <p className="font-mono text-[0.6875rem] break-words text-faint-foreground">
+          {event.detail}
+        </p>
+      ) : null}
       {event.noteArgs ? (
         <p className="text-xs text-faint-foreground">
           {stateLabel(dict, event.noteArgs.from)} → {stateLabel(dict, event.noteArgs.to)}
@@ -295,7 +319,7 @@ function SystemEventDetail({ event }: { event: BenchEvent }) {
  * three requests and one answer in the space one exchange should have taken is
  * a shape, not a number.
  */
-function SequenceDiagram({ events }: { events: BenchEvent[] }) {
+function SequenceDiagram({ events }: { events: LogEvent[] }) {
   const dict = useDictionary();
   const format = useFormat();
 

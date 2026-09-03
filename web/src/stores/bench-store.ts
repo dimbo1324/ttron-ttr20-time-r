@@ -17,6 +17,7 @@ import {
   type ScheduleMode,
   type SkewSample,
 } from "@/lib/bench/domain";
+import type { LogEvent } from "@/lib/telemetry/types";
 import {
   buildReadIdentityRequest,
   buildReadIdentityResponse,
@@ -49,42 +50,17 @@ import {
  * paused tab, a fault toggled mid-flight or a React re-render could tear.
  */
 
-export type EventDirection = "tx" | "rx" | "err" | "sys";
-
 /**
- * Everything the engine can say, as closed unions.
+ * The log vocabulary lives in `@/lib/telemetry/types`, not here.
  *
- * These were plain strings, which meant the log rendered whatever the engine
- * happened to emit — and three of the codes had no dictionary entry at all, so
- * a timeout showed the operator the word "timeout" in both languages. A union
- * makes the dictionary lookup exhaustive: a code added here fails to compile
- * until both locales can name it.
+ * It used to be defined in this file, which was fine while the bench was the
+ * only thing that could produce a log row. It is not any more: the live source
+ * emits the same rows from the real gateway's history, and both have to be
+ * renderable by one monitor. Re-exported so the many call sites that name
+ * `BenchEvent` keep working and keep meaning exactly what they meant.
  */
-export type BenchErrorCode = "invalidChecksum" | "noResponse" | "timeout" | "connectionClosed";
-
-export type BenchNote =
-  | "pollingStarted"
-  | "pollingStopped"
-  | "deviceStateChanged"
-  | "clockStateChanged"
-  | "reconnected";
-
-export interface BenchEvent {
-  id: number;
-  /** Simulated wall clock of the event, ms since epoch. */
-  at: number;
-  direction: EventDirection;
-  source: "gateway" | "device";
-  command: string;
-  bytes: number[];
-  /** Dictionary key for a system note, when the event is not a frame. */
-  note?: BenchNote;
-  noteArgs?: { from: string; to: string };
-  errorCode?: BenchErrorCode;
-  cycle: number;
-  attempt: number;
-  latencyMs?: number;
-}
+export type { BenchErrorCode, BenchNote, EventDirection } from "@/lib/telemetry/types";
+export type { LogEvent as BenchEvent } from "@/lib/telemetry/types";
 
 export interface DeviceFaults {
   responseDelayMs: number;
@@ -124,7 +100,7 @@ export interface BenchCounters {
   connections: number;
 }
 
-interface BenchState {
+export interface BenchState {
   running: boolean;
   connected: boolean;
   checksumMode: ChecksumMode;
@@ -134,7 +110,7 @@ interface BenchState {
   identity: DeviceIdentity;
   gateway: GatewaySettings;
 
-  events: BenchEvent[];
+  events: LogEvent[];
   samples: SkewSample[];
   health: HealthSnapshot;
   counters: BenchCounters;
@@ -348,12 +324,12 @@ export const useBenchStore = create<BenchState>()((set, get) => ({
   },
 }));
 
-function appendEvent(events: BenchEvent[], event: BenchEvent): BenchEvent[] {
+function appendEvent(events: LogEvent[], event: LogEvent): LogEvent[] {
   const next = [...events, event];
   return next.length > MAX_EVENTS ? next.slice(next.length - MAX_EVENTS) : next;
 }
 
-function appendEvents(events: BenchEvent[], added: BenchEvent[]): BenchEvent[] {
+function appendEvents(events: LogEvent[], added: LogEvent[]): LogEvent[] {
   const next = [...events, ...added];
   return next.length > MAX_EVENTS ? next.slice(next.length - MAX_EVENTS) : next;
 }
@@ -369,7 +345,7 @@ function appendEvents(events: BenchEvent[], added: BenchEvent[]): BenchEvent[] {
 function runCycle(state: BenchState, now: number): Partial<BenchState> {
   const { faults, gateway, checksumMode, adapterAddress } = state;
   const cycle = state.cycle + 1;
-  const added: BenchEvent[] = [];
+  const added: LogEvent[] = [];
   const counters = { ...state.counters };
 
   let connected = state.connected;
