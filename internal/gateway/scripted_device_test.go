@@ -15,6 +15,7 @@ import (
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/codec"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/command"
 	"github.com/dimbo1324/ttron-ttr20-time-r/internal/protocol/frame"
+	"github.com/dimbo1324/ttron-ttr20-time-r/internal/schedule"
 )
 
 type deviceReply struct {
@@ -191,6 +192,11 @@ func testGatewayConfig(target string) *config.GatewayConfig {
 	cfg.Target = target
 	cfg.CRCMode = "sum"
 	cfg.AdapterAddr = 1
+	// A fixed rate, stated rather than inherited: these tests poll every 40ms
+	// to stay fast, and the shipped default is a calendar schedule whose +5s
+	// offset cannot fit inside an interval that short.
+	cfg.ScheduleMode = string(schedule.ModeInterval)
+	cfg.PollOffset = 0
 	cfg.PollInterval = 40 * time.Millisecond
 	cfg.RequestTimeout = 300 * time.Millisecond
 	cfg.ConnectTimeout = 500 * time.Millisecond

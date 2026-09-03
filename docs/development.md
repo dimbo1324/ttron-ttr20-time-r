@@ -17,7 +17,7 @@ go build ./...
 .\scripts\check-architecture.ps1
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode sum
 go run ./cmd/ft12-client -host 127.0.0.1 -port 9000 -crc sum
-go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 5s
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -schedule interval -interval 5s
 go run ./cmd/ft12-api -http-listen 127.0.0.1:8080
 make verify
 make proto
@@ -44,7 +44,7 @@ Useful service runs:
 
 ```powershell
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode crc16
-go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode crc16 -interval 1s
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode crc16 -schedule interval -interval 1s
 ```
 
 gRPC control:

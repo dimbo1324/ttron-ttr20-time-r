@@ -4,24 +4,43 @@ The gateway is a TCP polling service. It connects to an FT1.2-like
 emulator/device, sends read-time requests, parses responses, tracks status, and
 reconnects with backoff after errors.
 
-Run with the emulator:
+## Schedule
+
+With no flags the gateway reads the device clock **on the fifth second of
+every minute** -- the brief this project answers. That is an *aligned*
+schedule: poll instants are measured from the epoch, so they land on the same
+wall-clock boundary after every restart and reconnect rather than drifting by
+however long each reply took.
 
 ```powershell
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode sum
-go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 5s
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000
 ```
+
+For a fixed rate -- every N seconds from the last poll, phase wherever the
+connection put it -- ask for it by name:
+
+```powershell
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -schedule interval -interval 5s
+```
+
+An aligned schedule needs its offset to fall inside its interval, so
+`-interval` on its own is refused while the default `+5s` offset is still in
+force. The error names both flags.
 
 CRC16:
 
 ```powershell
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode crc16
-go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode crc16 -interval 5s
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode crc16
 ```
 
 Useful flags:
 
 - `-target`: TCP address of the emulator/device;
+- `-schedule`: `aligned` (default) or `interval`;
 - `-interval`: polling interval;
+- `-poll-offset`: offset inside an aligned interval;
 - `-timeout`: request/response timeout;
 - `-connect-timeout`: TCP connect timeout;
 - `-backoff-initial`, `-backoff-max`: reconnect behavior;

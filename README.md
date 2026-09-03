@@ -107,7 +107,7 @@ Run services manually:
 
 ```powershell
 go run ./cmd/ft12-emulator -listen 127.0.0.1:9000 -mode sum -grpc-listen 127.0.0.1:9100
-go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -interval 1s -grpc-listen 127.0.0.1:9200
+go run ./cmd/ft12-gateway -target 127.0.0.1:9000 -mode sum -schedule interval -interval 1s -grpc-listen 127.0.0.1:9200
 go run ./cmd/ft12-api -http-listen 127.0.0.1:8080 -emulator-grpc 127.0.0.1:9100 -gateway-grpc 127.0.0.1:9200
 ```
 
