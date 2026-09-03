@@ -28,34 +28,30 @@ Concurrency cancels older runs for the same Git ref.
 
 ## Local Equivalents
 
-```powershell
+The same commands on every platform, because they are one Go program:
+
+```sh
+go run ./tools/checks release
+```
+
+Or a stage at a time:
+
+```sh
 go fmt ./...
-.\scripts\check-go-format.ps1
-.\scripts\check-architecture.ps1
+go run ./tools/checks format
+go run ./tools/checks architecture
+go run ./tools/checks doc-links
 go test ./...
 go build ./...
 docker compose config
-docker compose build
-docker compose up -d
-.\scripts\check-doc-links.ps1
-.\scripts\clean-runtime.ps1 -DryRun
-.\scripts\release-check.ps1
-```
-
-On Unix-like systems:
-
-```sh
-sh scripts/check-architecture.sh
-sh scripts/check-go-format.sh
-bash scripts/clean-runtime.sh --dry-run
+go run ./tools/checks clean-runtime --dry-run
 ```
 
 ## Formatting And Line Endings
 
-CI uses `scripts/check-go-format.ps1` for the cross-platform backend matrix.
-The script checks active Go files only and compares `gofmt` output after
-normalizing CRLF/LF, so `windows-latest` does not fail merely because checkout
-line endings differ. Real `gofmt` changes still fail the job.
+The format check runs on the whole backend matrix and compares `gofmt` output
+after normalizing CRLF/LF, so `windows-latest` does not fail merely because
+checkout line endings differ. Real `gofmt` changes still fail the job.
 
 `legacy/` is reference-only and excluded from active formatting/build/test
 policy. Active code under `cmd/` and `internal/` is checked strictly.

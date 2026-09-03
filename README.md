@@ -127,14 +127,9 @@ Use `-log=` to keep a service on stdout, or pass another `-log` path for local
 diagnostics. `runtime/`, `tmp/`, logs, and similar generated output
 are ignored by Git. Cleanup helpers:
 
-```powershell
-.\scripts\clean-runtime.ps1 -DryRun
-.\scripts\clean-runtime.ps1
-```
-
 ```sh
-bash scripts/clean-runtime.sh --dry-run
-bash scripts/clean-runtime.sh
+go run ./tools/checks clean-runtime --dry-run
+go run ./tools/checks clean-runtime
 ```
 
 ## Service Ports
@@ -155,7 +150,7 @@ internal/   Go packages for protocol, services, API, config, platform helpers
 proto/      protobuf/gRPC contract sources
 deploy/     Docker and observability assets
 docs/       architecture, protocol, operations, release, examples
-scripts/    architecture, docs-link, and release-check scripts
+tools/      the repository's own checks: boundaries, formatting, links
 legacy/     retained reference implementations
 task/       original assignment documents
 ```

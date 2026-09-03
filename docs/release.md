@@ -17,21 +17,16 @@ can pass `VERSION`, `COMMIT`, and `BUILD_DATE` build args.
 
 ## Local Release Check
 
-PowerShell:
-
-```powershell
-.\scripts\release-check.ps1
-```
-
-Unix-like shell:
-
 ```sh
-sh scripts/release-check.sh
+go run ./tools/checks release
 ```
 
-The scripts run Go checks, architecture checks, frontend checks, Compose config,
-and documentation link checks. Docker image build and smoke tests are still
-recommended before tagging when Docker is available.
+It runs formatting, architecture boundaries, documentation links, `go vet`, the
+test suite, the build, Compose configuration and a cleanup dry-run, in that
+order -- cheapest first, so a missing `gofmt` is a five-second answer rather
+than one that arrives after a Compose build. Compose stages are skipped with a
+note when Docker is not installed. Image builds and smoke tests are still worth
+running before tagging.
 
 ## Manual Docker Smoke
 
