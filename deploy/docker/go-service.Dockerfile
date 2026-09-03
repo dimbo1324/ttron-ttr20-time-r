@@ -26,7 +26,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/dimbo1324/ttr
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ft12-healthcheck ./cmd/ft12-healthcheck
 
 # gcr.io/distroless/base-debian12:nonroot
-FROM gcr.io/distroless/base-debian12@sha256:7f0c72cd138b442ae0deeb69c08b1acf5525439ba251a49ad93c320a061567e5
+FROM gcr.io/distroless/base-debian12@sha256:fabbf1c0c357a3d42550111351daed089b20a2c954df13ee2fcff60602515e84
 WORKDIR /app
 COPY --from=builder /out/service /app/service
 COPY --from=builder /out/ft12-healthcheck /app/ft12-healthcheck
