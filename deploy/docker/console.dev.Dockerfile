@@ -14,7 +14,7 @@
 # Pinned by digest for the same reason as the production images.
 
 # golang:1.26-bookworm
-FROM golang@sha256:9fdc884aacc3bec89b20ffc69f4bb369c78210e3e4f600387b5128b12c199f81 AS health
+FROM golang@sha256:512690a5660563b57d37ecc31129e7f136e831db2aed24a1dbeb8ad7380dc0fa AS health
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
