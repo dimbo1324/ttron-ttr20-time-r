@@ -63,12 +63,29 @@ jobs:
         # has moved on without it, rather than quietly resolving something the
         # author never ran.
         run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
       - name: Test
         run: pnpm test
       - name: Build
         run: pnpm build
+
+  lint:
+    name: Lint (Go)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          # Pinned rather than "latest": a linter that upgrades itself turns a
+          # green branch red on a morning nobody touched the code.
+          version: v2.13.2
 
   architecture:
     name: Architecture

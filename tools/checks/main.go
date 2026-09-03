@@ -108,8 +108,6 @@ func (f *failures) addf(format string, args ...any) {
 	f.items = append(f.items, fmt.Sprintf(format, args...))
 }
 
-func (f *failures) len() int { return len(f.items) }
-
 // err renders the collected failures as one error, or nil when there are none.
 func (f *failures) err(headline string) error {
 	if len(f.items) == 0 {

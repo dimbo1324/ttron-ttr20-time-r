@@ -3,6 +3,7 @@ package errors
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"google.golang.org/grpc/codes"
@@ -34,7 +35,10 @@ func WriteUpstreamError(w http.ResponseWriter, service string, err error) {
 		WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "unexpected empty upstream error")
 		return
 	}
-	if err == context.DeadlineExceeded {
+	// errors.Is, not ==: a deadline arrives from the gRPC client wrapped, and
+	// comparing the value directly sent every timeout to the 502 branch --
+	// after a broken upstream instead of a slow one.
+	if errors.Is(err, context.DeadlineExceeded) {
 		WriteError(w, http.StatusGatewayTimeout, "UPSTREAM_TIMEOUT", service+" request timed out")
 		return
 	}

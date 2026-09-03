@@ -32,7 +32,6 @@ type Filter = "all" | EventDirection;
 
 export function ExchangeMonitor() {
   const dict = useDictionary();
-  const format = useFormat();
   const { source, events, checksumMode, counters } = useTelemetry();
   /**
    * Clearing is bench-only: the live log is the gateway's own frame history,

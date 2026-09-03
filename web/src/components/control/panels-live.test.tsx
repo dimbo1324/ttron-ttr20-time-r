@@ -71,7 +71,7 @@ describe("EmulatorPanel sliders", () => {
     resetBenchStore({
       faults: { ...useBenchStore.getState().faults, clockDriftPerDayMs: -48_000 },
     });
-    const { dict } = renderWithLocale(<EmulatorPanel />);
+    renderWithLocale(<EmulatorPanel />);
 
     expect(screen.getByText(format.driftPerDay(-48_000))).toBeInTheDocument();
   });

@@ -39,13 +39,13 @@ func Run(args []string) int {
 		logger.Printf("emulator grpc dial failed: %v", err)
 		return 1
 	}
-	defer emulatorConn.Close()
+	defer func() { _ = emulatorConn.Close() }()
 	gatewayClient, gatewayConn, err := grpcclient.DialGateway(rootCtx, cfg.GatewayGRPC)
 	if err != nil {
 		logger.Printf("gateway grpc dial failed: %v", err)
 		return 1
 	}
-	defer gatewayConn.Close()
+	defer func() { _ = gatewayConn.Close() }()
 
 	metricsRegistry := metrics.NewRegistry()
 	handler := handlers.New(

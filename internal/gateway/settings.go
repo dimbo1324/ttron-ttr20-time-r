@@ -79,7 +79,7 @@ func (s Settings) Policy() health.Policy {
 // deserves to be told rather than quietly given 5s.
 func (s Settings) Validate() error {
 	if _, err := s.Schedule(); err != nil {
-		return fmt.Errorf("%w: %v", ErrInvalidSettings, err)
+		return fmt.Errorf("%w: %w", ErrInvalidSettings, err)
 	}
 	if s.RequestTimeout <= 0 {
 		return fmt.Errorf("%w: request timeout must be positive", ErrInvalidSettings)
@@ -90,13 +90,13 @@ func (s Settings) Validate() error {
 		return fmt.Errorf("%w: request timeout must be below the poll interval", ErrInvalidSettings)
 	}
 	if err := s.RetryPolicy().Validate(); err != nil {
-		return fmt.Errorf("%w: %v", ErrInvalidSettings, err)
+		return fmt.Errorf("%w: %w", ErrInvalidSettings, err)
 	}
 	if err := s.Thresholds().Validate(); err != nil {
-		return fmt.Errorf("%w: %v", ErrInvalidSettings, err)
+		return fmt.Errorf("%w: %w", ErrInvalidSettings, err)
 	}
 	if err := s.Policy().Normalize().Validate(); err != nil {
-		return fmt.Errorf("%w: %v", ErrInvalidSettings, err)
+		return fmt.Errorf("%w: %w", ErrInvalidSettings, err)
 	}
 	if s.DegradeAfter <= 0 || s.OfflineAfter <= 0 || s.RecoverAfter <= 0 {
 		return fmt.Errorf("%w: health thresholds must be positive", ErrInvalidSettings)
@@ -127,11 +127,11 @@ func (s *Service) UpdateSettings(next Settings) (Settings, error) {
 	}
 	plan, err := next.Schedule()
 	if err != nil {
-		return Settings{}, fmt.Errorf("%w: %v", ErrInvalidSettings, err)
+		return Settings{}, fmt.Errorf("%w: %w", ErrInvalidSettings, err)
 	}
 	policy := next.RetryPolicy().Normalize()
 	if err := policy.Validate(); err != nil {
-		return Settings{}, fmt.Errorf("%w: %v", ErrInvalidSettings, err)
+		return Settings{}, fmt.Errorf("%w: %w", ErrInvalidSettings, err)
 	}
 
 	// The clock monitor and the health tracker own their own locks and their

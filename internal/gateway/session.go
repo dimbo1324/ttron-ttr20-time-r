@@ -116,7 +116,7 @@ func (p *pollSession) pollWithRetry(ctx context.Context) error {
 	}
 
 	service.incrementExhaustedPolls()
-	failure := fmt.Errorf("%w after %d attempts: %v", ErrPollExhausted, policy.Attempts+1, last)
+	failure := fmt.Errorf("%w after %d attempts: %w", ErrPollExhausted, policy.Attempts+1, last)
 	service.recordFailure(failure)
 	service.observeHealthFailure(failure)
 	service.logger.Printf("gateway poll exhausted target=%s last=%v", service.cfg.Target, last)
@@ -189,7 +189,7 @@ func (p *pollSession) readFrame(deadline time.Time) ([]byte, time.Time, error) {
 		}
 		if readErr != nil {
 			if isTimeoutError(readErr) {
-				return nil, time.Time{}, fmt.Errorf("%w: %v", ErrNoResponse, readErr)
+				return nil, time.Time{}, fmt.Errorf("%w: %w", ErrNoResponse, readErr)
 			}
 			return nil, time.Time{}, fmt.Errorf("read response: %w", readErr)
 		}

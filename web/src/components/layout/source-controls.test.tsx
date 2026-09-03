@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { api } from "@/lib/api/client";
-import { renderWithLocale, resetLiveStore, useSource } from "@/test/utils";
+import { renderWithLocale, resetLiveStore, selectSource } from "@/test/utils";
 import { useSourceStore } from "@/stores/source-store";
 import { useLiveStore } from "@/stores/live-store";
 
@@ -96,7 +96,7 @@ describe("SourceNotice", () => {
   });
 
   it("says nothing on a healthy live source", () => {
-    useSource("live");
+    selectSource("live");
     useLiveStore.setState({ link: "ready", error: null });
 
     const { container } = renderWithLocale(<SourceNotice />);
@@ -105,7 +105,7 @@ describe("SourceNotice", () => {
   });
 
   it("names the missing processes and how to start them", () => {
-    useSource("live");
+    selectSource("live");
     useLiveStore.setState({ link: "unreachable", error: "Failed to fetch" });
 
     const { dict } = renderWithLocale(<SourceNotice />);
@@ -121,7 +121,7 @@ describe("SourceNotice", () => {
   });
 
   it("shows the underlying failure alongside the instructions", () => {
-    useSource("live");
+    selectSource("live");
     useLiveStore.setState({ link: "unreachable", error: "Failed to fetch" });
 
     renderWithLocale(<SourceNotice />);
@@ -130,7 +130,7 @@ describe("SourceNotice", () => {
   });
 
   it("offers the command to the clipboard", async () => {
-    useSource("live");
+    selectSource("live");
     useLiveStore.setState({ link: "unreachable", error: null });
     const writeText = jest.fn(async () => undefined);
     Object.assign(navigator.clipboard, { writeText });
@@ -142,7 +142,7 @@ describe("SourceNotice", () => {
   });
 
   it("gives a reachable gateway's error a quieter band", () => {
-    useSource("live");
+    selectSource("live");
     useLiveStore.setState({ link: "ready", error: "dial tcp: connection refused" });
 
     const { dict } = renderWithLocale(<SourceNotice />);
@@ -155,7 +155,7 @@ describe("SourceNotice", () => {
   });
 
   it("translates", () => {
-    useSource("live");
+    selectSource("live");
     useLiveStore.setState({ link: "unreachable", error: null });
 
     const { dict } = renderWithLocale(<SourceNotice />, { locale: "en" });

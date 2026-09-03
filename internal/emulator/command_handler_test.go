@@ -150,7 +150,7 @@ func TestEmulatorAppliesClockOffsetToReadTime(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	skew := parsed.Time.Sub(time.Now())
+	skew := time.Until(parsed.Time)
 	if delta := skew - offset; delta > 2*time.Second || delta < -2*time.Second {
 		t.Fatalf("device clock skew = %s, want about %s", skew, offset)
 	}
@@ -172,7 +172,7 @@ func TestEmulatorSetFaultModeReconfiguresClock(t *testing.T) {
 		t.Fatalf("clock settings = (%s, %s)", offset, drift)
 	}
 
-	skew := service.DeviceTime().Sub(time.Now())
+	skew := time.Until(service.DeviceTime())
 	if delta := skew - 30*time.Second; delta > 2*time.Second || delta < -2*time.Second {
 		t.Fatalf("DeviceTime() skew = %s, want about 30s", skew)
 	}

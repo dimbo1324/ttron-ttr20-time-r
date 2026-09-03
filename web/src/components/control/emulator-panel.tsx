@@ -19,7 +19,7 @@ import {
 import { activeFaultCount, type FaultView } from "@/lib/telemetry/types";
 import { useFaultControls, useTelemetry } from "@/lib/telemetry/use-telemetry";
 import { useFormat } from "@/lib/use-format";
-import { useMounted } from "@/lib/use-mounted";
+import { useNow } from "@/lib/use-now";
 import { useBenchStore } from "@/stores/bench-store";
 
 /**
@@ -101,12 +101,15 @@ export function EmulatorPanel() {
 
   // The preview carries a live timestamp, so it can only be built in the
   // browser: rendering it on the server would bake in a different second.
-  const mounted = useMounted();
-  const preview = mounted
+  // useNow is zero until mount, which is what keeps the two renders agreeing,
+  // and ticks once a second afterwards -- the resolution of the timestamp
+  // inside the frame, and no faster.
+  const now = useNow(1000);
+  const preview = now
     ? encodeFrame(
         RESPONSE_BIT,
         adapterAddress,
-        buildReadTimeResponse(new Date(Date.now() + (faults?.clockOffsetMs ?? 0))),
+        buildReadTimeResponse(new Date(now + (faults?.clockOffsetMs ?? 0))),
         checksumMode,
       )
     : [];

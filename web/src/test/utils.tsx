@@ -96,7 +96,7 @@ export function resetLiveStore(overrides: Partial<LiveStoreState> = {}) {
 }
 
 /** Selects a telemetry source for the components under test. */
-export function useSource(source: TelemetrySource) {
+export function selectSource(source: TelemetrySource) {
   useSourceStore.setState({ source, hydrated: true });
 }
 

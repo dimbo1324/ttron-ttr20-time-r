@@ -96,6 +96,8 @@ func (s *Server) Run(ctx context.Context) error {
 	err = s.server.Serve(ln)
 	close(done)
 	if ctx.Err() != nil || errors.Is(err, http.ErrServerClosed) {
+		//nolint:nilerr // A server told to stop did not fail; reporting the
+		// shutdown as an error would make every clean exit look like a crash.
 		return nil
 	}
 	return err

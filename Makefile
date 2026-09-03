@@ -6,11 +6,13 @@ PROTO_FILES := proto/ft12/v1/common.proto proto/ft12/v1/emulator.proto proto/ft1
 # The repository's own rules, in one place and one language. See tools/checks.
 CHECKS := go run ./tools/checks
 
-.PHONY: help fmt check-go-format test test-race test-fuzz build build-client build-emulator build-gateway build-cli build-api build-healthcheck run-emulator run-client run-gateway run-api proto check-architecture check-doc-links release-check clean-runtime clean-runtime-dry-run compose-config docker-build docker-up docker-down docker-logs docker-ps docker-smoke metrics-smoke ci-local verify clean
+.PHONY: help fmt lint lint-web check-go-format test test-race test-fuzz build build-client build-emulator build-gateway build-cli build-api build-healthcheck run-emulator run-client run-gateway run-api proto check-architecture check-doc-links release-check clean-runtime clean-runtime-dry-run compose-config docker-build docker-up docker-down docker-logs docker-ps docker-smoke metrics-smoke ci-local verify clean
 
 help:
 	@echo "Targets:"
 	@echo "  fmt             go fmt ./..."
+	@echo "  lint            golangci-lint run ./..."
+	@echo "  lint-web        eslint over the console"
 	@echo "  check-go-format verify active Go files are gofmt-formatted"
 	@echo "  test            go test ./..."
 	@echo "  test-race       go test -race ./..."
@@ -43,6 +45,12 @@ help:
 
 fmt:
 	go fmt ./...
+
+lint:
+	golangci-lint run ./...
+
+lint-web:
+	pnpm --dir web lint
 
 check-go-format:
 	$(CHECKS) format
@@ -135,7 +143,7 @@ metrics-smoke:
 	docker compose exec -T ft12-api /app/ft12-healthcheck -url http://127.0.0.1:8080/metrics
 	docker compose down -v
 
-ci-local: fmt check-go-format check-architecture test build compose-config check-doc-links clean-runtime-dry-run
+ci-local: fmt check-go-format lint check-architecture test build compose-config check-doc-links clean-runtime-dry-run
 
 release-check:
 	$(CHECKS) release

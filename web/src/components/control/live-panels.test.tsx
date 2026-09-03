@@ -22,7 +22,7 @@ import {
   renderWithLocale,
   resetBenchStore,
   resetLiveStore,
-  useSource,
+  selectSource,
 } from "@/test/utils";
 
 /**
@@ -72,7 +72,7 @@ async function goLive(statusOverrides: Record<string, unknown> = {}) {
   mocked.gatewayFleet.mockResolvedValue(fleetFixture() as never);
   mocked.faultMode.mockResolvedValue(faultModeFixture({ responseDelayMs: 250 }) as never);
 
-  useSource("live");
+  selectSource("live");
   await act(async () => {
     await useLiveStore.getState().refresh();
     await useLiveStore.getState().loadFaults();

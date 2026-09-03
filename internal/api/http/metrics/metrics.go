@@ -41,11 +41,11 @@ func (r *Registry) Write(w http.ResponseWriter) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	fmt.Fprintln(w, "# HELP ft12_http_requests_total Total HTTP requests handled by ft12-api.")
-	fmt.Fprintln(w, "# TYPE ft12_http_requests_total counter")
+	_, _ = fmt.Fprintln(w, "# HELP ft12_http_requests_total Total HTTP requests handled by ft12-api.")
+	_, _ = fmt.Fprintln(w, "# TYPE ft12_http_requests_total counter")
 	writeCounter(w, "ft12_http_requests_total", r.requests)
-	fmt.Fprintln(w, "# HELP ft12_http_request_duration_seconds_total Total HTTP request duration in seconds.")
-	fmt.Fprintln(w, "# TYPE ft12_http_request_duration_seconds_total counter")
+	_, _ = fmt.Fprintln(w, "# HELP ft12_http_request_duration_seconds_total Total HTTP request duration in seconds.")
+	_, _ = fmt.Fprintln(w, "# TYPE ft12_http_request_duration_seconds_total counter")
 	writeCounterFloat(w, "ft12_http_request_duration_seconds_total", r.duration)
 }
 
@@ -53,7 +53,7 @@ func writeCounter(w http.ResponseWriter, name string, values map[string]uint64) 
 	keys := sortedKeys(values)
 	for _, key := range keys {
 		method, path, status := splitMetricKey(key)
-		fmt.Fprintf(w, "%s{method=%q,path=%q,status=%q} %d\n", name, method, path, status, values[key])
+		_, _ = fmt.Fprintf(w, "%s{method=%q,path=%q,status=%q} %d\n", name, method, path, status, values[key])
 	}
 }
 
@@ -61,7 +61,7 @@ func writeCounterFloat(w http.ResponseWriter, name string, values map[string]flo
 	keys := sortedKeys(values)
 	for _, key := range keys {
 		method, path, status := splitMetricKey(key)
-		fmt.Fprintf(w, "%s{method=%q,path=%q,status=%q} %.6f\n", name, method, path, status, values[key])
+		_, _ = fmt.Fprintf(w, "%s{method=%q,path=%q,status=%q} %.6f\n", name, method, path, status, values[key])
 	}
 }
 
