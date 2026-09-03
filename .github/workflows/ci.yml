@@ -155,6 +155,19 @@ jobs:
           curl -fsS http://127.0.0.1:8080/api/v1/export/events.csv
           curl -fsS http://127.0.0.1:8080/api/v1/export/overview.json
           curl -fsS http://127.0.0.1:8080/metrics
+      - name: Smoke the console
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/ru >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl -fsS -o /dev/null http://127.0.0.1:3000/ru
+          curl -fsS -o /dev/null http://127.0.0.1:3000/en
+          # Through the console's own proxy, which is the path a browser
+          # takes and the one a rewrite could not have served from an image.
+          curl -fsS http://127.0.0.1:3000/upstream/api/v1/health
       - name: Compose logs
         if: always()
         run: docker compose logs

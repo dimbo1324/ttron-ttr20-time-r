@@ -1,0 +1,66 @@
+# Development overlay.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# A separate file rather than `docker-compose.override.yml`, which Compose
+# picks up automatically: a stack that quietly runs in development mode
+# because a file happens to be on disk is how a demo ends up served by a dev
+# server with source maps and no caching, and nobody notices.
+#
+# What changes here, and why:
+#
+#   - The console runs `next dev` against a bind-mounted source tree, so an
+#     edit is on screen in a second instead of after an image rebuild.
+#   - The gateway polls every second rather than on the calendar, because a
+#     bench nobody is watching for a minute teaches nothing.
+#   - Every service keeps its production wiring otherwise. A dev overlay that
+#     changes the addresses too stops rehearsing the thing it is standing in
+#     for.
+
+services:
+  ft12-console:
+    build:
+      dockerfile: deploy/docker/console.dev.Dockerfile
+    command: ["pnpm", "dev"]
+    environment:
+      FT12_API_URL: http://ft12-api:8080
+      # Polling is how a file watcher sees changes across a bind mount from a
+      # Windows or macOS host; without it an edit lands and nothing rebuilds.
+      WATCHPACK_POLLING: "true"
+      NODE_ENV: development
+    volumes:
+      - ./web/src:/src/src
+      - ./web/public:/src/public
+      - ./web/next.config.ts:/src/next.config.ts
+      - ./web/tsconfig.json:/src/tsconfig.json
+      - ./web/postcss.config.mjs:/src/postcss.config.mjs
+      # node_modules and .next stay inside the container: the host tree is
+      # built for a different platform, and mounting over them is the classic
+      # way to get a module that will not load.
+      - console-node-modules:/src/node_modules
+      - console-next:/src/.next
+    healthcheck:
+      # `next dev` compiles a route the first time it is asked for, so the
+      # first probe can take much longer than a built server's.
+      start_period: 60s
+
+  ft12-gateway:
+    command:
+      - -log
+      - ""
+      - -target
+      - ft12-emulator:9000
+      - -grpc-listen
+      - :9200
+      - -mode
+      - sum
+      - -schedule
+      - interval
+      - -interval
+      - 1s
+      - -recent
+      - "200"
+
+volumes:
+  console-node-modules:
+  console-next:

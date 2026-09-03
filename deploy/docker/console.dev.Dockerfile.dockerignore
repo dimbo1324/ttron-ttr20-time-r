@@ -1,0 +1,41 @@
+# Build context for the console.
+#
+# It needs web/ for the app and go.mod, cmd/ and internal/ for the health-check
+# binary. Everything else is weight on every build.
+.git
+.github
+.claude
+docs/
+task/
+legacy/
+tools/
+deploy/
+examples/
+
+web/node_modules/
+web/.next/
+web/out/
+web/coverage/
+web/*.tsbuildinfo
+
+bin/
+dist/
+tmp/
+temp/
+logs/
+runtime/
+*.log
+*.out
+*.test
+*.prof
+coverage.out
+coverage.*
+*.coverprofile
+profile.cov
+*.exe
+*.dll
+*.so
+*.dylib
+.env
+go.work
+go.work.sum

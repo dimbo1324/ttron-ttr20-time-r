@@ -18,9 +18,19 @@ This is the teaching mode: every fault can be switched on and its effect
 watched on the timeline, and a frame copied out of the log decodes identically
 in the analyzer.
 
-```powershell
+```sh
 pnpm --dir web dev
 ```
+
+## Everything at once, in Docker
+
+```sh
+docker compose up --build
+```
+
+Brings up the emulator, the gateway, the API and the console together, with the
+console on `http://localhost:3000/ru` already pointed at the API. See
+[Docker](docker.md) for the development overlay and how the proxy is wired.
 
 ## Live stack
 
