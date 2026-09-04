@@ -34,6 +34,7 @@ type check struct {
 var checks = []check{
 	{"architecture", "dependency boundaries between packages", runArchitecture},
 	{"format", "gofmt over the Go files this repository tracks", runFormat},
+	{"ignored", "source files .gitignore is hiding from the repository", runIgnored},
 	{"doc-links", "local Markdown links resolve to something", runDocLinks},
 	{"coverage", "summarise the Go coverage profile [--min N]", runCoverage},
 	{"clean-runtime", "remove build and runtime artefacts [--dry-run]", runCleanRuntime},

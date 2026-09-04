@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -372,5 +373,113 @@ func TestWriteProfileDropsGeneratedAndKeepsSpans(t *testing.T) {
 func TestPackageOfStripsTheModulePath(t *testing.T) {
 	if got := packageOf(modulePath + "/internal/gateway/settings.go"); got != "internal/gateway" {
 		t.Fatalf("packageOf() = %q", got)
+	}
+}
+
+// ---------------------------------------------------------------- ignored
+
+func TestIsSourceLooksAtTheExtension(t *testing.T) {
+	for _, name := range []string{"coverage.go", "a/b/route.ts", "deploy.yml", "notes.md"} {
+		if !isSource(name) {
+			t.Errorf("isSource(%q) = false, want true", name)
+		}
+	}
+	for _, name := range []string{"go-coverage.out", "app.exe", "profile.cov", "image.png"} {
+		if isSource(name) {
+			t.Errorf("isSource(%q) = true, want false", name)
+		}
+	}
+}
+
+func TestFirstSourceInStopsAtBuildDirectories(t *testing.T) {
+	root := t.TempDir()
+	mustWrite(t, filepath.Join(root, "node_modules", "left-pad", "index.js"), "module.exports = 0")
+
+	found, err := firstSourceIn(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found != "" {
+		t.Errorf("firstSourceIn = %q, want nothing: a dependency tree is not this repository's source", found)
+	}
+
+	mustWrite(t, filepath.Join(root, "pkg", "service.go"), "package pkg")
+	found, err = firstSourceIn(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if found != "service.go" {
+		t.Errorf("firstSourceIn = %q, want service.go", found)
+	}
+}
+
+// TestIgnoredCatchesAPatternThatSwallowsSource reproduces the failure this
+// check was written for: `coverage.*`, meant for coverage artefacts, also
+// matches coverage.go, and git then hides the file from `git status` and from
+// `git add -A` without a word.
+func TestIgnoredCatchesAPatternThatSwallowsSource(t *testing.T) {
+	root := newGitRepo(t)
+	mustWrite(t, filepath.Join(root, ".gitignore"), "coverage.*\n")
+	mustWrite(t, filepath.Join(root, "tools", "coverage.go"), "package tools")
+
+	err := runIgnored(root, nil)
+	if err == nil {
+		t.Fatal("runIgnored() = nil, want a failure naming the hidden file")
+	}
+	if !strings.Contains(err.Error(), "tools/coverage.go") {
+		t.Errorf("error does not name the file: %v", err)
+	}
+	if !strings.Contains(err.Error(), ".gitignore:1") {
+		t.Errorf("error does not name the pattern's line, which is the fix: %v", err)
+	}
+}
+
+func TestIgnoredAllowsArtefactsAndWholeBuildDirectories(t *testing.T) {
+	root := newGitRepo(t)
+	mustWrite(t, filepath.Join(root, ".gitignore"), "runtime/\nnode_modules/\n*.out\n")
+	mustWrite(t, filepath.Join(root, "runtime", "reports", "go-coverage.out"), "mode: set")
+	mustWrite(t, filepath.Join(root, "node_modules", "left-pad", "index.js"), "module.exports = 0")
+	mustWrite(t, filepath.Join(root, "kept.go"), "package kept")
+
+	if err := runIgnored(root, nil); err != nil {
+		t.Fatalf("runIgnored() = %v, want nil: none of these is hidden source", err)
+	}
+}
+
+func TestIgnoredReportsAWholeDirectoryOfHiddenSource(t *testing.T) {
+	root := newGitRepo(t)
+	mustWrite(t, filepath.Join(root, ".gitignore"), "internal/\n")
+	mustWrite(t, filepath.Join(root, "internal", "gateway", "poll.go"), "package gateway")
+
+	err := runIgnored(root, nil)
+	if err == nil {
+		t.Fatal("runIgnored() = nil, want a failure: an ignored directory of source is worse than one file")
+	}
+	if !strings.Contains(err.Error(), "internal/") {
+		t.Errorf("error does not name the directory: %v", err)
+	}
+}
+
+func newGitRepo(t *testing.T) string {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not on PATH")
+	}
+	root := t.TempDir()
+	cmd := exec.Command("git", "init")
+	cmd.Dir = root
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+	return root
+}
+
+func mustWrite(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }

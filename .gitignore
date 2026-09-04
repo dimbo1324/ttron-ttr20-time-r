@@ -1,13 +1,19 @@
 # Go
 bin/
 dist/
-coverage.out
 *.test
 *.prof
-*.out
-coverage.*
 *.coverprofile
 profile.cov
+
+# Coverage output, named rather than globbed. `coverage.*` was here, and it
+# also matches coverage.go -- which is source, and which git then hid from
+# every `git status` and every `git add -A` until CI cloned the repository
+# without it. An ignore pattern broad enough to swallow source is a pattern
+# that fails silently and locally never notices.
+/coverage.out
+/coverage.html
+/coverage.txt
 
 # Binaries
 *.exe

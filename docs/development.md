@@ -97,6 +97,7 @@ The rules the compiler and the test suite cannot express live in
 ```sh
 go run ./tools/checks architecture    # dependency boundaries
 go run ./tools/checks format          # gofmt over tracked Go files
+go run ./tools/checks ignored         # source .gitignore is hiding
 go run ./tools/checks doc-links       # local Markdown links resolve
 go run ./tools/checks coverage        # summarise the profile, enforce a floor
 go run ./tools/checks clean-runtime   # remove build and runtime artefacts
@@ -105,6 +106,15 @@ go run ./tools/checks release         # all of the above, plus tests and build
 
 One Go program rather than five pairs of shell and PowerShell scripts, so
 "what CI runs" and "what I can run" are the same sentence on every platform.
+
+The `ignored` check is there because of one afternoon. `.gitignore` carried
+`coverage.*` from the first commit, meaning coverage artefacts; a later commit
+added `tools/checks/coverage.go`, and the pattern swallowed it. The file never
+appeared in `git status`, `git add -A` skipped it silently, and every check
+passed locally because locally the file existed. CI cloned the repository and
+failed eight jobs on `undefined: runCoverage`. A too-broad ignore pattern does
+not fail on the machine that has the file; it fails on every machine that does
+not.
 
 The architecture check keeps `internal/protocol` independent of transports,
 config, logging, the service packages and the adapters, and keeps the emulator

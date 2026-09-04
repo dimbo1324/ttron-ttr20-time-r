@@ -162,6 +162,12 @@ jobs:
       - name: Check architecture boundaries
         run: go run ./tools/checks architecture
 
+      # Fires on a developer's machine rather than here -- a fresh clone does
+      # not have the hidden file to find. It is in CI so that the check itself
+      # cannot rot unnoticed.
+      - name: Check that no source is hidden from git
+        run: go run ./tools/checks ignored
+
   cleanup:
     name: Cleanup (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

@@ -33,6 +33,7 @@ func runRelease(root string, _ []string) error {
 
 	stages := []stage{
 		{name: "format", argv: append(append([]string{}, self...), "format")},
+		{name: "ignored files", argv: append(append([]string{}, self...), "ignored")},
 		{name: "architecture", argv: append(append([]string{}, self...), "architecture")},
 		{name: "doc links", argv: append(append([]string{}, self...), "doc-links")},
 		{name: "vet", argv: []string{"go", "vet", "./..."}},

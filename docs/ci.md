@@ -16,7 +16,7 @@ cancels older runs for the same ref.
 | `frontend` | Ubuntu | ESLint, `tsc --noEmit`, Jest, the production build |
 | `coverage` | Ubuntu | both suites measured, a floor enforced, the reports kept |
 | `lint` | Ubuntu | golangci-lint |
-| `architecture` | Ubuntu | dependency boundaries, from the real import graph |
+| `architecture` | Ubuntu | dependency boundaries, and that no source is hidden from git |
 | `docs` | Ubuntu | every local Markdown link resolves |
 | `cleanup` | Ubuntu, Windows | the cleanup command's dry-run does not misfire |
 | `docker` | Ubuntu | `compose config`, `compose build`, and a smoke test of the running stack |
