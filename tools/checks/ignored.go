@@ -99,9 +99,13 @@ func lastSegment(entry string) string {
 // invisible, not to list it.
 func firstSourceIn(dir string) (string, error) {
 	var found string
-	err := filepath.WalkDir(dir, func(name string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
+	err := filepath.WalkDir(dir, func(name string, entry fs.DirEntry, walkErr error) error {
+		// A path that cannot be read is a path this check cannot judge, and
+		// one unreadable directory is not a reason to fail the run. SkipDir
+		// rather than nil so that the decision is written down instead of
+		// being an ignored error.
+		if walkErr != nil {
+			return fs.SkipDir
 		}
 		if entry.IsDir() {
 			if buildDirs[entry.Name()] {
