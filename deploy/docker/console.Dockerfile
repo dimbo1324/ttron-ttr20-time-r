@@ -41,7 +41,7 @@ RUN pnpm build
 
 # ---------------------------------------------------------------- health
 # golang:1.26-bookworm
-FROM golang@sha256:9fdc884aacc3bec89b20ffc69f4bb369c78210e3e4f600387b5128b12c199f81 AS health
+FROM golang@sha256:3680233e3204827fbdc66088528ae6d4b3d034f51d03a99d454f6de034888244 AS health
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
