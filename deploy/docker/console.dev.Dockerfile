@@ -24,7 +24,7 @@ COPY proto ./proto
 RUN CGO_ENABLED=0 go build -trimpath -o /out/ft12-healthcheck ./cmd/ft12-healthcheck
 
 # node:22-bookworm-slim
-FROM node@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+FROM node@sha256:6d2c7d5d074bf72f81ddc252b4fbb5d625bc028eeda49cb4b8c2ff8eda1ee617
 WORKDIR /src
 
 RUN npm install -g pnpm@9
