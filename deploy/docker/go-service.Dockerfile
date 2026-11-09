@@ -7,7 +7,7 @@
 # still tell what it is.
 
 # golang:1.26-bookworm
-FROM golang@sha256:9fdc884aacc3bec89b20ffc69f4bb369c78210e3e4f600387b5128b12c199f81 AS builder
+FROM golang@sha256:e519d3b0a5b285e5aa53ab9eef02bc6bbb9cb04608389b743a136a9ce75f0d1e AS builder
 WORKDIR /src
 
 ARG SERVICE=ft12-api
