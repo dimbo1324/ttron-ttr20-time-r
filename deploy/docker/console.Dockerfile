@@ -16,7 +16,7 @@
 # Dependencies are their own layer, keyed on the manifest and the lockfile, so
 # editing a component does not reinstall the tree.
 # node:22-bookworm-slim
-FROM node@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS deps
+FROM node@sha256:438603bbb5cda404b9416f0b5c8026f61501ab911760d861ec28c36b5d675725 AS deps
 WORKDIR /src
 
 # Pinned to the major that wrote the lockfile: pnpm 10 rewrites a v9 lockfile,
@@ -28,7 +28,7 @@ RUN pnpm install --frozen-lockfile
 
 # ---------------------------------------------------------------- builder
 # node:22-bookworm-slim
-FROM node@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS builder
+FROM node@sha256:438603bbb5cda404b9416f0b5c8026f61501ab911760d861ec28c36b5d675725 AS builder
 WORKDIR /src
 
 RUN npm install -g pnpm@9
